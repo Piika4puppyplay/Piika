@@ -167,3 +167,7 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 
 ## Version 2.3.1
 - Les défis personnalisés sont désormais proposés dans l'onglet Défis (carte « Créer un défi perso » tant qu'il reste un emplacement libre), et plus seulement en bas de Réglages.
+
+
+## Version 2.3.2
+- Correction : la fenêtre de confirmation (par exemple « Effacer ce défi ? ») passe maintenant au-dessus de la fenêtre de modification d'un défi personnalisé, au lieu de s'ouvrir dessous.
