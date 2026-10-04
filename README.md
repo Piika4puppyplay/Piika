@@ -171,3 +171,8 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 
 ## Version 2.3.2
 - Correction : la fenêtre de confirmation (par exemple « Effacer ce défi ? ») passe maintenant au-dessus de la fenêtre de modification d'un défi personnalisé, au lieu de s'ouvrir dessous.
+
+
+## Version 2.3.3
+- Réglages › Mes défis : bouton « 🗑️ Supprimer » à côté de « Modifier » pour les défis personnalisés (avec confirmation).
+- Garde-fou : les défis personnalisés donnent au total une seule carte par jour (pointage et paliers), même si on supprime puis recrée un défi, pour éviter la génération abusive de cartes.
