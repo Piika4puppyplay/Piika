@@ -149,3 +149,7 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 - Détection de mise à jour : à l'ouverture (ou au retour sur l'appli), Piika vérifie en arrière-plan s'il existe une nouvelle version. Sans nouveauté, aucune fenêtre. Sinon, une fenêtre propose « Mettre à jour » (environ une seconde, rien n'est perdu) ou « Plus tard ».
 - La fenêtre n'apparaît jamais pendant une partie, une respiration guidée ou une autre fenêtre ouverte : elle attend la fin.
 - `sw.js` n'active plus la nouvelle version tout seul : c'est le bouton « Mettre à jour » qui le demande.
+
+
+## Version 2.2.1
+- Fenêtre de mise à jour sans contrainte : « Mettre à jour », « Plus tard » (la fenêtre ne revient pas avant 24 h) ou « Ignorer cette mise à jour » (elle ne revient qu'à la version suivante). Rien n'est forcé.

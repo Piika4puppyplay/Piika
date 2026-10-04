@@ -17,7 +17,7 @@ var _g30q="f5dd5409007954a7ec06f6d997b4cf16c25f6246b8b8";
  * Pour publier une nouvelle version, change VERSION ci-dessous.
  * La nouvelle version attend (sans skipWaiting automatique) que la personne appuie sur « Mettre à jour » dans Piika.
  */
-const VERSION = "piika-v2.2.0";
+const VERSION = "piika-v2.2.1";
 const FILES = ["./", "index.html", "manifest.json", "lang/en.js", "lang/es.js", "lang/de.js", "lang/pt.js", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -26,6 +26,7 @@ self.addEventListener("install", (e) => {
 
 self.addEventListener("message", (e) => {
   if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (e.data && e.data.type === "GET_VERSION" && e.ports && e.ports[0]) e.ports[0].postMessage({ version: VERSION });
 });
 
 self.addEventListener("activate", (e) => {
