@@ -176,3 +176,9 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 ## Version 2.3.3
 - Réglages › Mes défis : bouton « 🗑️ Supprimer » à côté de « Modifier » pour les défis personnalisés (avec confirmation).
 - Garde-fou : les défis personnalisés donnent au total une seule carte par jour (pointage et paliers), même si on supprime puis recrée un défi, pour éviter la génération abusive de cartes.
+
+
+## Version 2.4.0
+- Félicitations : à chaque nouveau palier de badge, une fenêtre à fermer soi-même montre la carte gagnée ; si plusieurs défis ont franchi un palier pendant l'absence, un seul popup les regroupe. Appli ouverte au moment du palier : simple message qui disparaît tout seul. Interrupteur dans Réglages pour désactiver les fenêtres.
+- La fenêtre de mise à jour n'apparaît plus que sur l'écran des défis, jamais pendant une partie ou ailleurs.
+- Correction : plus de message vide quand un palier de défi personnalisé ne donne pas de carte.
