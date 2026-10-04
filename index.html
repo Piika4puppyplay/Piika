@@ -39,7 +39,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Piika">
 <script>(function(){var c=null;try{c=localStorage.getItem("piika_lang")}catch(e){}if(c&&/^(en|es|de|pt)$/.test(c))document.write('<script src="lang/'+c+'.js"><\/script>')})()</script>
-<script>(function(){try{var t=localStorage.getItem("piika_theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
+<script>(function(){try{var t=localStorage.getItem("piika_theme");if(t==="time"){var n=new Date(),m=n.getHours()*60+n.getMinutes(),f=+localStorage.getItem("piika_tf"),u=+localStorage.getItem("piika_tt");if(!(f>=0&&f<1440)||localStorage.getItem("piika_tf")===null)f=1230;if(!(u>=0&&u<1440)||localStorage.getItem("piika_tt")===null)u=420;t=(f<=u?(m>=f&&m<u):(m>=f||m<u))?"dark":"light"}if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
 <title>Piika</title>
 <style>
 :root{--warn:#ffb74d;--bg:#10222e;--card:#183344;--txt:#f2ead9;--mut:#9fb3bf;--line:#2a4a5e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -47,6 +47,7 @@
 :root[data-theme="dark"]{--warn:#ffb74d;--bg:#10222e;--card:#183344;--txt:#f2ead9;--mut:#9fb3bf;--line:#2a4a5e}
 :root[data-theme="light"]{--bg:#f4efe4;--card:#fffaf0;--txt:#1d2b34;--mut:#5d6e78;--line:#dccfb6;--warn:#b45309}
 :root[data-theme="light"] .time b{color:color-mix(in srgb,var(--c) 60%,#000)}
+select.tm{font:inherit;padding:10px 8px;border-radius:12px;background:var(--bg);color:var(--txt);border:1px solid var(--line);min-height:46px;margin-top:4px;display:block}label.tm{display:block;flex:1 1 140px}
 input[type=time]{font:inherit;padding:10px 12px;border-radius:12px;background:var(--bg);color:var(--txt);border:1px solid var(--line);min-height:46px}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0 10px}.cal i{aspect-ratio:1;border-radius:6px;background:var(--line);display:block}.cal i.t{outline:2px solid var(--txt);outline-offset:1px}.cal i.n{background:transparent}
 .obd{display:flex;gap:6px;justify-content:center;margin:6px 0}.obd i{width:8px;height:8px;border-radius:50%;background:var(--line)}.obd i.on{background:var(--c)}
@@ -649,6 +650,7 @@ S.lastExport=tnow();save();toast(_t("Sauvegarde enregistrée"));render()}catch(x
 if(a=="copy"){var t=document.getElementById("code");t.value=seal(Object.assign({},S,{exportedAt:tnow()}));t.select();try{await navigator.clipboard.writeText(t.value);toast(_t("Code copié"))}catch(x){toast(_t("Sélectionne le code et copie-le à la main"))}}
 if(a=="paste")imp(document.getElementById("code").value)});
 document.addEventListener("change",function(e){var i=e.target;
+if(i.dataset.a=="tf"||i.dataset.a=="tt"){try{localStorage.setItem(i.dataset.a=="tf"?"piika_tf":"piika_tt",String(+i.value||0))}catch(x){}themeApply();return}
 if(i.dataset.a=="mins"){S.mins[i.dataset.id]=Math.max(0,+i.value||0);save();return}if(i.dataset.a=="cfg"){S.c[i.dataset.id].cfg[i.dataset.ev]=i.checked?1:0;save();return}
 if(i.closest&&i.closest("#shw")&&i.checked){var all=document.querySelectorAll("#shw input");if(i.dataset.ok){all.forEach(function(x){if(x!==i)x.checked=false})}else{all.forEach(function(x){if(x.dataset.ok)x.checked=false})}}});
 var CH=(function(){
@@ -1289,7 +1291,7 @@ var ALAW=PL.law||[
 ["Code pénal, art. 226-13 : secret professionnel","« La révélation d'une information à caractère secret par une personne qui en est dépositaire soit par état ou par profession, soit en raison d'une fonction ou d'une mission temporaire, est punie d'un an d'emprisonnement et de 15 000 euros d'amende. »","Médecins, soignants et centres de dépistage doivent garder le secret."],
 ["Code de la santé publique, art. L1110-4 (extrait) : vie privée et secret","« Toute personne prise en charge par un professionnel […] a droit au respect de sa vie privée et du secret des informations la concernant. »","Tu peux parler franchement à un soignant : c'est protégé."]
 ];
-var VER="v2.5.0";
+var VER="v2.5.1";
 var LANGS=[["fr","Français"],["en","English"],["es","Español"],["de","Deutsch"],["pt","Português (BR)"]];
 var REPORT_URL="";
 function langCard(){var h="<section class='card' style='--c:#4dd0e1;--onc:#10222e'><div class='head'><span class='e'>🌐</span>Langue · Language</div><div class='row'>";LANGS.forEach(function(l){h+="<button"+(l[0]==LANG?" class='main'":"")+" data-a='lang' data-id='"+l[0]+"'>"+l[1]+"</button>"});return h+"</div><p class='stat'>"+_t("Tu peux changer de langue quand tu veux, sans rien perdre : tes chronos, cartes et réglages restent identiques.")+"</p>"+(LANG=="fr"?"":"<p class='stat'>⚠️ "+_t("Les traductions ont été faites par IA et peuvent contenir des erreurs. Le concepteur de Piika ne parle que français : si tu vois une erreur, merci de la signaler dans la discussion Piika sur Reddit, de façon anonyme.")+"</p>"+(REPORT_URL?"<p><a href='"+REPORT_URL+"' target='_blank' rel='noopener' style='color:var(--txt)'>"+_t("Signaler une erreur de traduction")+"</a></p>":""))+"</section>"}
@@ -1299,11 +1301,16 @@ function langAsk(){var w=document.getElementById("langw");if(w&&w.remove)w.remov
  h+="</div><p class='stat'>Tu pourras la changer à tout moment dans Réglages.<br>You can change it any time in Settings.<br>Puedes cambiarla cuando quieras en Ajustes.<br>Du kannst sie jederzeit in den Einstellungen ändern.<br>Você pode mudar quando quiser em Configurações.</p><p class='stat' style='font-size:.8em'>⚠️ Les traductions sont faites par IA et peuvent contenir des erreurs ; le concepteur ne parle que français.<br>Translations are AI-made and may contain mistakes; the creator only speaks French.<br>Las traducciones son hechas por IA y pueden tener errores; el creador solo habla francés.<br>Die Übersetzungen stammen von einer KI und können Fehler enthalten; der Entwickler spricht nur Französisch.<br>As traduções foram feitas por IA e podem ter erros; o criador só fala francês.</p>"+(inApp()?"":"<p class='stat' style='font-size:.8em'>🪧 Si une bannière de l'hébergeur gêne en bas, ferme-la avec sa croix (elle ne vient pas de Piika).<br>If a host banner is in the way at the bottom, close it with its cross (it is not from Piika).<br>Si un banner del alojamiento estorba abajo, ciérralo con su cruz (no es de Piika).<br>Wenn unten ein Banner des Hosters stört, schließe es mit dem Kreuz (es stammt nicht von Piika).<br>Se um banner da hospedagem atrapalhar embaixo, feche-o no X (ele não é do Piika).</p>")+"</div></div>";w.innerHTML=h;document.body.appendChild(w)}
 
 /* ---------- v2.5 : apparence, rappel, calendrier, accueil ---------- */
-function themeCur(){var t="";try{t=localStorage.getItem("piika_theme")||""}catch(e){}return t=="dark"||t=="light"?t:"auto"}
-function themeApply(){var t=themeCur(),r=document.documentElement;try{if(t=="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",t)}catch(e){}}
-function themeCard(){var c=themeCur(),o=[["auto",_t("Auto")],["dark",_t("Sombre")],["light",_t("Clair")]],h="<section class='card' style='--c:#ce93d8;--onc:#10222e'><div class='head'><span class='e'>🌗</span>"+_t("Apparence")+"</div><div class='row'>";
+function themeCur(){var t="";try{t=localStorage.getItem("piika_theme")||""}catch(e){}return t=="dark"||t=="light"||t=="time"?t:"auto"}
+function themeMin(k,d){var v=null;try{v=localStorage.getItem(k)}catch(e){}v=v===null||v===""?NaN:+v;return v>=0&&v<1440&&v%30==0?v:d}
+function themeEff(){var t=themeCur();if(t!="time")return t;var n=new Date(tnow()),m=n.getHours()*60+n.getMinutes(),f=themeMin("piika_tf",1230),u=themeMin("piika_tt",420);return(f<=u?(m>=f&&m<u):(m>=f||m<u))?"dark":"light"}
+function themeApply(){var t=themeEff(),r=document.documentElement;try{if(t=="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",t)}catch(e){}}
+function themeOpts(sel){var h="",i,e,hh;for(i=0;i<48;i++){hh=Math.floor(i/2);e=hh<5||hh>=20?"🌙":hh<9?"🌅":hh<17?"☀️":"🌇";h+="<option value='"+i*30+"'"+(i*30==sel?" selected":"")+">"+e+" "+two(hh)+":"+(i%2?"30":"00")+"</option>"}return h}
+function themeCard(){var c=themeCur(),o=[["auto",_t("Auto")],["time",_t("Selon l'heure")],["dark",_t("Sombre")],["light",_t("Clair")]],h="<section class='card' style='--c:#ce93d8;--onc:#10222e'><div class='head'><span class='e'>🌗</span>"+_t("Apparence")+"</div><div class='row' style='flex-wrap:wrap'>";
  o.forEach(function(x){h+="<button"+(x[0]==c?" class='main'":"")+" data-a='theme' data-id='"+x[0]+"'>"+x[1]+"</button>"});
- return h+"</div><p class='stat'>"+_t("Auto suit le réglage de ton téléphone.")+"</p></section>"}
+ h+="</div><p class='stat'>"+_t("Auto suit le réglage de ton téléphone.")+"</p>";
+ if(c=="time")h+="<p>"+_t("Le thème change tout seul aux heures choisies, avec l'horloge protégée de l'appli. Tu peux le bloquer à tout moment sur Sombre ou Clair.")+"</p><div class='row' style='align-items:center;flex-wrap:wrap'><label class='tm'>🌙 "+_t("Sombre à partir de")+" <select class='tm' data-a='tf'>"+themeOpts(themeMin("piika_tf",1230))+"</select></label><label class='tm'>☀️ "+_t("Clair à partir de")+" <select class='tm' data-a='tt'>"+themeOpts(themeMin("piika_tt",420))+"</select></label></div>";
+ return h+"</section>"}
 function remCard(){var v="21:30";try{v=localStorage.getItem("piika_rt")||v}catch(e){}
  return "<section class='card' style='--c:#80cbc4;--onc:#10222e'><div class='head'><span class='e'>⏰</span>"+_t("Rappel quotidien")+"</div><p>"+_t("Piika n'envoie aucune notification. Si tu le souhaites, tu peux ajouter un rappel discret à ton agenda : le fichier contient seulement un événement nommé « Piika », rien d'autre, et rien n'est envoyé nulle part. Ouvre ensuite le fichier avec ton application Agenda.")+"</p><div class='row'><input type='time' id='rmt' value='"+v+"' aria-label='"+_t("Heure du rappel")+"'><button class='main' data-a='ics'>"+_t("Créer le rappel")+"</button></div></section>"}
 function icsMake(hm){var m=/^(\d\d):(\d\d)$/.exec(hm||"");if(!m||+m[1]>23||+m[2]>59){hm="21:30";m=/^(\d\d):(\d\d)$/.exec(hm)}
@@ -1345,7 +1352,7 @@ function openAid(){/*4bee5283d09bf1948ef08072a15eb4*/var w=document.getElementBy
 function closeAid(){/*a57c24aaddf2979db8bdca30d8a8f17cd07d6b*/var w=document.getElementById("aidw");if(w&&w.remove)w.remove()}
 
 function aidCard(){return _t("<section class='card' style='--c:#ef5350;--onc:#10222e'><div class='head'><span class='e'>🆘</span>Aide et droits</div><p>Les numéros d'aide selon ta situation (danger, détresse, homophobie, transphobie, drogue à ton insu, violences, sexe sans consentement…) et les textes de loi qui te protègent. Un bouton « 🆘 Aide » flotte aussi sur chaque écran.</p><div class='row'><button class='main' data-a='aid'>Ouvrir Aide et droits</button></div></section>")}
-load();lockCheck();if(!lockR)checkMissed();render();langInit();
+load();lockCheck();if(!lockR)checkMissed();render();langInit();themeApply();setInterval(function(){if(themeCur()=="time")themeApply()},60000);
 function clockTick(){var jt=document.getElementById("jkt");if(jt&&S.jk)jt.textContent=jokerLeft();var t=tnow(),c=document.getElementById("clk");if(c)c.textContent=_f("🕒 {0} · heure protégée",[fmtFull(t)]);var sc=document.getElementById("sclk");if(sc){var d23=new Date(t);d23.setHours(23,0,0,0);var m=d23.getTime()-t,p=parts(Math.max(0,m));sc.textContent=_f("🕒 Déclaration du {0}{1}",[fmtFull(t),m>0?_f(" · il reste {0} h {1} min avant 23h",[p[1],two(p[2])]):_t(" · 23h est passé")])}}
 function pulse(){var pl=lockR;lockCheck();if(pl!==lockR){render();return}if(lockR){lockUI(false);return}var n=ban.length;checkMissed();if(ban.length!=n&&!sheet){render();return}if(checkTiers()&&tab=="col"&&!sheet){render();return}if(G&&G.g=="breath"&&G.st=="play"&&tab=="jeu")brTick();tick();clockTick();var w=Date.now();if(w-lastSv>15000){lastSv=w;save()}}
 setInterval(pulse,1000);

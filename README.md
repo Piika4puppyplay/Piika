@@ -191,3 +191,7 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 - **Rappel quotidien** (Réglages) : génère un fichier `.ics` (événement quotidien nommé « Piika », avec alarme) à ouvrir avec l'application Agenda. Aucune notification, rien n'est envoyé.
 - **Calendrier des 5 dernières semaines** dans « Mon chemin » (couleurs neutres, aucun rouge).
 - Traductions EN/ES/DE/PT mises à jour.
+
+## v2.5.1
+
+- **Apparence** : nouveau mode « Selon l'heure ». Le thème passe tout seul en sombre puis en clair aux heures choisies (par défaut sombre de 20h30 à 7h00), avec l'horloge protégée de l'appli. Deux menus déroulants (pas de 30 min) règlent les heures. Les modes Auto (téléphone), Sombre et Clair restent disponibles pour tout bloquer à la main.
