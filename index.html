@@ -577,6 +577,8 @@ if(a=="key"){openKey();return}if(a=="kclose"){var kw=document.getElementById("ky
 if(b.dataset.tab){tab=b.dataset.tab;render();return}
 if(a&&a.indexOf("g_")==0){gameClick(a,b);return}
 if(a=="coach"){S.cch=S.cch?0:1;save();render();return}
+if(a=="updgo"){updGo();return}
+if(a=="updlater"){UPD.later=1;updClose();return}
 if(a=="bdg"){try{localStorage.setItem("piika_bdg","1")}catch(e){}render();return}
 if(a=="jkuse"){jokerUse();return}if(a=="jkkeep"){jokerKeep();return}
 if(a=="inst"){instGo();return}
@@ -1243,7 +1245,7 @@ var ALAW=PL.law||[
 ["Code pénal, art. 226-13 : secret professionnel","« La révélation d'une information à caractère secret par une personne qui en est dépositaire soit par état ou par profession, soit en raison d'une fonction ou d'une mission temporaire, est punie d'un an d'emprisonnement et de 15 000 euros d'amende. »","Médecins, soignants et centres de dépistage doivent garder le secret."],
 ["Code de la santé publique, art. L1110-4 (extrait) : vie privée et secret","« Toute personne prise en charge par un professionnel […] a droit au respect de sa vie privée et du secret des informations la concernant. »","Tu peux parler franchement à un soignant : c'est protégé."]
 ];
-var VER="v2.1.1";
+var VER="v2.2.0";
 var LANGS=[["fr","Français"],["en","English"],["es","Español"],["de","Deutsch"],["pt","Português (BR)"]];
 var REPORT_URL="";
 function langCard(){var h="<section class='card' style='--c:#4dd0e1;--onc:#10222e'><div class='head'><span class='e'>🌐</span>Langue · Language</div><div class='row'>";LANGS.forEach(function(l){h+="<button"+(l[0]==LANG?" class='main'":"")+" data-a='lang' data-id='"+l[0]+"'>"+l[1]+"</button>"});return h+"</div><p class='stat'>"+_t("Tu peux changer de langue quand tu veux, sans rien perdre : tes chronos, cartes et réglages restent identiques.")+"</p>"+(LANG=="fr"?"":"<p class='stat'>⚠️ "+_t("Les traductions ont été faites par IA et peuvent contenir des erreurs. Le concepteur de Piika ne parle que français : si tu vois une erreur, merci de la signaler dans la discussion Piika sur Reddit, de façon anonyme.")+"</p>"+(REPORT_URL?"<p><a href='"+REPORT_URL+"' target='_blank' rel='noopener' style='color:var(--txt)'>"+_t("Signaler une erreur de traduction")+"</a></p>":""))+"</section>"}
@@ -1281,7 +1283,21 @@ try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().
 if(window.addEventListener){window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();DIP=e;if(tab=="sav")render()});window.addEventListener("appinstalled",function(){DIP=null;if(tab=="sav")render();toast(_t("Piika est installée. Tu la trouveras sur ton écran d'accueil."))})}
 document.addEventListener("input",function(e){var i=e.target;if(i&&i.id=="fq")faqFilter(i.value)});
 document.addEventListener("keydown",function(e){if(e.key=="Enter"&&e.target&&e.target.id=="kpw")keyGo()});
-if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+var UPD={w:null,later:0,go:0};
+function updBusy(){return !!(G||document.getElementById("askw")||document.getElementById("langw")||document.getElementById("updw")||lockR)}
+function updShow(){if(!UPD.w||UPD.later)return;if(updBusy()){setTimeout(updShow,6000);return}
+ var w=document.createElement("div");w.id="updw";w.innerHTML="<div class='ov' style='z-index:90;align-items:center'><div class='sh' style='--c:#4dd0e1;border-radius:24px;max-width:420px;margin:16px'><div class='head'><span class='e'>✨</span>Piika</div><p><b>"+_t("Une nouvelle version de Piika est prête.")+"</b></p><p class='stat'>"+_t("La mise à jour prend environ une seconde, pas d'inquiétude. Tes chronos, cartes et réglages ne sont pas touchés : rien n'est perdu.")+"</p><div class='row' style='margin-top:16px'><button data-a='updlater'>"+_t("Plus tard")+"</button><button class='main' data-a='updgo'>"+_t("Mettre à jour")+"</button></div></div></div>";document.body.appendChild(w)}
+function updClose(){var w=document.getElementById("updw");if(w&&w.remove)w.remove()}
+function updGo(){UPD.go=1;var w=document.getElementById("updw");if(w){var b=w.querySelector("[data-a='updgo']");if(b)b.textContent=_t("Mise à jour…")}try{if(!lockR)save()}catch(e){}
+ try{UPD.w.postMessage({type:"SKIP_WAITING"})}catch(e){}setTimeout(function(){try{location.reload()}catch(e){}},4000)}
+if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)){window.addEventListener("load",function(){
+ var rl=0;navigator.serviceWorker.addEventListener("controllerchange",function(){if(UPD.go&&!rl){rl=1;try{location.reload()}catch(e){}}});
+ navigator.serviceWorker.register("sw.js").then(function(reg){
+  function seen(n){if(n&&navigator.serviceWorker.controller){UPD.w=n;updShow()}}
+  if(reg.waiting)seen(reg.waiting);
+  reg.addEventListener("updatefound",function(){var n=reg.installing;if(n)n.addEventListener("statechange",function(){if(n.state=="installed")seen(n)})});
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&!G&&!UPD.w){try{reg.update()}catch(e){}}});
+ }).catch(function(){})})}
 </script>
 </body>
 </html>
