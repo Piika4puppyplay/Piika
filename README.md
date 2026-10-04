@@ -182,3 +182,12 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 - Félicitations : à chaque nouveau palier de badge, une fenêtre à fermer soi-même montre la carte gagnée ; si plusieurs défis ont franchi un palier pendant l'absence, un seul popup les regroupe. Appli ouverte au moment du palier : simple message qui disparaît tout seul. Interrupteur dans Réglages pour désactiver les fenêtres.
 - La fenêtre de mise à jour n'apparaît plus que sur l'écran des défis, jamais pendant une partie ou ailleurs.
 - Correction : plus de message vide quand un palier de défi personnalisé ne donne pas de carte.
+
+## v2.5.0
+
+- **Accueil en 3 étapes** pour les nouvelles installations (après le choix de la langue) : comment ça marche, le pointage quotidien sans jugement, la discrétion. Peut être passé. Jamais affiché aux utilisateurs existants.
+- **Message de rechute** : ajoute « Tu avais tenu X jour(s) : ça reste acquis. ».
+- **Apparence** (Réglages) : Auto / Sombre / Clair, mémorisée sur l'appareil.
+- **Rappel quotidien** (Réglages) : génère un fichier `.ics` (événement quotidien nommé « Piika », avec alarme) à ouvrir avec l'application Agenda. Aucune notification, rien n'est envoyé.
+- **Calendrier des 5 dernières semaines** dans « Mon chemin » (couleurs neutres, aucun rouge).
+- Traductions EN/ES/DE/PT mises à jour.

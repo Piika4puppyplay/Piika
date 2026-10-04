@@ -39,11 +39,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Piika">
 <script>(function(){var c=null;try{c=localStorage.getItem("piika_lang")}catch(e){}if(c&&/^(en|es|de|pt)$/.test(c))document.write('<script src="lang/'+c+'.js"><\/script>')})()</script>
+<script>(function(){try{var t=localStorage.getItem("piika_theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
 <title>Piika</title>
 <style>
 :root{--warn:#ffb74d;--bg:#10222e;--card:#183344;--txt:#f2ead9;--mut:#9fb3bf;--line:#2a4a5e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f4efe4;--card:#fffaf0;--txt:#1d2b34;--mut:#5d6e78;--line:#dccfb6;--warn:#b45309}}
 :root[data-theme="dark"]{--warn:#ffb74d;--bg:#10222e;--card:#183344;--txt:#f2ead9;--mut:#9fb3bf;--line:#2a4a5e}
+:root[data-theme="light"]{--bg:#f4efe4;--card:#fffaf0;--txt:#1d2b34;--mut:#5d6e78;--line:#dccfb6;--warn:#b45309}
+:root[data-theme="light"] .time b{color:color-mix(in srgb,var(--c) 60%,#000)}
+input[type=time]{font:inherit;padding:10px 12px;border-radius:12px;background:var(--bg);color:var(--txt);border:1px solid var(--line);min-height:46px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0 10px}.cal i{aspect-ratio:1;border-radius:6px;background:var(--line);display:block}.cal i.t{outline:2px solid var(--txt);outline-offset:1px}.cal i.n{background:transparent}
+.obd{display:flex;gap:6px;justify-content:center;margin:6px 0}.obd i{width:8px;height:8px;border-radius:50%;background:var(--line)}.obd i.on{background:var(--c)}
 *{box-sizing:border-box}html,body{overscroll-behavior-y:none}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:90px}
@@ -537,7 +543,7 @@ if(tab=="suc"){h+=_f("<h1>Succès</h1><p class='sub'>Ton chemin parcouru, et les
 act().forEach(function(d){var s=S.c[d.id],m=dys(Math.max(s.best,cur(d.id)));h+="<h2>"+d.e+" "+d.n+"</h2><div class='badges' style='--c:"+d.c+"'>";T.forEach(function(t){h+="<div class='b "+(m>=t[0]?"on":"off")+"'><div class='i'>"+t[2]+"</div><b>"+t[1]+"</b><small>"+t[0]+" j</small></div>"});h+="</div>"});h+=_f("<h2>🎮 Jeux</h2><div class='badges' style='--c:#4dd0e1'>{0}</div>",[gachHtml()])}
 if(tab=="inf")h+=guideHtml();
 if(tab=="sav"){var le=S.lastExport?fmtS(S.lastExport):_t("jamais");
-h+=_f("<h1>Réglages</h1><p class='sub'>Choisis tes défis, retrouve les aides officielles et gère ta sauvegarde.</p>{0}{1}{2}{3}{4}<h2>Sauvegarde</h2><p class='sub'>Dernière sauvegarde : {5}</p><section class='card' style='--c:var(--txt);--onc:var(--bg)'><div class='head'>Fichier de sauvegarde</div><p>Le fichier contient tous tes chronos, records et historiques. Garde-le dans un cloud ou envoie-le toi par mail pour changer de téléphone sans rien perdre. Il est chiffré : seule cette appli peut le lire, et toute modification le rend invalide. Exporte-le juste avant de changer de téléphone : les jours sans pointage depuis l'export remettent les chronos à zéro.</p><div class='row'><button class='main' data-a='exp'>Enregistrer le fichier</button></div><p class='stat'>⚠️ <b>À savoir :</b> si tu vides les « données du site » ou les « données » de Chrome (ou si un nettoyeur de téléphone le fait), ta progression est effacée. Un simple vidage du cache ne touche pas à tes données. Sauvegarde-toi de temps en temps : tes cartes, succès et réglages seront retrouvés. Les chronos repartent de zéro si le fichier est ancien, sauf si tu utilises ton joker 🃏 (1 par mois).</p><p class='stat'>Pour restaurer : choisis ton fichier de sauvegarde.</p><input type='file' id='fi' accept='.json,application/json'></section>",[langCard()+mileCard()+shareCard()+instHtml(),aidCard(),setHtml(),gsetHtml(),helpHtml(1),le]);
+h+=_f("<h1>Réglages</h1><p class='sub'>Choisis tes défis, retrouve les aides officielles et gère ta sauvegarde.</p>{0}{1}{2}{3}{4}<h2>Sauvegarde</h2><p class='sub'>Dernière sauvegarde : {5}</p><section class='card' style='--c:var(--txt);--onc:var(--bg)'><div class='head'>Fichier de sauvegarde</div><p>Le fichier contient tous tes chronos, records et historiques. Garde-le dans un cloud ou envoie-le toi par mail pour changer de téléphone sans rien perdre. Il est chiffré : seule cette appli peut le lire, et toute modification le rend invalide. Exporte-le juste avant de changer de téléphone : les jours sans pointage depuis l'export remettent les chronos à zéro.</p><div class='row'><button class='main' data-a='exp'>Enregistrer le fichier</button></div><p class='stat'>⚠️ <b>À savoir :</b> si tu vides les « données du site » ou les « données » de Chrome (ou si un nettoyeur de téléphone le fait), ta progression est effacée. Un simple vidage du cache ne touche pas à tes données. Sauvegarde-toi de temps en temps : tes cartes, succès et réglages seront retrouvés. Les chronos repartent de zéro si le fichier est ancien, sauf si tu utilises ton joker 🃏 (1 par mois).</p><p class='stat'>Pour restaurer : choisis ton fichier de sauvegarde.</p><input type='file' id='fi' accept='.json,application/json'></section>",[langCard()+themeCard()+mileCard()+remCard()+shareCard()+instHtml(),aidCard(),setHtml(),gsetHtml(),helpHtml(1),le]);
 h+=_f("<section class='card' style='--c:var(--txt);--onc:var(--bg)'><div class='head'>Par code (secours)</div><p>Si l'enregistrement du fichier ne marche pas, copie ce code et colle-le dans tes notes. Pour restaurer, colle-le ici.</p><textarea id='code' placeholder='Colle ton code ici'></textarea><div class='row' style='margin-top:8px'><button data-a='copy'>Copier mon code</button><button data-a='paste'>Restaurer ce code</button></div></section>{0}",[aboutPiika()])}
 a.innerHTML=h;
 document.getElementById("nav").innerHTML=[["def","⏱️",_t("Défis")],["jeu","🎮",_t("Jeux")],["col","🃏",_t("Cartes")],["suc","🏅",_t("Succès")],["inf","📖",_t("Guide")],["sav","⚙️",_t("Réglages")]].map(function(x){return"<button data-tab='"+x[0]+"' class='"+(tab==x[0]?"on":"")+"'><span>"+x[1]+"</span>"+x[2]+(x[0]=="inf"&&keyReady()?"<i class='dot'></i>":"")+"</button>"}).join("");
@@ -576,8 +582,8 @@ document.querySelectorAll("#shw input:checked").forEach(function(i){sel.push(d.e
 if(!sel.length){toast(_t("Choisis au moins une réponse"));return}
 if(s.paused){s.start+=tnow()-s.paused;s.paused=null;s.grace=dk(tnow());s.log.unshift({t:tnow(),x:_t("Défi repris")})}var needRst=sel.some(function(e){return rst(e,d)}),today=dk(tnow());
 s.log.unshift({t:tnow(),ev:sel.map(function(e){return e.l})});sel.forEach(function(e){if(e.vid)s.created++});
-if(needRst){doReset(d.id,_t("Chrono remis à zéro"))}
-s.checkins[today]=1;s.log=s.log.slice(0,60);var msg=needRst?_f("Pointé. {0}",[pick(RELAPSE,today+d.id)]):_f("Pointage enregistré 👍 {0}",[fmtS(tnow())]);
+var prevD=needRst?Math.floor(dys(cur(d.id))):0;if(needRst){doReset(d.id,_t("Chrono remis à zéro"))}
+s.checkins[today]=1;s.log=s.log.slice(0,60);var msg=needRst?_f("Pointé. {0}",[pick(RELAPSE,today+d.id)]):_f("Pointage enregistré 👍 {0}",[fmtS(tnow())]);if(needRst&&prevD>=1)msg+=" "+_f("Tu avais tenu {0} jour{1} : ça reste acquis.",[prevD,prevD>1?"s":""]);
 var dwk=d.custom?"cu":d.id;if(!needRst&&(S.draws[dwk]||"")!=today){var c=draw();S.draws[dwk]=today;give(c);msg=_f("Nouvelle carte : {0} {1} ({2}) !",[c.e,c.n,RN[c.r]])}
 save();closeSheet();toast(msg);render();ghostChk()}
 function imp(txt){/*e1a2a6f0152f548bcedeaa79fce2db2e856bef1450*/var o=unseal((txt||"").trim());if(!o){var pl=false;try{pl=!!JSON.parse(txt)}catch(e){}toast(pl?_t("Ancien format non accepté : réexporte depuis l'appli."):_t("Fichier ou code invalide, ou modifié"));return}
@@ -600,7 +606,7 @@ if(e1)e1.textContent=_f("🕒 Heure du téléphone : {0}",[fmtFull(t)]);
 if(e2){var p=parts(Math.max(0,(S.last||0)-t));e2.textContent=_f("Déblocage automatique dans {0}{1} h {2} min {3} s.",[p[0]?p[0]+" j ":"",p[1],two(p[2]),two(p[3])])}}
 document.addEventListener("click",async function(e){var b=e.target.closest("button");if(!b)return;var a=b.dataset.a,id=b.dataset.id;
 if(lockR){var oka=a=="lang"||a=="aid"||a=="aidx"||a=="unlock"||a=="wipe"||a=="ano"||a=="ayes"||(lockR=="bad"&&a=="paste2");if(!oka)return}else{lockCheck();if(lockR){render();return}}
-if(a=="lang"){setLang(id);return}if(a=="aid"){openAid();return}if(a=="aidx"){closeAid();return}
+if(a=="lang"){setLang(id);return}if(a=="obn"){obNext();return}if(a=="obx"){obEnd();return}if(a=="theme"){try{if(id=="auto")localStorage.removeItem("piika_theme");else localStorage.setItem("piika_theme",id)}catch(e){}themeApply();render();return}if(a=="ics"){icsGo();return}if(a=="aid"){openAid();return}if(a=="aidx"){closeAid();return}
 if(a=="key"){openKey();return}if(a=="kclose"){var kw=document.getElementById("kyw");if(kw)kw.remove();return}if(a=="kgo"){keyGo();return}if(a=="mclose"){var xw=document.getElementById("mdw");if(xw)xw.remove();render();return}
 if(b.dataset.tab){tab=b.dataset.tab;render();return}
 if(a&&a.indexOf("g_")==0){gameClick(a,b);return}
@@ -1198,6 +1204,7 @@ function chemHtml(){var d=chemData(30),h=_t("<section class='card' style='--c:#4
  var rows="";act().forEach(function(x){var s=S.c[x.id];if(!s.start&&!s.best)return;var c=cur(x.id),m=Math.max(s.best,c,1);rows+=_f("<div class='chr'><div class='chn'><span>{0} {1}</span><span>{2} j · record {3} j</span></div><div class='chp'><i style='width:{4}%;background:{5}'></i></div></div>",[x.e,x.n,Math.floor(dys(c)),Math.floor(dys(Math.max(s.best,c))),Math.max(3,Math.round(c/m*100)),x.c])});
  if(rows)h+=_f("<h3 style='margin:12px 0 4px'>Chaque défi face à son record</h3>{0}",[rows]);
  if(S.gs.sos_ms>0)h+=_f("<p>🆘 Temps passé en mode SOS : <b>{0}</b>. Autant de minutes où tu as tenu bon.</p>",[fmtDur(S.gs.sos_ms)]);
+ h+=calHtml();
  return _f("{0}<p class='stat'>Une journée compte quand le chrono tourne au moins la moitié de la journée. L'historique détaillé commence avec la version 1.12 : les anciens chronos remis à zéro avant ne sont pas comptés. Un jour vide n'est pas un échec, c'est juste une page à écrire.</p></section>",[h])}
 
 /* ---------- SOS + clics ---------- */
@@ -1282,7 +1289,7 @@ var ALAW=PL.law||[
 ["Code pénal, art. 226-13 : secret professionnel","« La révélation d'une information à caractère secret par une personne qui en est dépositaire soit par état ou par profession, soit en raison d'une fonction ou d'une mission temporaire, est punie d'un an d'emprisonnement et de 15 000 euros d'amende. »","Médecins, soignants et centres de dépistage doivent garder le secret."],
 ["Code de la santé publique, art. L1110-4 (extrait) : vie privée et secret","« Toute personne prise en charge par un professionnel […] a droit au respect de sa vie privée et du secret des informations la concernant. »","Tu peux parler franchement à un soignant : c'est protégé."]
 ];
-var VER="v2.4.0";
+var VER="v2.5.0";
 var LANGS=[["fr","Français"],["en","English"],["es","Español"],["de","Deutsch"],["pt","Português (BR)"]];
 var REPORT_URL="";
 function langCard(){var h="<section class='card' style='--c:#4dd0e1;--onc:#10222e'><div class='head'><span class='e'>🌐</span>Langue · Language</div><div class='row'>";LANGS.forEach(function(l){h+="<button"+(l[0]==LANG?" class='main'":"")+" data-a='lang' data-id='"+l[0]+"'>"+l[1]+"</button>"});return h+"</div><p class='stat'>"+_t("Tu peux changer de langue quand tu veux, sans rien perdre : tes chronos, cartes et réglages restent identiques.")+"</p>"+(LANG=="fr"?"":"<p class='stat'>⚠️ "+_t("Les traductions ont été faites par IA et peuvent contenir des erreurs. Le concepteur de Piika ne parle que français : si tu vois une erreur, merci de la signaler dans la discussion Piika sur Reddit, de façon anonyme.")+"</p>"+(REPORT_URL?"<p><a href='"+REPORT_URL+"' target='_blank' rel='noopener' style='color:var(--txt)'>"+_t("Signaler une erreur de traduction")+"</a></p>":""))+"</section>"}
@@ -1290,11 +1297,40 @@ function langAsk(){var w=document.getElementById("langw");if(w&&w.remove)w.remov
  var h="<div class='ov' style='z-index:300;align-items:center'><div class='sh' style='--c:#4dd0e1;border-radius:24px;max-width:420px;margin:16px;max-height:calc(100vh - 32px);overflow-y:auto'><div class='head'><span class='e'>🌍</span>Piika</div><p><b>Choisis ta langue · Choose your language<br>Elige tu idioma · Wähle deine Sprache · Escolha seu idioma</b></p><div class='row' style='flex-direction:column'>";
  LANGS.forEach(function(l){h+="<button class='"+(l[0]==nl?"main":"")+"' data-a='lang' data-id='"+l[0]+"'>"+l[1]+"</button>"});
  h+="</div><p class='stat'>Tu pourras la changer à tout moment dans Réglages.<br>You can change it any time in Settings.<br>Puedes cambiarla cuando quieras en Ajustes.<br>Du kannst sie jederzeit in den Einstellungen ändern.<br>Você pode mudar quando quiser em Configurações.</p><p class='stat' style='font-size:.8em'>⚠️ Les traductions sont faites par IA et peuvent contenir des erreurs ; le concepteur ne parle que français.<br>Translations are AI-made and may contain mistakes; the creator only speaks French.<br>Las traducciones son hechas por IA y pueden tener errores; el creador solo habla francés.<br>Die Übersetzungen stammen von einer KI und können Fehler enthalten; der Entwickler spricht nur Französisch.<br>As traduções foram feitas por IA e podem ter erros; o criador só fala francês.</p>"+(inApp()?"":"<p class='stat' style='font-size:.8em'>🪧 Si une bannière de l'hébergeur gêne en bas, ferme-la avec sa croix (elle ne vient pas de Piika).<br>If a host banner is in the way at the bottom, close it with its cross (it is not from Piika).<br>Si un banner del alojamiento estorba abajo, ciérralo con su cruz (no es de Piika).<br>Wenn unten ein Banner des Hosters stört, schließe es mit dem Kreuz (es stammt nicht von Piika).<br>Se um banner da hospedagem atrapalhar embaixo, feche-o no X (ele não é do Piika).</p>")+"</div></div>";w.innerHTML=h;document.body.appendChild(w)}
+
+/* ---------- v2.5 : apparence, rappel, calendrier, accueil ---------- */
+function themeCur(){var t="";try{t=localStorage.getItem("piika_theme")||""}catch(e){}return t=="dark"||t=="light"?t:"auto"}
+function themeApply(){var t=themeCur(),r=document.documentElement;try{if(t=="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",t)}catch(e){}}
+function themeCard(){var c=themeCur(),o=[["auto",_t("Auto")],["dark",_t("Sombre")],["light",_t("Clair")]],h="<section class='card' style='--c:#ce93d8;--onc:#10222e'><div class='head'><span class='e'>🌗</span>"+_t("Apparence")+"</div><div class='row'>";
+ o.forEach(function(x){h+="<button"+(x[0]==c?" class='main'":"")+" data-a='theme' data-id='"+x[0]+"'>"+x[1]+"</button>"});
+ return h+"</div><p class='stat'>"+_t("Auto suit le réglage de ton téléphone.")+"</p></section>"}
+function remCard(){var v="21:30";try{v=localStorage.getItem("piika_rt")||v}catch(e){}
+ return "<section class='card' style='--c:#80cbc4;--onc:#10222e'><div class='head'><span class='e'>⏰</span>"+_t("Rappel quotidien")+"</div><p>"+_t("Piika n'envoie aucune notification. Si tu le souhaites, tu peux ajouter un rappel discret à ton agenda : le fichier contient seulement un événement nommé « Piika », rien d'autre, et rien n'est envoyé nulle part. Ouvre ensuite le fichier avec ton application Agenda.")+"</p><div class='row'><input type='time' id='rmt' value='"+v+"' aria-label='"+_t("Heure du rappel")+"'><button class='main' data-a='ics'>"+_t("Créer le rappel")+"</button></div></section>"}
+function icsMake(hm){var m=/^(\d\d):(\d\d)$/.exec(hm||"");if(!m||+m[1]>23||+m[2]>59){hm="21:30";m=/^(\d\d):(\d\d)$/.exec(hm)}
+ var n=new Date(tnow()),ds=n.getFullYear()+two(n.getMonth()+1)+two(n.getDate()),st=n.getUTCFullYear()+two(n.getUTCMonth()+1)+two(n.getUTCDate())+"T"+two(n.getUTCHours())+two(n.getUTCMinutes())+two(n.getUTCSeconds())+"Z";
+ return["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Piika//Rappel//FR","CALSCALE:GREGORIAN","BEGIN:VEVENT","UID:piika-rappel@piika","DTSTAMP:"+st,"DTSTART:"+ds+"T"+m[1]+m[2]+"00","DURATION:PT5M","RRULE:FREQ=DAILY","SUMMARY:Piika","BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:Piika","TRIGGER:PT0M","END:VALARM","END:VEVENT","END:VCALENDAR",""].join("\r\n")}
+function icsGo(){var el=document.getElementById("rmt"),v=el&&el.value||"21:30";try{localStorage.setItem("piika_rt",v)}catch(e){}
+ try{var b=new Blob([icsMake(v)],{type:"text/calendar"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="piika-rappel.ics";document.body.appendChild(a);a.click();setTimeout(function(){a.remove();URL.revokeObjectURL(u)},1500);toast(_t("Fichier prêt : ouvre-le avec ton application Agenda."))}catch(e){toast(_t("Impossible de créer le fichier sur cet appareil."))}}
+function calHtml(){var g=chemData(42),m={},mx=g.max||1,today=dk(tnow()),p=today.split("-"),wd=(new Date(+p[0],+p[1]-1,+p[2]).getDay()+6)%7,k0=add(today,-(wd+28)),h="<h3 style='margin:12px 0 4px'>"+_t("Les 5 dernières semaines")+"</h3><div class='cal' role='img' aria-label='"+_t("Calendrier des jours tenus, une case par jour")+"'>",i,k;
+ g.days.forEach(function(x){m[x.k]=x.c});
+ for(i=0;i<35;i++){k=add(k0,i);if(k>today){h+="<i class='n'></i>";continue}var c=m[k]||0;h+=_f("<i class='{0}' style='{1}' title='{2} : {3} défi{4}'></i>",[k==today?"t":"",c?"background:#4dd0e1;opacity:"+(0.35+0.65*c/mx).toFixed(2):"",fr(k),c,c>1?"s":""])}
+ return h+"</div><p class='stat'>"+_t("Chaque case est un jour, de lundi à dimanche. Plus elle est colorée, plus tu as tenu de défis ce jour-là.")+"</p>"}
+var OBI=0;
+function obStart(){OBI=0;obRender()}
+function obInit(){try{if(localStorage.getItem("piika_ob")==="0")obStart()}catch(e){}}
+function obRender(){var w=document.getElementById("langw");if(w&&w.remove)w.remove();w=document.createElement("div");w.id="langw";
+ var st=[[ "👋",_t("Bienvenue dans Piika"),_t("Piika t'aide à tenir un défi : tu lances un chrono pour chaque habitude que tu veux arrêter, et il compte tes jours. Tout est gratuit, sans pub, et reste sur ton téléphone.")],
+  ["✅",_t("Un pointage par jour"),_t("Chaque jour, tu fais un pointage pour confirmer que tu es là. C'est ce petit geste qui garde ton chrono en vie. Si tu rechutes, tu le dis simplement, sans jugement : les jours que tu as tenus restent acquis.")],
+  ["🔒",_t("Tout est discret et à toi"),_t("Dans Réglages, tu peux masquer les défis et les jeux qui ne te concernent pas, créer des chronos au nom neutre et choisir l'apparence. Prends ton temps : il n'y a rien à réussir ici.")]],x=st[OBI],last=OBI==2,dots="";
+ for(var i=0;i<3;i++)dots+="<i"+(i==OBI?" class='on'":"")+"></i>";
+ w.innerHTML="<div class='ov' style='z-index:300;align-items:center'><div class='sh' style='--c:#4dd0e1;border-radius:24px;max-width:420px;margin:16px;max-height:calc(100vh - 32px);overflow-y:auto' role='dialog' aria-modal='true'><div class='head'><span class='e'>"+x[0]+"</span>"+x[1]+"</div><p>"+x[2]+"</p><div class='obd'>"+dots+"</div><div class='row'>"+(last?"":"<button data-a='obx'>"+_t("Passer")+"</button>")+"<button class='main' data-a='obn'>"+(last?_t("C'est parti"):_t("Suivant"))+"</button></div></div></div>";document.body.appendChild(w)}
+function obNext(){if(OBI<2){OBI++;obRender();return}obEnd()}
+function obEnd(){try{localStorage.setItem("piika_ob","1")}catch(e){}var w=document.getElementById("langw");if(w&&w.remove)w.remove()}
 var LANGSET=null;
-function setLang(c){if(!/^(fr|en|es|de|pt)$/.test(c))return;var w=document.getElementById("langw");if(w&&w.remove)w.remove();LANGSET=c;try{localStorage.setItem("piika_lang",c)}catch(e){}if(c==LANG)return;try{if(!lockR)save()}catch(e){}try{location.reload()}catch(e){}}
+function setLang(c){if(!/^(fr|en|es|de|pt)$/.test(c))return;var w=document.getElementById("langw");if(w&&w.remove)w.remove();LANGSET=c;try{localStorage.setItem("piika_lang",c)}catch(e){}try{if(!_had&&!localStorage.getItem("piika_ob"))localStorage.setItem("piika_ob","0")}catch(e){}if(c==LANG){obInit();return}try{if(!lockR)save()}catch(e){}try{location.reload()}catch(e){}}
 function langInit(){var c=null;try{c=localStorage.getItem("piika_lang")}catch(e){}
  try{document.documentElement.lang=LANG;var sf=document.getElementById("sosf");if(sf){sf.textContent=_t("🆘 Aide");sf.setAttribute("aria-label",_t("Aide : numéros d'urgence et d'écoute"))}var md=document.querySelector('meta[name="description"]');if(md)md.setAttribute("content",_t("Piika : suivi de défis libre, gratuit, hors-ligne, sans publicité ni collecte de données."))}catch(e){}
- if(c)return;if(_had){try{localStorage.setItem("piika_lang","fr")}catch(e){}return}langAsk()}
+ if(c){obInit();return}if(_had){try{localStorage.setItem("piika_lang","fr")}catch(e){}return}langAsk()}
 function tel(n){return n.replace(/\s/g,"")}
 function callRow(c){var t=c[1]?"<a class='tl' href='tel:"+tel(c[1])+"'>📞 "+c[1]+"</a>":"";return"<div class='cr'><div><b>"+c[0]+"</b>"+(c[2]?"<small>"+c[2]+"</small>":"")+"</div>"+t+"</div>"}
 var _h30k="6361727465206361727465206368726f6e6f";
