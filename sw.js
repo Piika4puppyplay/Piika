@@ -16,7 +16,7 @@ var _g30q="f5dd5409007954a7ec06f6d997b4cf16c25f6246b8b8";
  * Stratégie : le cache répond tout de suite, puis se met à jour en arrière-plan.
  * Pour publier une nouvelle version, change VERSION ci-dessous.
  */
-const VERSION = "piika-v2.1.0";
+const VERSION = "piika-v2.1.1";
 const FILES = ["./", "index.html", "manifest.json", "lang/en.js", "lang/es.js", "lang/de.js", "lang/pt.js", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png"];
 
 self.addEventListener("install", (e) => {

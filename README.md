@@ -139,3 +139,7 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 - Nouvelle langue : portugais du Brésil (`lang/pt.js`), avec numéros d'aide du Brésil et du Portugal, quiz et mots mystère en portugais.
 - Avertissement au choix de la langue et dans Réglages : les traductions sont faites par IA et peuvent contenir des erreurs ; le concepteur ne parle que français. Un lien de signalement anonyme (discussion Reddit) s'affiche dès que `REPORT_URL` est renseigné dans `index.html`.
 - Les numéros d'aide cités dans l'Aide rapide et les conseils sont maintenant cliquables dans toutes les langues.
+
+
+## Version 2.1.1
+- Astuce affichée dans un navigateur (écran de bienvenue et coach du jour) : si une bannière de l'hébergeur gêne en bas de l'écran, on peut la fermer avec sa croix. Elle ne vient pas de Piika. Le bouton « Compris » la masque.
