@@ -153,3 +153,7 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 
 ## Version 2.2.1
 - Fenêtre de mise à jour sans contrainte : « Mettre à jour », « Plus tard » (la fenêtre ne revient pas avant 24 h) ou « Ignorer cette mise à jour » (elle ne revient qu'à la version suivante). Rien n'est forcé.
+
+
+## Version 2.2.2
+- FAQ : nouvelle question « Comment fonctionnent les mises à jour ? Est-ce sûr ? » (rien n'est envoyé, rien ne se met à jour sans l'accord de la personne). La réponse sur le code source indique qu'il est publié sur GitHub.
