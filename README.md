@@ -163,3 +163,7 @@ selon les termes de la GNU General Public License version 3 (ou toute version ul
 - Deux défis personnalisés (« Réglages › Mes défis › Créer ») : la personne choisit le nom, l'icône et jusqu'à 6 déclarations, chacune avec une case « remet à zéro ». Mêmes règles que les autres défis : pointage obligatoire avant 23h, joker, suspension, badges et cartes. Tout reste sur le téléphone, rien n'est traduit ni transmis. Désactivés tant qu'ils ne sont pas créés ; on peut les modifier ou les effacer.
 - Succès « Chrono fantôme » 👻 (lancer un défi personnalisé) et « Fantôme fidèle » (tenir 7 jours).
 - Bouton « Partager Piika » dans Réglages : le menu de partage du téléphone (ou copie du lien), sans aucune donnée personnelle.
+
+
+## Version 2.3.1
+- Les défis personnalisés sont désormais proposés dans l'onglet Défis (carte « Créer un défi perso » tant qu'il reste un emplacement libre), et plus seulement en bas de Réglages.
