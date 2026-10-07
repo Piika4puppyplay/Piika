@@ -696,7 +696,9 @@ public class CameraActivity extends Activity {
     void startRec() {
         if (dev == null || recording) return;
         try {
-            boolean useHevc = hevc && encoderOk(MediaFormat.MIMETYPE_VIDEO_HEVC, videoSize, videoFps);
+            tsMode = "ts".equals(sp.getString("container", "mp4")) && !(videoCaptureIntent && captureOut != null) && Build.VERSION.SDK_INT >= 29;
+            // le TS (blindé) n'accepte que le H.264
+            boolean useHevc = !tsMode && hevc && encoderOk(MediaFormat.MIMETYPE_VIDEO_HEVC, videoSize, videoFps);
             long px = area(videoSize);
             int br;
             if (px >= 7680L * 4320) br = useHevc ? 80_000_000 : 100_000_000;
@@ -707,9 +709,27 @@ public class CameraActivity extends Activity {
             rec = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(this) : new MediaRecorder();
             rec.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
             rec.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-            rec.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            rec.setOutputFormat(tsMode ? MediaRecorder.OutputFormat.MPEG_2_TS : MediaRecorder.OutputFormat.MPEG_4);
             String name = "PUP_" + stamp() + ".mp4";
-            if (videoCaptureIntent && captureOut != null) {
+            if (tsMode) {
+                // mode blindé : un seul fichier .ts lisible jusqu'à la dernière fraction de seconde,
+                // visible dès le départ et forcé sur le stockage chaque seconde
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.MediaColumns.DISPLAY_NAME, "PUP_" + stamp() + ".ts");
+                v.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp2t");
+                v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/PuppyPhone");
+                recUri = getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, v);
+                recPfd = getContentResolver().openFileDescriptor(recUri, "w");
+                rec.setOutputFile(recPfd.getFileDescriptor());
+                final ParcelFileDescriptor syncFd = recPfd;
+                syncTick = new Runnable() {
+                    @Override public void run() {
+                        if (!recording || recPfd != syncFd) return;
+                        try { Os.fsync(syncFd.getFileDescriptor()); } catch (Exception ignored) { }
+                        if (bg != null) bg.postDelayed(this, 1000);
+                    }
+                };
+            } else if (videoCaptureIntent && captureOut != null) {
                 recPfd = getContentResolver().openFileDescriptor(captureOut, "w");
                 rec.setOutputFile(recPfd.getFileDescriptor());
             } else if (Build.VERSION.SDK_INT >= 29) {
@@ -773,11 +793,13 @@ public class CameraActivity extends Activity {
                     try {
                         rec.start();
                         recStart = System.currentTimeMillis();
+                        if (tsMode && syncTick != null && bg != null) bg.postDelayed(syncTick, 1000);
                         if (sp.getBoolean("sound", true)) sound.play(MediaActionSound.START_VIDEO_RECORDING);
                         try {
                             JSONObject o = new JSONObject();
                             o.put("q", qualityLabel());
-                            o.put("codec", codecH ? "HEVC" : "H.264");
+                            o.put("codec", (codecH ? "HEVC" : "H.264") + (tsMode ? " · TS" : ""));
+                            o.put("ts", tsMode);
                             o.put("mbps", brF / 1_000_000);
                             emit("rec", o.toString());
                         } catch (Exception ignored) { }
@@ -792,6 +814,8 @@ public class CameraActivity extends Activity {
 
     // ------------------------------------------------------------------ sauvegarde en temps réel (segments)
     static final int SEG_SEC = 5;
+    boolean tsMode;
+    Runnable syncTick;
     boolean segmented;
     String recBase;
     int recOrient, finalized;
@@ -978,6 +1002,8 @@ public class CameraActivity extends Activity {
         recording = false;
         boolean ok = true;
         try { rec.stop(); } catch (Exception e) { ok = false; }
+        // en mode blindé, même un arrêt raté laisse un fichier lisible : on le garde
+        if (!ok && tsMode && recUri != null) { ok = true; }
         if (sp.getBoolean("sound", true)) sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
         if (segmented) {
             try { if (rec != null) rec.release(); } catch (Exception ignored) { }
@@ -999,7 +1025,9 @@ public class CameraActivity extends Activity {
         File f = recFile;
         releaseRec(!ok);
         try {
-            if (ok && u != null && Build.VERSION.SDK_INT >= 29) {
+            if (ok && u != null && tsMode) {
+                lastUri = u;
+            } else if (ok && u != null && Build.VERSION.SDK_INT >= 29) {
                 ContentValues v = new ContentValues();
                 v.put(MediaStore.MediaColumns.IS_PENDING, 0);
                 getContentResolver().update(u, v, null, null);
@@ -1072,6 +1100,7 @@ public class CameraActivity extends Activity {
                 o.put("volkey", sp.getBoolean("volkey", true));
                 o.put("grid", sp.getBoolean("grid", false));
                 o.put("maxbr", sp.getBoolean("maxbr", true));
+                o.put("container", sp.getString("container", "mp4"));
                 o.put("photo", photoSize == null ? "" : photoSize.getWidth() + "×" + photoSize.getHeight());
                 o.put("mp", photoSize == null ? 0 : Math.round(area(photoSize) / 1e5) / 10.0);
                 Range<Integer> evr = ch == null ? null : ch.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
@@ -1177,7 +1206,7 @@ public class CameraActivity extends Activity {
         @JavascriptInterface public void setPref(String k, String v) {
             ui.post(() -> {
                 SharedPreferences.Editor e = sp.edit();
-                if (k.equals("ratio") || k.equals("quality")) e.putString(k, v);
+                if (k.equals("ratio") || k.equals("quality") || k.equals("container")) e.putString(k, v);
                 else e.putBoolean(k, "true".equals(v));
                 e.apply();
                 if (k.equals("hevc")) hevc = "true".equals(v);

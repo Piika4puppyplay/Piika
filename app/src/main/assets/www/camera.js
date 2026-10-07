@@ -113,7 +113,7 @@
     recPaused = false;
     $('#recchip').hidden = false;
     $('#recchip').classList.remove('paused');
-    $('#recsafe').textContent = '🛟 sauvegarde en direct';
+    $('#recsafe').textContent = info.ts ? '🛡️ mode blindé : écrit chaque seconde' : '🛟 sauvegarde en direct';
     $('#recq').textContent = info.q ? info.q.replace(' i/s', '') + ' · ' + info.codec + ' · ' + info.mbps + ' Mb/s' : '';
     $('#lenses').style.visibility = 'hidden';
     $('#modes').style.visibility = 'hidden';
@@ -250,6 +250,10 @@
         <div class="choices c3">${qs.map((q) => `<button class="choice ${st.qsel === q ? 'on' : ''}" data-set="quality" data-v="${q}" type="button"><b>${QL[q] || q}</b><small>${q.startsWith('8k') ? 'max' : q === '4k60' ? 'défaut' : ''}</small></button>`).join('') || '<small>Ouvre la caméra pour détecter.</small>'}</div>
         <div class="row"><span>Codec<small>${st.hevc ? 'HEVC : même qualité, fichiers 2× plus légers' : 'H.264 : lisible partout'}</small></span>
           <div class="seg" style="width:170px"><button class="${st.hevc ? 'on' : ''}" data-set="hevc" data-v="true" type="button">HEVC</button><button class="${st.hevc ? '' : 'on'}" data-set="hevc" data-v="false" type="button">H.264</button></div></div>
+        <div class="row"><span>Sauvegarde anti-coupure<small>${st.container === 'ts'
+            ? 'Blindé (TS) : un seul fichier lisible jusqu\'à la dernière fraction de seconde. H.264 uniquement, fichiers ~40 % plus lourds, format .ts moins compatible (réseaux sociaux).'
+            : 'Morceaux de 5 s (MP4) : au pire 5 s perdues, HEVC possible, recollés en un seul MP4 à l\'arrêt.'}</small></span>
+          <div class="seg" style="width:170px"><button class="${st.container !== 'ts' ? 'on' : ''}" data-set="container" data-v="mp4" type="button">MP4 5 s</button><button class="${st.container === 'ts' ? 'on' : ''}" data-set="container" data-v="ts" type="button">Blindé</button></div></div>
         <div class="row"><span>Débit maximal<small>+25 % de détails, fichiers plus gros</small></span>${sw('maxbr', st.maxbr)}</div>
         <div class="row"><span>Stabilisation électronique<small>la stabilisation optique reste toujours active ; l'électronique recadre un peu</small></span>${sw('eis', st.eis)}</div>
       </div>
