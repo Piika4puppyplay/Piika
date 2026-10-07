@@ -27,17 +27,70 @@
     $('[data-a=timer]').innerHTML = I('timer', timer ? 'cyan' : 'chrome', { shape: 'none', n: timer || '' });
     $('[data-a=timer]').hidden = !!st.video;
     $('[data-a=ratio]').textContent = st.video ? (st.quality || '').replace(' i/s', '').replace(' · ', '·') : (st.ratio || '4:3');
-    $('[data-a=grid]').innerHTML = I('grid', st.grid ? 'cyan' : 'chrome', { shape: 'none' });
-    $('[data-a=grid]').classList.toggle('on', !!st.grid);
+    $('[data-a=pro]').classList.toggle('on', !!st.pro);
+    $('[data-a=raw]').hidden = !!st.video || !st.rawOk;
+    $('[data-a=raw]').classList.toggle('on', !!st.raw);
+    $('[data-a=mic]').innerHTML = I('speaker', st.voice ? 'cyan' : 'chrome', { shape: 'none', muted: !st.voice });
+    $('[data-a=mic]').classList.toggle('on', !!st.voice);
+    $('#voicechip').hidden = !st.voice || document.body.classList.contains('rec');
+    $('#vci').innerHTML = I('speaker', 'cyan', { shape: 'none' });
+    renderPro();
     $('[data-a=settings]').innerHTML = I('gear', 'violet', { shape: 'none' });
     $('#gridl').hidden = !st.grid;
     document.body.classList.toggle('video', !!st.video);
     $$('#modes button').forEach((b) => b.classList.toggle('on', (b.dataset.m === 'video') === !!st.video));
     $('#modes').style.display = st.capture ? 'none' : '';
-    $('#flip').innerHTML = I('switchcam', 'cyan', { shape: 'none' });
+    $('#flip').innerHTML = document.body.classList.contains('rec') ? I('camera', 'chrome', { shape: 'none' }) : I('switchcam', 'cyan', { shape: 'none' });
     renderThumb();
     renderLenses();
   }
+  // ------------------------------------------------------------------ MODE PRO
+  let dial = 'iso', live = { iso: 0, exp: 0, focus: 0 };
+  const AWB = { 1: 'Auto', 5: 'Soleil', 6: 'Nuageux', 8: 'Ombre', 2: 'Tungstène', 3: 'Fluo', 4: 'Fluo chaud', 7: 'Crépuscule' };
+  const fmtExp = (ns) => !ns ? '—' : ns >= 1e9 ? (Math.round(ns / 1e8) / 10) + ' s' : '1/' + Math.round(1e9 / ns);
+  const fmtFocus = (d) => d <= 0.01 ? '∞' : (1 / d < 1 ? Math.round(100 / d) + ' cm' : (Math.round(10 / d) / 10) + ' m');
+  const logPos = (v, a, b) => Math.log(v / a) / Math.log(b / a) * 1000;
+  const logVal = (p, a, b) => a * Math.pow(b / a, p / 1000);
+  function renderPro() {
+    const on = !!st.pro;
+    $('#propanel').hidden = !on;
+    $('#hud').hidden = !on;
+    if (!on) return;
+    const expMax = st.video ? Math.min(st.expMax || 1e8, 1e9 / (parseInt((st.quality || '30').split('· ')[1]) || 30)) : st.expMax;
+    const D = [
+      ['iso', 'ISO', st.isoMan ? st.isoMan : 'A·' + (live.iso || '—'), !!st.isoMan],
+      ['exp', 'VITESSE', st.expMan ? fmtExp(st.expMan) : 'A·' + fmtExp(live.exp), !!st.expMan],
+      ['focus', 'MAP', st.focusMan >= 0 ? fmtFocus(st.focusMan) : 'AF', st.focusMan >= 0],
+      ['awb', 'BLANCS', AWB[st.awb] || 'Auto', st.awb !== 1],
+      ['ev', 'EV', (st.ev > 0 ? '+' : '') + (st.ev || 0), !!st.ev],
+    ];
+    $('#dials').innerHTML = D.map(([k, l, v, man]) => `<button class="dial ${dial === k ? 'sel' : ''} ${man ? 'man' : ''}" data-dial="${k}" type="button"><small>${l}</small><b>${v}</b></button>`).join('');
+    let ctl = '';
+    if (!st.manual && (dial === 'iso' || dial === 'exp' || dial === 'focus')) ctl = `<small style="color:var(--muted)">Ce capteur ne donne pas le contrôle manuel aux applis.</small>`;
+    else if (dial === 'iso') ctl = `<input type="range" id="pr" min="0" max="1000" value="${Math.round(logPos(st.isoMan || live.iso || st.isoMin || 100, st.isoMin || 50, st.isoMax || 3200))}"><button class="ab small ${st.isoMan ? 'glass' : 'green'}" data-auto="iso" type="button">AUTO</button>`;
+    else if (dial === 'exp') ctl = `<input type="range" id="pr" min="0" max="1000" value="${Math.round(logPos(st.expMan || live.exp || 1e7, st.expMin || 1e4, expMax || 1e9))}"><button class="ab small ${st.expMan ? 'glass' : 'green'}" data-auto="exp" type="button">AUTO</button>`;
+    else if (dial === 'focus') ctl = `<input type="range" id="pr" min="0" max="1000" value="${Math.round((st.focusMan >= 0 ? st.focusMan : live.focus) / (st.focusMin || 10) * 1000)}"><button class="ab small ${st.focusMan >= 0 ? 'glass' : 'green'}" data-auto="focus" type="button">AF</button>`;
+    else if (dial === 'awb') ctl = `<div class="wbs">${(st.awbModes || [1]).filter((m) => AWB[m]).map((m) => `<button class="${st.awb === m ? 'on' : ''}" data-awb="${m}" type="button">${AWB[m]}</button>`).join('')}</div>`;
+    else if (dial === 'ev') ctl = `<input type="range" id="pr" min="${st.evmin || 0}" max="${st.evmax || 0}" value="${st.ev || 0}"><button class="ab small glass" data-auto="ev" type="button">0</button>`;
+    ctl += `<div class="toggles">${`<button class="${st.minimal ? 'on' : ''}" data-tog="minimal" type="button">Brut</button>`}${st.video && st.flatOk ? `<button class="${st.flat ? 'on' : ''}" data-tog="flat" type="button">Plat</button>` : ''}</div>`;
+    $('#dialctl').innerHTML = ctl;
+    const r = $('#pr');
+    if (r) {
+      const upd = () => r.style.setProperty('--v', ((r.value - r.min) / (r.max - r.min) * 100) + '%');
+      upd();
+      r.oninput = () => {
+        upd();
+        const p = +r.value;
+        if (dial === 'iso') { const v = Math.round(logVal(p, st.isoMin || 50, st.isoMax || 3200)); st.isoMan = v; call('setPro', 'iso', String(v)); }
+        if (dial === 'exp') { const v = Math.round(logVal(p, st.expMin || 1e4, expMax || 1e9)); st.expMan = v; call('setPro', 'exp', String(v)); }
+        if (dial === 'focus') { const v = p / 1000 * (st.focusMin || 10); st.focusMan = v; call('setPro', 'focus', String(v)); }
+        if (dial === 'ev') { st.ev = p; call('ev', p); }
+        $$('.dial.sel b')[0].textContent = dial === 'iso' ? st.isoMan : dial === 'exp' ? fmtExp(st.expMan) : dial === 'focus' ? fmtFocus(st.focusMan) : (st.ev > 0 ? '+' : '') + st.ev;
+      };
+    }
+    $('#hud').textContent = `ISO ${live.iso || '—'} · ${fmtExp(live.exp)} · ${fmtFocus(live.focus)}${st.raw ? ' · RAW ' + (st.rawRes || '') : ''}`;
+  }
+
   function renderThumb() {
     const t = $('#thumb');
     if (document.body.classList.contains('rec')) { t.innerHTML = I(recPaused ? 'play' : 'pause', 'chrome', { shape: 'none' }); return; }
@@ -110,6 +163,8 @@
   }
   function startRecUi(info) {
     document.body.classList.add('rec');
+    $('#voicechip').hidden = true;
+    $('#flip').innerHTML = info.snap === false ? I('switchcam', 'chrome', { shape: 'none' }) : I('camera', 'chrome', { shape: 'none' });
     recPaused = false;
     $('#recchip').hidden = false;
     $('#recchip').classList.remove('paused');
@@ -124,6 +179,8 @@
   }
   function stopRecUi() {
     document.body.classList.remove('rec');
+    $('#voicechip').hidden = !st.voice;
+    $('#flip').innerHTML = I('switchcam', 'cyan', { shape: 'none' });
     $('#recchip').hidden = true;
     $('#lenses').style.visibility = '';
     $('#modes').style.visibility = '';
@@ -212,14 +269,23 @@
     if (d.a === 'flash') { const order = st.video ? ['off', 'torch'] : ['off', 'auto', 'on', 'torch']; const n = order[(order.indexOf(st.flash || 'off') + 1) % order.length]; st.flash = n; call('flash', n); renderTop(); return; }
     if (d.a === 'timer') { timer = timer === 0 ? 3 : timer === 3 ? 10 : 0; localStorage.setItem('pc_timer', timer); renderTop(); return; }
     if (d.a === 'ratio') { if (st.video) openSheet(); else call('setPref', 'ratio', st.ratio === '4:3' ? '16:9' : '4:3'); return; }
+    if (d.a === 'pro') { call('setPro', 'pro', String(!st.pro)); st.pro = !st.pro; renderTop(); return; }
+    if (d.a === 'raw') { call('setPro', 'raw', String(!st.raw)); st.raw = !st.raw; renderTop(); if (st.raw) call('toast', 'RAW activé : chaque photo = JPG + DNG (DCIM/PuppyPhone/RAW)'); return; }
+    if (d.a === 'mic') { call('voice', !st.voice); st.voice = !st.voice; renderTop(); return; }
+    if (d.dial) { dial = d.dial; renderPro(); return; }
+    if (d.auto) { if (d.auto === 'iso') st.isoMan = 0; if (d.auto === 'exp') st.expMan = 0; if (d.auto === 'focus') st.focusMan = -1; if (d.auto === 'ev') { st.ev = 0; call('ev', 0); } else call('setPro', d.auto, d.auto === 'focus' ? '-1' : '0'); renderPro(); return; }
+    if (d.awb) { st.awb = +d.awb; call('setPro', 'awb', d.awb); renderPro(); return; }
+    if (d.tog) { st[d.tog] = !st[d.tog]; call('setPro', d.tog, String(st[d.tog])); renderPro(); return; }
+    if (d.vlang) { localStorage.setItem('pc_vlang', d.vlang); call('voiceLang', d.vlang); openSheet(); return; }
     if (d.a === 'grid') { call('setPref', 'grid', String(!st.grid)); st.grid = !st.grid; renderTop(); return; }
     if (d.a === 'settings') return openSheet();
     if (d.a === 'therm') { call('thermal'); toastLike(); return; }
+    if (d.set === 'voice') { call('voice', d.v === 'true'); return; }
     if (d.set) { call('setPref', d.set, d.v); return; }
   });
   $('#shut').onclick = shutter;
   $('#flip').onclick = () => {
-    if (document.body.classList.contains('rec')) return;
+    if (document.body.classList.contains('rec')) { haptic(); call('snapshot'); const f = $('#flashfx'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); return; }
     const other = lenses.find((l) => !!l.front !== !!st.front);
     if (!other) return;
     haptic();
@@ -268,6 +334,14 @@
         <div class="row"><span>Grille</span>${sw('grid', st.grid)}</div>
       </div>
       <div class="cp">
+        <div class="cp-h">${I('speaker', 'cyan')}<div><b>Déclencheur vocal</b><small>Active le micro en haut, puis dis « photo » (clic), « film » (cloche) ou « flash » (lumière). Marche en français, anglais et espagnol : photo/foto/picture · film/vidéo/record/graba · flash/lumière/light/luz. Le micro est pris par la vidéo pendant le tournage : la voix fonctionne avant de filmer.</small></div></div>
+        <div class="row"><span>Activé</span>${sw('voice', st.voice)}</div>
+        <div class="row"><span>Langue d'écoute</span><div class="seg" style="width:200px">${[['', 'Auto'], ['fr-FR', 'FR'], ['en-US', 'EN'], ['es-ES', 'ES']].map(([t, l]) => `<button class="${(localStorage.getItem('pc_vlang') || '') === t ? 'on' : ''}" data-vlang="${t || navigator.language}" type="button">${l}</button>`).join('')}</div></div>
+      </div>
+      <div class="cp">
+        <div class="cp-h">${I('sparkle', 'amber')}<div><b>Mode Pro</b><small>ISO ${st.isoMin || '?'}–${st.isoMax || '?'} (analogique jusqu'à ${st.isoAnalog || '?'}), vitesse ${fmtExp(st.expMin)} → ${fmtExp(st.expMax)}, mise au point jusqu'à ${st.focusMin ? fmtFocus(st.focusMin) : '?'}. Ce sont les vraies limites du capteur, sans bride ajoutée. RAW : ${st.rawOk ? 'disponible (' + st.rawRes + ')' : 'non proposé par ce capteur'}.</small></div></div>
+      </div>
+      <div class="cp">
         <div class="cp-h">${I('pupface', 'amber', { shape: 'none', level: 2 })}<div><b>Chaleur</b><small>Aucune coupure : PupCamera ne s'arrête jamais à cause de la température. Le chiot en haut transpire pour te prévenir, c'est tout. (Seul Android lui-même peut ralentir ou éteindre le téléphone en dernier recours.)</small></div></div>
       </div>
       <div class="cp">
@@ -292,6 +366,10 @@
     else if (ev === 'paused') { recPaused = data === '1'; $('#recchip').classList.toggle('paused', recPaused); renderThumb(); }
     else if (ev === 'seg') { $('#recsafe').textContent = '🛟 ' + fmt(+data * 5000) + ' sécurisées'; }
     else if (ev === 'merge') { const m = $('#merge'); if (data === 'done') m.hidden = true; else { m.hidden = false; m.textContent = '🐾 Assemblage de la vidéo… ' + data + ' %'; } }
+    else if (ev === 'live') { live = J(data, live) || live; if (st.pro) { $('#hud').textContent = `ISO ${live.iso} · ${fmtExp(live.exp)} · ${fmtFocus(live.focus)}${st.raw ? ' · RAW ' + (st.rawRes || '') : ''}`; $$('.dial').forEach((b) => { if (b.dataset.dial === 'iso' && !st.isoMan) $('b', b).textContent = 'A·' + live.iso; if (b.dataset.dial === 'exp' && !st.expMan) $('b', b).textContent = 'A·' + fmtExp(live.exp); }); } }
+    else if (ev === 'voice') { const vc = $('#voicechip'); vc.classList.toggle('hear', data === 'hear'); }
+    else if (ev === 'voicecmd') { const v = $('#vcmd'); v.textContent = data === 'photo' ? '📸 PHOTO !' : data === 'film' ? '🎬 ÇA TOURNE !' : '🔦 LUMIÈRE !'; v.hidden = false; v.style.animation = 'none'; void v.offsetWidth; v.style.animation = ''; setTimeout(() => { v.hidden = true; }, 1300); }
+    else if (ev === 'raw') { call('toast', '🎞️ DNG enregistré'); }
     else if (ev === 'key') shutter();
     else if (ev === 'perm') { $('#perm').hidden = data === 'ok'; lenses = J(call('lenses'), []) || []; call('state'); }
     else if (ev === 'orient') { const r = +data; const rot = r === 90 ? -90 : r === 270 ? 90 : r === 180 ? 180 : 0; $$('.tb2 .pi,.thumb,.flip .pi,.lens,.therm span').forEach((el) => { el.style.transition = 'transform .3s'; el.style.transform = `rotate(${rot}deg)`; }); }
@@ -317,7 +395,7 @@
   renderTop();
 
   function mock() {
-    const s = { cam: '0', front: false, video: false, zoom: 1, zmin: 0.5, zmax: 30, flash: 'off', hasFlash: true, ratio: '4:3', quality: '4K · 60 i/s', qualities: ['8k30', '4k60', '4k30', '1080p60', '1080p30'], qsel: '4k60', hevc: true, eis: false, sound: true, volkey: true, grid: true, maxbr: true, photo: '4000×3000', mp: 12, evmin: -8, evmax: 8, ev: 0, hasLast: false };
+    const s = { cam: '0', front: false, video: false, zoom: 1, zmin: 0.5, zmax: 30, flash: 'off', hasFlash: true, ratio: '4:3', quality: '4K · 60 i/s', qualities: ['8k30', '4k60', '4k30', '1080p60', '1080p30'], qsel: '4k60', hevc: true, eis: false, sound: true, volkey: true, grid: true, maxbr: true, photo: '4000×3000', mp: 12, evmin: -8, evmax: 8, ev: 0, hasLast: false, pro: true, manual: true, rawOk: true, raw: true, rawRes: '4032×3024', voice: true, isoMin: 50, isoMax: 3200, isoAnalog: 800, expMin: 1e4, expMax: 1e10, focusMin: 10, awb: 1, awbModes: [1, 2, 3, 5, 6, 8], isoMan: 0, expMan: 0, focusMan: -1, flatOk: true };
     document.body.style.background = 'radial-gradient(circle at 60% 40%,#ffb37a,#c2486e 40%,#2a1650 75%)';
     setTimeout(() => { on('state', JSON.stringify(s)); on('thermal', JSON.stringify({ status: 2, temp: 42.3 })); }, 50);
     return { lenses: () => JSON.stringify([{ id: '0', front: false, eq: 26, zmin: 0.5, zmax: 30, mp: 12, logical: true }, { id: '1', front: true, eq: 26, zmin: 1, zmax: 8, mp: 10 }, { id: '2', front: false, eq: 13, zmin: 1, zmax: 8, mp: 12 }]),

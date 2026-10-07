@@ -13,13 +13,22 @@
   <button class="tb2" data-a="flash" type="button"></button>
   <button class="tb2" data-a="timer" type="button"></button>
   <button class="tb2 chip" data-a="ratio" type="button"></button>
-  <button class="tb2" data-a="grid" type="button"></button>
+  <button class="tb2 chip pro" data-a="pro" type="button">PRO</button>
+  <button class="tb2 chip raw" data-a="raw" type="button" hidden>RAW</button>
+  <button class="tb2" data-a="mic" type="button"></button>
   <button class="therm" id="therm" data-a="therm" type="button" hidden><span id="thi"></span><b id="tht"></b></button>
   <button class="tb2" data-a="settings" type="button"></button>
 </header>
+<div id="voicechip" hidden><span id="vci"></span><b id="vct">Dis : photo · film · flash</b></div>
+<div id="vcmd" hidden></div>
+<div id="hud" hidden></div>
 <div id="recchip" hidden><i></i><b id="rect">00:00</b><small id="recq"></small><small id="recsafe" class="safe"></small></div>
 <div id="merge" hidden></div>
 <footer id="bottom">
+  <div class="propanel" id="propanel" hidden>
+    <div class="dials" id="dials"></div>
+    <div class="dialctl" id="dialctl"></div>
+  </div>
   <div class="lenses" id="lenses"></div>
   <div class="modes" id="modes"><button data-m="photo" type="button">PHOTO</button><button data-m="video" type="button">VIDÉO</button></div>
   <div class="ctrl">

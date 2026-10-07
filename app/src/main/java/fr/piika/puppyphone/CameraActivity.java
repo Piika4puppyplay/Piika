@@ -22,6 +22,17 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.DngCreator;
+import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.TonemapCurve;
+import android.media.AudioAttributes;
+import android.media.AudioFormat;
+import android.media.AudioTrack;
+import android.media.ExifInterface;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
@@ -250,11 +261,14 @@ public class CameraActivity extends Activity {
         if (oel.canDetectOrientation()) oel.enable();
         if (!hasPerms()) askPerms();
         else openIfReady();
+        voiceOn = sp.getBoolean("voiceOn", false);
+        if (voiceOn && hasPerms()) ui.postDelayed(this::voiceStart, 1200);
     }
 
     @Override
     protected void onPause() {
         if (recording) stopRec();
+        voiceStop();
         closeCam();
         oel.disable();
         if (bgT != null) { bgT.quitSafely(); bgT = null; bg = null; }
@@ -509,6 +523,10 @@ public class CameraActivity extends Activity {
         dev = null;
         try { if (jpeg != null) jpeg.close(); } catch (Exception ignored) { }
         jpeg = null;
+        try { if (rawReader != null) rawReader.close(); } catch (Exception ignored) { }
+        rawReader = null;
+        try { if (snap != null) snap.close(); } catch (Exception ignored) { }
+        snap = null;
     }
 
     void startPreview() {
@@ -536,10 +554,30 @@ public class CameraActivity extends Activity {
                     } catch (Exception e) { toast("Photo non enregistrée"); }
                 }, bg);
                 outs.add(jpeg.getSurface());
+                if (rawOn && rawCapable()) {
+                    Size rs = rawSize();
+                    if (rs != null) {
+                        if (rawReader != null) rawReader.close();
+                        rawReader = ImageReader.newInstance(rs.getWidth(), rs.getHeight(), ImageFormat.RAW_SENSOR, 3);
+                        rawReader.setOnImageAvailableListener(r -> {
+                            try {
+                                Image img = r.acquireNextImage();
+                                if (img == null) return;
+                                synchronized (rawLock) { rawImages.put(img.getTimestamp(), img); }
+                                pairRaw();
+                            } catch (Exception ignored) { }
+                        }, bg);
+                        outs.add(rawReader.getSurface());
+                    }
+                }
             }
+            final boolean triedRaw = rawReader != null && !videoMode;
             dev.createCaptureSession(outs, new CameraCaptureSession.StateCallback() {
                 @Override public void onConfigured(CameraCaptureSession s) { sess = s; repeat(); emitState(); }
-                @Override public void onConfigureFailed(CameraCaptureSession s) { toast("Configuration caméra refusée"); }
+                @Override public void onConfigureFailed(CameraCaptureSession s) {
+                    if (triedRaw) { rawOn = false; try { rawReader.close(); } catch (Exception ignored) { } rawReader = null; toast("RAW refusé par ce capteur"); startPreview(); }
+                    else toast("Configuration caméra refusée");
+                }
             }, bg);
         } catch (Exception e) { toast("Aperçu impossible"); }
     }
@@ -580,6 +618,326 @@ public class CameraActivity extends Activity {
                 b.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, eis ? m : CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
             b.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fpsRange(videoFps));
         }
+        if (pro) applyPro(b);
+    }
+
+    // ------------------------------------------------------------------ MODE PRO (limites réelles du capteur, sans bride)
+    boolean pro, rawOn, flat, minimal;
+    int isoMan, awb = CaptureRequest.CONTROL_AWB_MODE_AUTO;
+    long expMan;
+    float focusMan = -1f;
+    volatile int lastIso = 100;
+    volatile long lastExp = 10_000_000L;
+    volatile float lastFocus = 0f;
+    long lastLiveEmit;
+
+    boolean hasCap(int cap) {
+        int[] caps = ch == null ? null : ch.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+        if (caps != null) for (int c : caps) if (c == cap) return true;
+        return false;
+    }
+    boolean manualCapable() { return hasCap(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR); }
+    boolean rawCapable() { return hasCap(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_RAW) && rawSize() != null; }
+    Size rawSize() {
+        StreamConfigurationMap map = ch == null ? null : ch.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        Size[] r = map == null ? null : map.getOutputSizes(ImageFormat.RAW_SENSOR);
+        if (r == null || r.length == 0) return null;
+        return Collections.max(Arrays.asList(r), (x, y) -> Long.compare(area(x), area(y)));
+    }
+
+    void applyPro(CaptureRequest.Builder b) {
+        boolean manualExp = manualCapable() && (isoMan > 0 || expMan > 0);
+        if (manualExp) {
+            Range<Integer> isoR = ch.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+            Range<Long> expR = ch.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+            Long maxFrame = ch.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+            int iso = isoMan > 0 ? isoMan : lastIso;
+            long exp = expMan > 0 ? expMan : lastExp;
+            if (isoR != null) iso = Math.max(isoR.getLower(), Math.min(isoR.getUpper(), iso));
+            if (expR != null) exp = Math.max(expR.getLower(), Math.min(expR.getUpper(), exp));
+            if (videoMode) exp = Math.min(exp, 1_000_000_000L / Math.max(1, videoFps));
+            long frame = videoMode ? 1_000_000_000L / Math.max(1, videoFps) : Math.max(exp, 33_333_333L);
+            if (maxFrame != null) frame = Math.min(frame, maxFrame);
+            b.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            b.set(CaptureRequest.FLASH_MODE, "torch".equals(flash) ? CaptureRequest.FLASH_MODE_TORCH : CaptureRequest.FLASH_MODE_OFF);
+            b.set(CaptureRequest.SENSOR_SENSITIVITY, iso);
+            b.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exp);
+            b.set(CaptureRequest.SENSOR_FRAME_DURATION, frame);
+        }
+        if (focusMan >= 0 && manualCapable()) {
+            b.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            b.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusMan);
+        }
+        b.set(CaptureRequest.CONTROL_AWB_MODE, awb);
+        if (minimal) {
+            int[] nr = ch.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES);
+            if (nr != null) for (int m : nr) if (m == CameraMetadata.NOISE_REDUCTION_MODE_OFF) b.set(CaptureRequest.NOISE_REDUCTION_MODE, m);
+            int[] ed = ch.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES);
+            if (ed != null) for (int m : ed) if (m == CameraMetadata.EDGE_MODE_OFF) b.set(CaptureRequest.EDGE_MODE, m);
+        }
+        if (videoMode && flat && hasCap(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)) {
+            // profil « plat » (pseudo-log) : ombres relevées, hautes lumières compressées = marge d'étalonnage
+            float[] c = {0f, 0.07f, 0.06f, 0.24f, 0.15f, 0.38f, 0.30f, 0.54f, 0.50f, 0.70f, 0.75f, 0.85f, 1f, 0.95f};
+            b.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_CONTRAST_CURVE);
+            b.set(CaptureRequest.TONEMAP_CURVE, new TonemapCurve(c, c, c));
+        }
+    }
+
+    final CameraCaptureSession.CaptureCallback liveCb = new CameraCaptureSession.CaptureCallback() {
+        @Override public void onCaptureCompleted(CameraCaptureSession s, CaptureRequest r, TotalCaptureResult res) {
+            Integer iso = res.get(CaptureResult.SENSOR_SENSITIVITY);
+            Long exp = res.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+            Float fd = res.get(CaptureResult.LENS_FOCUS_DISTANCE);
+            if (iso != null) lastIso = iso;
+            if (exp != null) lastExp = exp;
+            if (fd != null) lastFocus = fd;
+            long now = System.currentTimeMillis();
+            if (now - lastLiveEmit > 300) {
+                lastLiveEmit = now;
+                emit("live", "{\"iso\":" + lastIso + ",\"exp\":" + lastExp + ",\"focus\":" + lastFocus + "}");
+            }
+        }
+    };
+
+    // ------------------------------------------------------------------ RAW (DNG) apparié à sa photo
+    final Object rawLock = new Object();
+    final Map<Long, Image> rawImages = new HashMap<>();
+    final Map<Long, TotalCaptureResult> rawResults = new HashMap<>();
+    ImageReader rawReader;
+
+    void pairRaw() {
+        List<Image> imgs = new ArrayList<>();
+        List<TotalCaptureResult> res = new ArrayList<>();
+        synchronized (rawLock) {
+            for (Long ts : new ArrayList<>(rawImages.keySet())) {
+                TotalCaptureResult r = rawResults.remove(ts);
+                if (r != null) { imgs.add(rawImages.remove(ts)); res.add(r); }
+            }
+        }
+        for (int i = 0; i < imgs.size(); i++) saveDng(imgs.get(i), res.get(i));
+    }
+
+    void saveDng(Image img, TotalCaptureResult res) {
+        try (DngCreator dng = new DngCreator(ch, res)) {
+            int o = jpegOrientation();
+            dng.setOrientation(o == 90 ? ExifInterface.ORIENTATION_ROTATE_90 : o == 180 ? ExifInterface.ORIENTATION_ROTATE_180 : o == 270 ? ExifInterface.ORIENTATION_ROTATE_270 : ExifInterface.ORIENTATION_NORMAL);
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.MediaColumns.DISPLAY_NAME, "PUP_" + stamp() + "_RAW.dng");
+            v.put(MediaStore.MediaColumns.MIME_TYPE, "image/x-adobe-dng");
+            v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/PuppyPhone/RAW");
+            v.put(MediaStore.MediaColumns.IS_PENDING, 1);
+            ContentResolver cr = getContentResolver();
+            Uri u = cr.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+            try (ParcelFileDescriptor pf = cr.openFileDescriptor(u, "w"); FileOutputStream out = new FileOutputStream(pf.getFileDescriptor())) {
+                dng.writeImage(out, img);
+                out.flush();
+                out.getFD().sync();
+            }
+            v.clear();
+            v.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            cr.update(u, v, null, null);
+            emit("raw", "");
+        } catch (Exception e) {
+            toast("DNG non enregistré : " + e.getMessage());
+        } finally {
+            try { img.close(); } catch (Exception ignored) { }
+        }
+    }
+
+    // ------------------------------------------------------------------ photo pendant le tournage
+    ImageReader snap;
+    boolean snapOk;
+
+    void snapshot() {
+        if (!recording || sess == null || snap == null || !snapOk) { toast("Photo pendant le tournage non disponible ici"); return; }
+        try {
+            CaptureRequest.Builder b = dev.createCaptureRequest(CameraDevice.TEMPLATE_VIDEO_SNAPSHOT);
+            b.addTarget(prevSurface);
+            b.addTarget(rec.getSurface());
+            b.addTarget(snap.getSurface());
+            common(b);
+            b.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation());
+            b.set(CaptureRequest.JPEG_QUALITY, (byte) 100);
+            sess.capture(b.build(), null, bg);
+            sound.play(MediaActionSound.SHUTTER_CLICK);
+            emit("shutter", "");
+        } catch (Exception e) { toast("Photo ratée"); }
+    }
+
+    void recSession(boolean withSnap, boolean codecH, int brF) throws CameraAccessException {
+        List<Surface> outs = new ArrayList<>();
+        outs.add(prevSurface);
+        outs.add(rec.getSurface());
+        snapOk = false;
+        if (withSnap) {
+            if (snap != null) snap.close();
+            snap = ImageReader.newInstance(videoSize.getWidth(), videoSize.getHeight(), ImageFormat.JPEG, 2);
+            snap.setOnImageAvailableListener(r -> {
+                try (Image img = r.acquireNextImage()) {
+                    if (img == null) return;
+                    ByteBuffer buf = img.getPlanes()[0].getBuffer();
+                    byte[] data = new byte[buf.remaining()];
+                    buf.get(data);
+                    boolean ci = captureIntent;
+                    captureIntent = false;
+                    savePhoto(data);
+                    captureIntent = ci;
+                } catch (Exception ignored) { }
+            }, bg);
+            outs.add(snap.getSurface());
+        }
+        try { if (sess != null) sess.close(); } catch (Exception ignored) { }
+        sess = null;
+        dev.createCaptureSession(outs, new CameraCaptureSession.StateCallback() {
+            @Override public void onConfigured(CameraCaptureSession s) {
+                sess = s;
+                snapOk = withSnap;
+                recording = true;
+                recPaused = false;
+                recPausedTotal = 0;
+                repeat();
+                try {
+                    rec.start();
+                    recStart = System.currentTimeMillis();
+                    if (tsMode && syncTick != null && bg != null) bg.postDelayed(syncTick, 1000);
+                    if (voiceStarted) { bell(); voiceStarted = false; }
+                    else if (sp.getBoolean("sound", true)) sound.play(MediaActionSound.START_VIDEO_RECORDING);
+                    try {
+                        JSONObject o = new JSONObject();
+                        o.put("q", qualityLabel());
+                        o.put("codec", (codecH ? "HEVC" : "H.264") + (tsMode ? " · TS" : ""));
+                        o.put("ts", tsMode);
+                        o.put("mbps", brF / 1_000_000);
+                        o.put("snap", withSnap);
+                        emit("rec", o.toString());
+                    } catch (Exception ignored) { }
+                } catch (Exception e) { failRec("Le téléphone refuse cet enregistrement"); }
+            }
+            @Override public void onConfigureFailed(CameraCaptureSession s) {
+                if (withSnap) { try { recSession(false, codecH, brF); } catch (Exception e) { failRec("Configuration refusée"); } }
+                else failRec("Configuration " + qualityLabel() + " refusée");
+            }
+        }, bg);
+    }
+
+    // ------------------------------------------------------------------ déclencheur vocal FR / EN / ES
+    SpeechRecognizer sr;
+    boolean voiceOn, voiceBusy, voiceStarted;
+    long voiceCooldown;
+    static final String[] W_PHOTO = {"photo", "foto", "picture", "pic", "cheese", "ouistiti", "clic", "click", "patata", "shoot"};
+    static final String[] W_FILM = {"film", "filme", "filmer", "filma", "video", "vidéo", "record", "enregistre", "graba", "grabar", "action", "acción", "accion", "moteur", "rec"};
+    static final String[] W_FLASH = {"flash", "lumière", "lumiere", "light", "luz", "lampe", "torche", "torch", "linterna", "luces"};
+
+    void voiceStart() {
+        ui.post(() -> {
+            if (!voiceOn || recording || voiceBusy) return;
+            if (!SpeechRecognizer.isRecognitionAvailable(this)) { toast("Reconnaissance vocale indisponible sur ce téléphone"); voiceOn = false; emit("voice", "off"); return; }
+            if (sr == null) {
+                sr = SpeechRecognizer.createSpeechRecognizer(this);
+                sr.setRecognitionListener(new RecognitionListener() {
+                    @Override public void onReadyForSpeech(Bundle p) { emit("voice", "listen"); }
+                    @Override public void onBeginningOfSpeech() { emit("voice", "hear"); }
+                    @Override public void onRmsChanged(float v) { }
+                    @Override public void onBufferReceived(byte[] b) { }
+                    @Override public void onEndOfSpeech() { }
+                    @Override public void onError(int e) { voiceBusy = false; ui.postDelayed(CameraActivity.this::voiceStart, e == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ? 1200 : 250); }
+                    @Override public void onResults(Bundle r) { voiceBusy = false; handleWords(r); ui.postDelayed(CameraActivity.this::voiceStart, 200); }
+                    @Override public void onPartialResults(Bundle r) { handleWords(r); }
+                    @Override public void onEvent(int t, Bundle p) { }
+                });
+            }
+            Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, sp.getString("vlang", Locale.getDefault().toLanguageTag()));
+            i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+            i.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+            i.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 600L);
+            try { voiceBusy = true; sr.startListening(i); } catch (Exception e) { voiceBusy = false; }
+        });
+    }
+
+    void voiceStop() {
+        ui.post(() -> {
+            voiceBusy = false;
+            if (sr != null) { try { sr.cancel(); sr.destroy(); } catch (Exception ignored) { } sr = null; }
+        });
+    }
+
+    static boolean hasWord(String text, String[] words) {
+        String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{Nd}]+", " ") + " ";
+        for (String w : words) if (t.contains(" " + w + " ")) return true;
+        return false;
+    }
+
+    void handleWords(Bundle r) {
+        ArrayList<String> l = r == null ? null : r.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        if (l == null || l.isEmpty()) return;
+        long now = System.currentTimeMillis();
+        if (now < voiceCooldown) return;
+        String all = String.join(" ", l);
+        if (hasWord(all, W_FLASH)) {
+            voiceCooldown = now + 1500;
+            flash = "torch".equals(flash) ? "off" : "torch";
+            sp.edit().putString("flash", flash).apply();
+            if (bg != null) bg.post(this::repeat);
+            sound.play(MediaActionSound.FOCUS_COMPLETE);
+            emit("voicecmd", "flash");
+            emitState();
+        } else if (hasWord(all, W_FILM)) {
+            voiceCooldown = now + 3000;
+            emit("voicecmd", "film");
+            voiceStarted = true;
+            voiceStop();
+            if (!videoMode) {
+                videoMode = true;
+                sp.edit().putBoolean("video", true).apply();
+                ui.post(() -> { chooseSizes(); layoutPreview(); emitState(); });
+                if (bg != null) { bg.post(this::startPreview); bg.postDelayed(this::startRec, 1200); }
+            } else if (bg != null) bg.post(this::startRec);
+        } else if (hasWord(all, W_PHOTO)) {
+            voiceCooldown = now + 1500;
+            emit("voicecmd", "photo");
+            if (videoMode && !recording) {
+                videoMode = false;
+                sp.edit().putBoolean("video", false).apply();
+                ui.post(() -> { chooseSizes(); layoutPreview(); emitState(); });
+                if (bg != null) { bg.post(this::startPreview); bg.postDelayed(this::voicePhoto, 1200); }
+            } else if (bg != null) bg.post(this::voicePhoto);
+        }
+    }
+
+    void voicePhoto() {
+        boolean s0 = sp.getBoolean("sound", true);
+        sp.edit().putBoolean("sound", true).apply(); // le clic confirme toujours la commande vocale
+        takePhoto();
+        if (!s0) bg.postDelayed(() -> sp.edit().putBoolean("sound", false).apply(), 300);
+    }
+
+    /** Son de cloche synthétisé : confirme que le tournage a démarré. */
+    void bell() {
+        new Thread(() -> {
+            try {
+                int rate = 44100, n = (int) (rate * 1.4);
+                short[] pcm = new short[n];
+                double[] f = {880, 1318.5, 1760, 2637};
+                double[] a = {0.55, 0.3, 0.18, 0.08};
+                for (int i = 0; i < n; i++) {
+                    double t = i / (double) rate, v = 0;
+                    for (int k = 0; k < f.length; k++) v += a[k] * Math.sin(2 * Math.PI * f[k] * t) * Math.exp(-t * (2.2 + k * 1.4));
+                    double atk = Math.min(1, t / 0.004);
+                    pcm[i] = (short) Math.max(-32767, Math.min(32767, v * atk * 26000));
+                }
+                AudioTrack at = new AudioTrack.Builder()
+                        .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                        .setAudioFormat(new AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(rate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                        .setBufferSizeInBytes(n * 2).setTransferMode(AudioTrack.MODE_STATIC).build();
+                at.write(pcm, 0, n);
+                at.play();
+                Thread.sleep(1600);
+                at.release();
+            } catch (Exception ignored) { }
+        }, "pupcam-bell").start();
     }
 
     Range<Integer> fpsRange(int fps) {
@@ -599,7 +957,7 @@ public class CameraActivity extends Activity {
             prevB.addTarget(prevSurface);
             if (recording && rec != null) prevB.addTarget(rec.getSurface());
             common(prevB);
-            sess.setRepeatingRequest(prevB.build(), null, bg);
+            sess.setRepeatingRequest(prevB.build(), liveCb, bg);
         } catch (Exception ignored) { }
     }
 
@@ -615,17 +973,29 @@ public class CameraActivity extends Activity {
             CaptureRequest.Builder b = dev.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             b.addTarget(jpeg.getSurface());
             b.addTarget(prevSurface);
-            common(b);
-            b.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation());
-            b.set(CaptureRequest.JPEG_QUALITY, (byte) sp.getInt("jpegq", 100));
+            final boolean withRaw = rawReader != null;
+            if (withRaw) b.addTarget(rawReader.getSurface());
             b.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY);
             b.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY);
             b.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY);
             b.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_HIGH_QUALITY);
             b.set(CaptureRequest.SHADING_MODE, CaptureRequest.SHADING_MODE_HIGH_QUALITY);
+            common(b);
+            b.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation());
+            b.set(CaptureRequest.JPEG_QUALITY, (byte) sp.getInt("jpegq", 100));
+            if (withRaw) b.set(CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE, CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON);
+            final CameraCaptureSession.CaptureCallback stillCb = new CameraCaptureSession.CaptureCallback() {
+                @Override public void onCaptureCompleted(CameraCaptureSession s, CaptureRequest r, TotalCaptureResult res) {
+                    if (!withRaw) return;
+                    Long ts = res.get(CaptureResult.SENSOR_TIMESTAMP);
+                    if (ts == null) return;
+                    synchronized (rawLock) { rawResults.put(ts, res); }
+                    pairRaw();
+                }
+            };
             Runnable go = () -> {
                 try {
-                    sess.capture(b.build(), null, bg);
+                    sess.capture(b.build(), stillCb, bg);
                     if (sp.getBoolean("sound", true)) sound.play(MediaActionSound.SHUTTER_CLICK);
                     emit("shutter", "");
                 } catch (Exception e) { toast("Capture ratée"); }
@@ -778,35 +1148,8 @@ public class CameraActivity extends Activity {
             rec.prepare();
             final boolean codecH = useHevc;
             final int brF = br;
-            List<Surface> outs = new ArrayList<>();
-            outs.add(prevSurface);
-            outs.add(rec.getSurface());
-            try { if (sess != null) sess.close(); } catch (Exception ignored) { }
-            sess = null;
-            dev.createCaptureSession(outs, new CameraCaptureSession.StateCallback() {
-                @Override public void onConfigured(CameraCaptureSession s) {
-                    sess = s;
-                    recording = true;
-                    recPaused = false;
-                    recPausedTotal = 0;
-                    repeat();
-                    try {
-                        rec.start();
-                        recStart = System.currentTimeMillis();
-                        if (tsMode && syncTick != null && bg != null) bg.postDelayed(syncTick, 1000);
-                        if (sp.getBoolean("sound", true)) sound.play(MediaActionSound.START_VIDEO_RECORDING);
-                        try {
-                            JSONObject o = new JSONObject();
-                            o.put("q", qualityLabel());
-                            o.put("codec", (codecH ? "HEVC" : "H.264") + (tsMode ? " · TS" : ""));
-                            o.put("ts", tsMode);
-                            o.put("mbps", brF / 1_000_000);
-                            emit("rec", o.toString());
-                        } catch (Exception ignored) { }
-                    } catch (Exception e) { failRec("Le téléphone refuse cet enregistrement"); }
-                }
-                @Override public void onConfigureFailed(CameraCaptureSession s) { failRec("Configuration " + qualityLabel() + " refusée"); }
-            }, bg);
+            if (voiceOn) voiceStop();
+            recSession(true, codecH, brF);
         } catch (Exception e) {
             failRec("Enregistrement impossible : " + e.getMessage());
         }
@@ -1018,6 +1361,7 @@ public class CameraActivity extends Activity {
             }
             finishSegments(true);
             emit("recstop", "");
+            if (voiceOn) ui.postDelayed(this::voiceStart, 800);
             if (dev != null) startPreview();
             return;
         }
@@ -1043,6 +1387,7 @@ public class CameraActivity extends Activity {
         recFile = null;
         if (ok) { lastKind = "v"; lastThumb = null; emit("saved", "v"); }
         emit("recstop", "");
+        if (voiceOn) ui.postDelayed(this::voiceStart, 800);
         final boolean okF = ok;
         if (videoCaptureIntent) { ui.post(() -> { setResult(okF ? RESULT_OK : RESULT_CANCELED, captureOut == null && lastUri != null ? new Intent().setData(lastUri) : null); finish(); }); return; }
         if (dev != null) startPreview();
@@ -1110,6 +1455,34 @@ public class CameraActivity extends Activity {
                 o.put("hasLast", lastUri != null);
                 o.put("lastKind", lastKind);
                 o.put("capture", captureIntent || videoCaptureIntent);
+                o.put("pro", pro);
+                o.put("manual", manualCapable());
+                o.put("rawOk", rawCapable());
+                o.put("raw", rawOn && rawReader != null);
+                o.put("flat", flat);
+                o.put("minimal", minimal);
+                o.put("flatOk", hasCap(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING));
+                o.put("voice", voiceOn);
+                o.put("isoMan", isoMan);
+                o.put("expMan", expMan);
+                o.put("focusMan", focusMan);
+                o.put("awb", awb);
+                Range<Integer> isoR = ch == null ? null : ch.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+                Range<Long> expR = ch == null ? null : ch.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+                Float minF = ch == null ? null : ch.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
+                Integer maxAnalog = ch == null ? null : ch.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY);
+                o.put("isoMin", isoR == null ? 0 : isoR.getLower());
+                o.put("isoMax", isoR == null ? 0 : isoR.getUpper());
+                o.put("isoAnalog", maxAnalog == null ? 0 : maxAnalog);
+                o.put("expMin", expR == null ? 0 : expR.getLower());
+                o.put("expMax", expR == null ? 0 : expR.getUpper());
+                o.put("focusMin", minF == null ? 0 : minF);
+                int[] awbs = ch == null ? null : ch.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES);
+                JSONArray aw = new JSONArray();
+                if (awbs != null) for (int m : awbs) aw.put(m);
+                o.put("awbModes", aw);
+                Size rs = ch == null ? null : rawSize();
+                o.put("rawRes", rs == null ? "" : rs.getWidth() + "×" + rs.getHeight());
                 web.evaluateJavascript("window.CamUI&&CamUI.on('state'," + JSONObject.quote(o.toString()) + ")", null);
             } catch (Exception ignored) { }
         });
@@ -1233,6 +1606,41 @@ public class CameraActivity extends Activity {
         @JavascriptInterface public void haptic() { ui.post(() -> web.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)); }
         @JavascriptInterface public void state() { emitState(); }
         @JavascriptInterface public void thermal() { emitThermal(); }
+
+        @JavascriptInterface public void setPro(String k, String v) {
+            ui.post(() -> {
+                try {
+                    switch (k) {
+                        case "pro": pro = "true".equals(v); break;
+                        case "iso": isoMan = Integer.parseInt(v); break;
+                        case "exp": expMan = Long.parseLong(v); break;
+                        case "focus": focusMan = Float.parseFloat(v); break;
+                        case "awb": awb = Integer.parseInt(v); break;
+                        case "flat": flat = "true".equals(v); break;
+                        case "minimal": minimal = "true".equals(v); break;
+                        case "raw":
+                            rawOn = "true".equals(v);
+                            if (!recording && dev != null && !videoMode) bg.post(CameraActivity.this::startPreview);
+                            break;
+                    }
+                } catch (Exception ignored) { }
+                if (bg != null && !"raw".equals(k)) bg.post(CameraActivity.this::repeat);
+                emitState();
+            });
+        }
+
+        @JavascriptInterface public void snapshot() { if (bg != null) bg.post(CameraActivity.this::snapshot); }
+
+        @JavascriptInterface public void voice(boolean on) {
+            ui.post(() -> {
+                voiceOn = on;
+                sp.edit().putBoolean("voiceOn", on).apply();
+                if (on) voiceStart(); else voiceStop();
+                emitState();
+            });
+        }
+
+        @JavascriptInterface public void voiceLang(String tag) { sp.edit().putString("vlang", tag).apply(); voiceStop(); if (voiceOn) ui.postDelayed(CameraActivity.this::voiceStart, 400); }
     }
 
     void setZoomNow(float z) {
