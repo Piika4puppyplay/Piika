@@ -1,0 +1,19 @@
+/* PupSkin — habillage puppyplay appliqué localement par PuppyInternet (purement visuel) */
+:root{accent-color:#ff3fa4;caret-color:#29e6ff;scrollbar-color:#ff3fa4 #12081f}
+::selection{background:#ff3fa4!important;color:#fff!important}
+::-webkit-scrollbar{width:8px;height:8px;background:#12081f}
+::-webkit-scrollbar-thumb{border-radius:8px;background:linear-gradient(#ff3fa4,#9b5cff,#29e6ff)}
+html::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;z-index:2147483647;pointer-events:none;
+  background:linear-gradient(90deg,#ff3fa4,#9b5cff,#29e6ff,#ff3fa4);box-shadow:0 0 10px #ff3fa4,0 0 22px #29e6ff}
+html::after{content:"";position:fixed;inset:0;z-index:2147483646;pointer-events:none;opacity:.045;background-size:110px 110px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%23ff3fa4' transform='rotate(-14 50 50)'%3E%3Cellipse cx='50' cy='62' rx='15' ry='12'/%3E%3Ccircle cx='32' cy='42' r='6.5'/%3E%3Ccircle cx='44' cy='32' r='6.5'/%3E%3Ccircle cx='56' cy='32' r='6.5'/%3E%3Ccircle cx='68' cy='42' r='6.5'/%3E%3C/g%3E%3C/svg%3E")}
+a:not([role=button]):not(:has(img)):not(:has(svg)){color:#ff7ac8!important;text-decoration-color:rgba(41,230,255,.6)!important}
+a:not([role=button]):not(:has(img)):visited{color:#c79bff!important}
+:focus-visible{outline:2px solid #29e6ff!important;outline-offset:2px!important;box-shadow:0 0 14px rgba(41,230,255,.55)!important}
+button,[role=button],input[type=submit],input[type=button]{border-radius:14px!important;transition:box-shadow .2s,filter .2s}
+button:active,[role=button]:active,input[type=submit]:active{box-shadow:0 0 16px rgba(255,63,164,.85)!important;filter:brightness(1.25)}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),textarea,select{border-radius:12px!important}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):focus,textarea:focus,[contenteditable=true]:focus{box-shadow:0 0 0 2px #ff3fa4,0 0 18px rgba(255,63,164,.5)!important}
+h1,h2{text-shadow:0 0 12px rgba(255,63,164,.45)}
+mark{background:#ff3fa4!important;color:#fff!important}
+hr{border-color:#ff3fa4!important;box-shadow:0 0 8px rgba(255,63,164,.8)}

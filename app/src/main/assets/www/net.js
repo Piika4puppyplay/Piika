@@ -161,6 +161,7 @@
         ${item('newtab', 'plus', 'green', 'Nouvel onglet')}
         ${item('closetab', 'trash', 'red', 'Fermer l\'onglet')}
         ${item('adblock', 'shield', st.adblock === false ? 'chrome' : 'green', st.adblock === false ? 'Bloqueur OFF' : 'Bloqueur ON', { on: st.adblock !== false })}
+        ${item('skin', 'sparkle', st.skinHere ? 'pink' : 'chrome', st.skinHere ? 'Thème puppy ici' : 'Thème d\'origine ici', { on: !!st.skinHere, dis: a.blank })}
         ${item('phone', 'paw', 'pink', 'PuppyPhone')}
       </div></div>`;
   }
@@ -196,6 +197,13 @@
       <div class="cp">
         <div class="cp-h">${I('shield', 'green')}<div><b>Bloqueur de pubs & traqueurs</b><small>${(st.hosts || 0).toLocaleString('fr-FR')} domaines bloqués + pubs masquées + pop-up interdites. Total : ${(st.blockedTotal || 0).toLocaleString('fr-FR')} bloqués.</small></div></div>
         <div class="row"><span>Bloqueur</span>${sw('adblock', st.adblock !== false)}</div>
+      </div>
+      <div class="cp">
+        <div class="cp-h">${I('sparkle', 'pink')}<div><b>Thème puppyplay sur les sites</b><small>Habille tous les sites aux couleurs du PuppyPhone, comme Dark Reader : mode sombre, liens néon, liseré rose et cyan en haut, pattes en filigrane, boutons arrondis. Purement visuel, rien n'est modifié côté site.</small></div></div>
+        <div class="row"><span>Thème puppyplay</span>${sw('skin', st.skin !== false)}</div>
+        <div class="row"><span>Mode sombre automatique<small style="display:block;font-weight:400;color:var(--muted);font-size:12px">Assombrit les sites clairs</small></span>${sw('skinDark', st.skinDark !== false)}</div>
+        <p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">🏦 Les sites sensibles (banques, paiement, impôts, Ameli, CAF…) gardent leur look officiel : c'est plus sûr pour repérer une fausse page. Menu → « Thème puppy ici » pour l'activer ou le couper site par site.${st.skinOffN ? ` ${st.skinOffN} site(s) exclu(s) à la main.` : ''}</p>
+        ${st.skinOffN ? `<button class="ab small glass" data-act="skinreset" type="button" style="margin-top:8px">Réinitialiser les exceptions</button>` : ''}
       </div>
       <div class="cp">
         <div class="cp-h">${I('lock', 'red')}<div><b>Ouverture des autres applis</b><small>Toujours bloquée : aucun site ne peut lancer une appli (WhatsApp, Play Store, appli d'un magasin…) tout seul. Tu décides avec « Ouvrir quand même ».</small></div></div>
@@ -273,6 +281,7 @@
     if (d.act === 'newtab') { call('newTab', ''); setMode('start'); autoStart = true; return; }
     if (d.act === 'closeall') { call('closeAll'); setMode('start'); autoStart = true; return; }
     if (d.act === 'default') { call('askDefault'); return; }
+    if (d.act === 'skinreset') { call('skinReset'); return; }
     if (d.act === 'export') { call('exportBackup', backup()); return; }
     if (d.act === 'import') { call('importBackup'); return; }
     if (d.m) {
@@ -296,6 +305,7 @@
         case 'newtab': call('newTab', ''); setMode('start'); autoStart = true; break;
         case 'closetab': call('close', a.id); setMode(null); break;
         case 'adblock': call('setSetting', 'adblock', String(st.adblock === false)); break;
+        case 'skin': call('skinToggle'); setMode(null); break;
         case 'phone': call('home'); setMode(null); break;
       }
     }

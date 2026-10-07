@@ -427,6 +427,51 @@ public class BrowserActivity extends Activity {
         return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + v + " Safari/537.36";
     }
 
+    // ------------------------------------------------------------------ PupSkin : habillage puppyplay des sites (CSS local, purement visuel)
+    static String skinCss;
+    static final java.util.regex.Pattern SENSITIVE = java.util.regex.Pattern.compile(
+            "(gouv\\.fr|impots|ameli\\.fr|caf\\.fr|service-public|franceconnect|francetravail|pole-emploi|urssaf|paypal|stripe|lydia|revolut|n26|wise\\.com|boursorama|labanquepostale|credit-agricole|ca-[a-z-]+\\.fr|societegenerale|bnpparibas|mabanque|lcl\\.fr|caisse-epargne|banquepopulaire|cic\\.fr|creditmutuel|fortuneo|hellobank|monabanq|bank|banque|secure|3ds|payment|paiement|checkout)");
+    String skinCss() {
+        if (skinCss == null) {
+            try (java.io.InputStream in = getAssets().open("skin/pupskin.css")) {
+                java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream(); byte[] b = new byte[8192]; int n;
+                while ((n = in.read(b)) > 0) o.write(b, 0, n);
+                skinCss = o.toString("UTF-8");
+            } catch (Exception e) { skinCss = ""; }
+        }
+        return skinCss;
+    }
+    static String skinHost(String url) {
+        try { String h = Uri.parse(url).getHost(); if (h == null) return ""; h = h.toLowerCase(java.util.Locale.ROOT); return h.replaceFirst("^(www|m|mobile)\\.", ""); } catch (Exception e) { return ""; }
+    }
+    boolean skinSensitive(String host) { return !host.isEmpty() && SENSITIVE.matcher(host).find(); }
+    java.util.Set<String> skinSet(String k) { return new java.util.HashSet<>(java.util.Arrays.asList(sp.getString(k, "").split(","))); }
+    boolean skinOn(String url) {
+        if (!sp.getBoolean("skin", true) || url == null || !url.startsWith("http")) return false;
+        String h = skinHost(url);
+        if (skinSet("skinOff").contains(h)) return false;
+        if (skinSensitive(h)) return skinSet("skinForce").contains(h);
+        return true;
+    }
+    void applySkin(WebView v, String url) {
+        boolean on = skinOn(url);
+        if (on) {
+            String css = skinCss() + (sp.getBoolean("skinDark", true) ? "\n:root{color-scheme:dark}" : "");
+            v.evaluateJavascript("(function(){window.__pupSkinOn=true;var d=document,id='pupnet-skin',s=d.getElementById(id);if(!s){s=d.createElement('style');s.id=id;(d.head||d.documentElement).appendChild(s);}s.textContent=" + JSONObject.quote(css) + ";"
+                    + "if(!window.__pupSkinObs){window.__pupSkinObs=new MutationObserver(function(){if(window.__pupSkinOn&&!d.getElementById(id))(d.head||d.documentElement).appendChild(s);});window.__pupSkinObs.observe(d.documentElement,{childList:true,subtree:false});}})()", null);
+        } else v.evaluateJavascript("(function(){window.__pupSkinOn=false;var e=document.getElementById('pupnet-skin');if(e)e.remove();})()", null);
+    }
+    /** Mode sombre automatique de Chromium (comme Dark Reader), réglé site par site. */
+    boolean setDark(WebView v, String url) {
+        boolean want = skinOn(url) && sp.getBoolean("skinDark", true);
+        WebSettings s = v.getSettings();
+        try {
+            if (Build.VERSION.SDK_INT >= 33) { if (s.isAlgorithmicDarkeningAllowed() == want) return false; s.setAlgorithmicDarkeningAllowed(want); return true; }
+            if (Build.VERSION.SDK_INT >= 29) { int f = want ? WebSettings.FORCE_DARK_ON : WebSettings.FORCE_DARK_OFF; if (s.getForceDark() == f) return false; s.setForceDark(f); return true; }
+        } catch (Throwable ignored) { }
+        return false;
+    }
+
     void applySettings(WebView wv) {
         WebSettings s = wv.getSettings();
         if (defaultUA.isEmpty()) defaultUA = s.getUserAgentString();
@@ -504,12 +549,14 @@ public class BrowserActivity extends Activity {
             t.loading = true;
             t.blocked = 0;
             t.icon = null;
+            setDark(v, url);
             v.setVisibility(t == cur ? View.VISIBLE : View.GONE);
             emitState();
         }
 
         @Override
         public void onPageCommitVisible(WebView v, String url) {
+            applySkin(v, url);
             if (sp.getBoolean("adblock", true)) v.evaluateJavascript(COSMETIC, null);
         }
 
@@ -522,6 +569,7 @@ public class BrowserActivity extends Activity {
             t.url = url;
             if (v.getTitle() != null && !v.getTitle().isEmpty()) t.title = v.getTitle();
             if (sp.getBoolean("adblock", true)) v.evaluateJavascript(COSMETIC, null);
+            applySkin(v, url);
             addHistory(url, t.title);
             saveTabs();
             emitState();
@@ -702,6 +750,10 @@ public class BrowserActivity extends Activity {
                 o.put("zoom", sp.getInt("zoom", 100));
                 o.put("engine", sp.getString("engine", "ddg"));
                 o.put("isDefault", isDefaultBrowser());
+                o.put("skin", sp.getBoolean("skin", true));
+                o.put("skinDark", sp.getBoolean("skinDark", true));
+                o.put("skinOffN", sp.getString("skinOff", "").replace(",", " ").trim().isEmpty() ? 0 : sp.getString("skinOff", "").replaceAll("^,|,$", "").split(",").length);
+                if (cur != null) { String hh = skinHost(cur.url); o.put("skinHost", hh); o.put("skinHere", skinOn(cur.url)); o.put("skinSensitive", skinSensitive(hh)); }
                 stateJson = o.toString();
                 emitUi("state", stateJson);
             } catch (Exception ignored) { }
@@ -852,11 +904,30 @@ public class BrowserActivity extends Activity {
                     default: e.putBoolean(k, "true".equals(v));
                 }
                 e.apply();
-                for (Tab t : tabs) if (t.wv != null) applySettings(t.wv);
+                for (Tab t : tabs) if (t.wv != null) { applySettings(t.wv); if (k.startsWith("skin")) { boolean ch = setDark(t.wv, t.url); applySkin(t.wv, t.url); if (ch && t == cur && !t.url.isEmpty()) t.wv.reload(); } }
                 if (("desktop".equals(k) || "js".equals(k)) && cur != null && cur.wv != null && !cur.url.isEmpty()) cur.wv.reload();
                 emitState();
             });
         }
+
+        @JavascriptInterface public void skinToggle() {
+            ui.post(() -> {
+                if (cur == null || cur.wv == null || cur.url.isEmpty()) return;
+                String h = skinHost(cur.url);
+                boolean on = skinOn(cur.url);
+                java.util.Set<String> off = skinSet("skinOff"), force = skinSet("skinForce");
+                off.remove(""); force.remove("");
+                if (on) { if (skinSensitive(h)) force.remove(h); else off.add(h); }
+                else { off.remove(h); if (skinSensitive(h)) force.add(h); if (!sp.getBoolean("skin", true)) sp.edit().putBoolean("skin", true).apply(); }
+                sp.edit().putString("skinOff", android.text.TextUtils.join(",", off)).putString("skinForce", android.text.TextUtils.join(",", force)).apply();
+                boolean ch = setDark(cur.wv, cur.url);
+                applySkin(cur.wv, cur.url);
+                if (ch) cur.wv.reload();
+                toast(skinOn(cur.url) ? "Thème puppy activé sur " + h + " 🐾" : "Thème d'origine sur " + h);
+                emitState();
+            });
+        }
+        @JavascriptInterface public void skinReset() { ui.post(() -> { sp.edit().remove("skinOff").remove("skinForce").apply(); for (Tab t : tabs) if (t.wv != null) { setDark(t.wv, t.url); applySkin(t.wv, t.url); } emitState(); }); }
 
         @JavascriptInterface public void clear(String what) {
             ui.post(() -> {
