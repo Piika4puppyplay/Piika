@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupMusic</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="music.css">
+</head>
+<body class="music wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+
+<!-- ======== bibliothèque ======== -->
+<section id="lib">
+  <header class="mhead">
+    <div class="mrow">
+      <button class="hbtn" id="lback" type="button" hidden></button>
+      <span class="mlogo" id="mlogo"></span>
+      <div class="mtitle"><div class="neon mt2">PUP<span>MUSIC</span></div><small id="lsub">Bibliothèque</small></div>
+      <button class="hbtn" id="lmenu" type="button"></button>
+    </div>
+    <label class="vsearch"><span class="pw" id="sicon"></span><input id="q" placeholder="Titres, artistes, albums…" autocomplete="off" enterkeyhint="search"><button class="go" id="qx" type="button" hidden></button></label>
+  </header>
+  <div class="lbody" id="lbody"></div>
+  <div class="abc" id="abc" hidden></div>
+  <div class="mini" id="mini" hidden></div>
+</section>
+
+<!-- ======== lecteur ======== -->
+<section id="player" class="down">
+  <div class="pbg"><img id="pbgimg" alt=""><i></i></div>
+  <header class="ptop">
+    <button class="hbtn" id="pdown" type="button"></button>
+    <div class="ptx"><div class="neon mt3">PUP<span>MUSIC</span></div><small id="pinfo">—</small></div>
+    <button class="hbtn" id="pmenu" type="button"></button>
+  </header>
+  <div class="stage" id="stage">
+    <div class="vinyl" id="vinyl"><i></i></div>
+    <div class="frame" id="frame"><span class="art big" id="artbig"><img id="artimg" alt=""></span><i class="gloss"></i></div>
+    <div class="refl" id="refl"></div>
+  </div>
+  <canvas id="spec" height="70"></canvas>
+  <div class="meta">
+    <div class="mq"><b id="ttl">PupMusic</b></div>
+    <span id="art2">Choisis un titre dans la bibliothèque</span>
+    <small id="alb"></small>
+  </div>
+  <div class="seekrow">
+    <span id="tpos">0:00</span>
+    <div class="seek" id="seek"><div class="strack"><i id="sfill"></i><i id="sbuf"></i></div><b id="sthumb"></b></div>
+    <span id="tdur">0:00</span>
+  </div>
+  <div class="ctrl">
+    <button class="cbtn" id="brep" type="button"></button>
+    <button class="cbtn mid" id="bprev" type="button"></button>
+    <button class="playorb" id="bplay" type="button"></button>
+    <button class="cbtn mid" id="bnext" type="button"></button>
+    <button class="cbtn" id="bshuf" type="button"></button>
+  </div>
+  <div class="tools" id="tools"></div>
+</section>
+
+<div id="layer"></div>
+<div id="toasts"></div>
+<script src="icons.js"></script>
+<script src="music.js"></script>
+</body>
+</html>
