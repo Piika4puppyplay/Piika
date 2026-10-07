@@ -15,6 +15,10 @@
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <queries>
         <intent>
@@ -125,6 +129,74 @@
             <intent-filter>
                 <action android:name="android.intent.action.WEB_SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".GalleryActivity"
+            android:label="PupGalery"
+            android:icon="@mipmap/ic_pupgal"
+            android:roundIcon="@mipmap/ic_pupgal"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.gal"
+            android:theme="@style/PupNetTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.APP_GALLERY" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".VideoActivity"
+            android:label="PupVidéo"
+            android:icon="@mipmap/ic_pupvid"
+            android:roundIcon="@mipmap/ic_pupvid"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.vid"
+            android:theme="@style/PupNetTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PickActivity"
+            android:label="PupGalery"
+            android:icon="@mipmap/ic_pupgal"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/PupNetTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
 

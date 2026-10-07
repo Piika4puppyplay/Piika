@@ -202,6 +202,9 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         if (web != null) web.onResume();
+        // fond choisi depuis PupGalery / PupVidéo ?
+        long ver = wallPrefs().getLong("wall_ver", 0);
+        if (ver != appliedWallVer) { applyWallMode(); emit("wall", wallInfo()); }
         emit("resume", "");
     }
 
@@ -445,7 +448,10 @@ public class MainActivity extends Activity {
         @Override public void onServiceDisconnected(ComponentName n) { wall = null; }
     };
 
+    long appliedWallVer;
+
     void applyWallMode() {
+        appliedWallVer = wallPrefs().getLong("wall_ver", 0);
         ui.post(() -> {
             String type = wallPrefs().getString("wall_type", "neon");
             Window win = getWindow();

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupGalery</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="media.css">
+</head>
+<body class="media wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><div class="pawfloor"></div><div class="grain"></div></div>
+
+<header id="top">
+  <div class="mt">
+    <button class="ibtn" id="bback" type="button" hidden aria-label="Retour"></button>
+    <span class="mlogo" id="mlogo"></span>
+    <div class="mtx"><div class="neon mname" id="mname">PUP<span>GALERY</span></div><div class="msub" id="msub">—</div></div>
+    <button class="ibtn" id="bslide" type="button" aria-label="Diaporama"></button>
+    <button class="ibtn" id="bsel" type="button" aria-label="Sélectionner"></button>
+  </div>
+  <div class="seg" id="tabs"></div>
+</header>
+<main id="list"></main>
+
+<div id="selbar" hidden></div>
+
+<div id="viewer" hidden>
+  <div class="vstage" id="vstage"><img id="vimg" alt="" draggable="false"><img id="vnext" alt="" draggable="false"><button class="vplay" id="vplay" type="button" hidden></button></div>
+  <div class="vtop" id="vtop"><button class="ibtn" data-v="close" type="button"></button><div class="vtx"><b id="vtitle"></b><small id="vsub"></small></div><span class="vcount" id="vcount"></span></div>
+  <div class="vbot" id="vbot"></div>
+</div>
+
+<div id="player" hidden>
+  <div class="pgest" id="pgest"></div>
+  <div class="pmeter" id="pmeter" hidden><span class="pi-wrap" id="pmi"></span><div class="pbar"><i id="pmv"></i></div><b id="pmt"></b></div>
+  <div class="pskip l" id="pskl">« 10 s</div><div class="pskip r" id="pskr">10 s »</div>
+  <div class="pui" id="pui">
+    <div class="ptop"><button class="ibtn" data-p="close" type="button"></button><div class="vtx"><b id="ptitle"></b><small id="psub"></small></div><button class="ibtn" data-p="lock" type="button"></button></div>
+    <div class="pmid"><button class="pbtn" data-p="rw" type="button"></button><button class="porb" data-p="toggle" type="button" id="porb"></button><button class="pbtn" data-p="ff" type="button"></button></div>
+    <div class="pbot">
+      <div class="seekrow"><span id="ppos">0:00</span><div class="seek" id="seek"><div class="sfill" id="sfill"></div><div class="sknob" id="sknob"></div></div><span id="pdur">0:00</span></div>
+      <div class="popts" id="popts"></div>
+    </div>
+  </div>
+  <button class="unlock" id="unlock" type="button" hidden></button>
+</div>
+
+<div id="layer"></div>
+<div id="toasts"></div>
+<script src="icons.js"></script>
+<script src="media.js"></script>
+</body>
+</html>
