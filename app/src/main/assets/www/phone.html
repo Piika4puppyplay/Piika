@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupPhone</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="phone.css">
+</head>
+<body class="phone wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+
+<!-- ======== composeur ======== -->
+<section id="dial" hidden>
+  <header class="phead">
+    <div class="prow"><span class="plogo" id="plogo"></span><div class="neon ptitle2">PUP<span>PHONE</span></div></div>
+    <div id="incallbar" hidden></div>
+    <div id="pbanner" hidden></div>
+    <div class="seg" id="ptabs"><button data-tab="keypad" class="on" type="button">Clavier</button><button data-tab="recents" type="button">Récents</button><button data-tab="contacts" type="button">Contacts</button><button data-tab="favs" type="button">Favoris</button></div>
+  </header>
+  <div class="pbody" id="pbody"></div>
+</section>
+
+<!-- ======== écran d'appel ======== -->
+<section id="call" hidden>
+  <div class="cwho">
+    <div class="rings" id="rings"><i></i><i></i><i></i></div>
+    <span class="bigav" id="bigav"></span>
+    <b class="cname" id="cname"></b>
+    <small class="cnum" id="cnum"></small>
+    <div class="cstate" id="cstate"></div>
+  </div>
+  <div id="cwait" hidden></div>
+  <div class="cpanel" id="cpanel"></div>
+</section>
+
+<div id="layer"></div>
+<script src="icons.js"></script>
+<script src="phone.js"></script>
+</body>
+</html>
