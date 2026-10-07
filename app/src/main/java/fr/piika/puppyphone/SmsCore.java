@@ -137,7 +137,7 @@ public final class SmsCore {
     static int maxMmsSize(Context c) {
         try {
             CarrierConfigManager cm = c.getSystemService(CarrierConfigManager.class);
-            Bundle b = cm == null ? null : cm.getConfig();
+            android.os.PersistableBundle b = cm == null ? null : cm.getConfig();
             int v = b == null ? 0 : b.getInt(CarrierConfigManager.KEY_MMS_MAX_MESSAGE_SIZE_INT, 0);
             if (v > 0) return v;
         } catch (Exception ignored) { }
