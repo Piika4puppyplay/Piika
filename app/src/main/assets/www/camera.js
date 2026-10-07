@@ -104,9 +104,9 @@
     const r = (z) => Math.round(z * 10) / 10;
     if (prim.zmin < 0.95) pills.push({ id: prim.id, z: prim.zmin, label: String(r(prim.zmin)).replace(/^0/, ''), sub: 'ultra' });
     pills.push({ id: prim.id, z: 1, label: '1×', sub: prim.mp ? prim.mp + ' Mpx' : '' });
-    if (prim.zmax >= 2) pills.push({ id: prim.id, z: 2, label: '2' });
-    if (prim.zmax >= 3) pills.push({ id: prim.id, z: 3, label: '3', sub: 'télé' });
-    if (prim.zmax >= 10 && !st.front) pills.push({ id: prim.id, z: 10, label: '10' });
+    if (prim.zmax >= 2) pills.push({ id: prim.id, z: 2, label: '2×', sub: 'num.' });
+    if (prim.zmax >= 3) pills.push({ id: prim.id, z: 3, label: '3×', sub: 'num.' });
+    if (prim.zmax >= 10 && !st.front) pills.push({ id: prim.id, z: 10, label: '10×', sub: 'num.' });
     const bad = J(localStorage.getItem('pc_badlens'), []) || [];
     side.slice(1).filter((l) => !bad.includes(l.id)).forEach((l) => {
       const ratio = prim.eq && l.eq ? l.eq / prim.eq : 1;
@@ -326,6 +326,7 @@
       </div>
       <div class="cp">
         <div class="cp-h">${I('camera', 'amber')}<div><b>Photo</b><small>Pleine résolution du capteur : ${st.photo || '—'} (${st.mp || '?'} Mpx), JPEG qualité 100, traitement « haute qualité ».</small></div></div>
+        <div class="row"><span>Zoom photo net<small>en zoom numérique, la photo est prise sur tout le capteur puis recadrée : vrais pixels, aucun détail inventé (photo plus petite mais plus propre)</small></span>${sw('cropzoom', st.cropzoom !== false)}</div>
         <div class="row"><span>Format</span><div class="seg" style="width:170px"><button class="${st.ratio !== '16:9' ? 'on' : ''}" data-set="ratio" data-v="4:3" type="button">4:3</button><button class="${st.ratio === '16:9' ? 'on' : ''}" data-set="ratio" data-v="16:9" type="button">16:9</button></div></div>
       </div>
       <div class="cp">

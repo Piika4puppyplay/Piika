@@ -1017,6 +1017,10 @@ public class CameraActivity extends Activity {
             b.set(CaptureRequest.TONEMAP_MODE, CaptureRequest.TONEMAP_MODE_HIGH_QUALITY);
             b.set(CaptureRequest.SHADING_MODE, CaptureRequest.SHADING_MODE_HIGH_QUALITY);
             common(b);
+            // zoom net : on capture tout le capteur puis on recadre nous-mêmes (pas de pixels inventés)
+            boolean crop = sp.getBoolean("cropzoom", true) && zoom > 1.05f && Build.VERSION.SDK_INT >= 30;
+            if (crop) b.set(CaptureRequest.CONTROL_ZOOM_RATIO, Math.max(zoomRange.getLower(), 1f));
+            cropQueue.add(crop ? zoom : 1f);
             b.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation());
             b.set(CaptureRequest.JPEG_QUALITY, (byte) sp.getInt("jpegq", 100));
             if (withRaw) b.set(CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE, CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON);
@@ -1047,8 +1051,38 @@ public class CameraActivity extends Activity {
 
     String stamp() { return new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.FRANCE).format(new Date()); }
 
+    final java.util.concurrent.ConcurrentLinkedQueue<Float> cropQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+    /** Recadrage centré à la résolution native du capteur (aucun agrandissement artificiel). */
+    byte[] cropJpeg(byte[] data, float z) {
+        try {
+            int orient = new ExifInterface(new ByteArrayInputStream(data)).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            android.graphics.BitmapRegionDecoder d = android.graphics.BitmapRegionDecoder.newInstance(data, 0, data.length, false);
+            int W = d.getWidth(), H = d.getHeight();
+            int cw = Math.round(W / z), chh = Math.round(H / z);
+            Bitmap bm = d.decodeRegion(new Rect((W - cw) / 2, (H - chh) / 2, (W + cw) / 2, (H + chh) / 2), null);
+            d.recycle();
+            int deg = orient == ExifInterface.ORIENTATION_ROTATE_90 ? 90 : orient == ExifInterface.ORIENTATION_ROTATE_180 ? 180 : orient == ExifInterface.ORIENTATION_ROTATE_270 ? 270 : 0;
+            if (deg != 0) {
+                android.graphics.Matrix m = new android.graphics.Matrix();
+                m.postRotate(deg);
+                Bitmap r2 = Bitmap.createBitmap(bm, 0, 0, bm.getWidth(), bm.getHeight(), m, true);
+                bm.recycle();
+                bm = r2;
+            }
+            ByteArrayOutputStream o = new ByteArrayOutputStream();
+            bm.compress(Bitmap.CompressFormat.JPEG, 97, o);
+            bm.recycle();
+            return o.toByteArray();
+        } catch (Throwable t) {
+            return data;
+        }
+    }
+
     void savePhoto(byte[] data) {
         try {
+            Float cz = cropQueue.poll();
+            if (cz != null && cz > 1.05f) data = cropJpeg(data, cz);
             if (captureIntent) { returnCapture(data); return; }
             ContentResolver cr = getContentResolver();
             String name = "PUP_" + stamp() + ".jpg";
@@ -1481,6 +1515,7 @@ public class CameraActivity extends Activity {
                 o.put("volkey", sp.getBoolean("volkey", true));
                 o.put("grid", sp.getBoolean("grid", false));
                 o.put("maxbr", sp.getBoolean("maxbr", true));
+                o.put("cropzoom", sp.getBoolean("cropzoom", true));
                 o.put("container", sp.getString("container", "mp4"));
                 o.put("photo", photoSize == null ? "" : photoSize.getWidth() + "×" + photoSize.getHeight());
                 o.put("mp", photoSize == null ? 0 : Math.round(area(photoSize) / 1e5) / 10.0);

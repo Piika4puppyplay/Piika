@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupSMS</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="sms.css">
+</head>
+<body class="sms wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+
+<section id="vlist" class="view">
+  <header class="shead">
+    <div class="srow1"><span class="slogo" id="slogo"></span><div class="neon stitle">PUP<span>SMS</span></div></div>
+    <label class="vsearch"><span class="pw" id="lsico"></span><input id="lq" placeholder="Chercher une conversation…" autocomplete="off"></label>
+  </header>
+  <div id="defbanner" hidden></div>
+  <div class="clist" id="clist"></div>
+  <button class="fab" id="fab" type="button" aria-label="Nouveau message"></button>
+</section>
+
+<section id="vthread" class="view" hidden>
+  <header class="thead">
+    <button class="ibtn" id="tback" type="button"></button>
+    <span class="tav" id="tav"></span>
+    <div class="ttx"><b id="tname"></b><small id="tnum"></small></div>
+    <button class="ibtn" id="tcall" type="button"></button>
+  </header>
+  <div class="msgs" id="msgs"></div>
+</section>
+
+<section id="vnew" class="view" hidden>
+  <header class="thead">
+    <button class="ibtn" id="nback" type="button"></button>
+    <div class="ttx"><b class="chrome">Nouveau message</b><small>choisis un ou plusieurs contacts</small></div>
+  </header>
+  <div class="tobar"><span class="tolbl">À :</span><div class="chips" id="chips"></div><input id="nq" placeholder="Nom ou numéro" inputmode="text" autocomplete="off"></div>
+  <div class="sugg" id="nsugg"></div>
+</section>
+
+<footer id="composer" hidden>
+  <div class="atts" id="atts"></div>
+  <div class="crow">
+    <button class="plus" id="cplus" type="button" aria-label="Joindre"></button>
+    <div class="cfield"><textarea id="ctext" rows="1" placeholder="Message…"></textarea><small id="ccount"></small></div>
+    <button class="sendorb" id="csend" type="button" aria-label="Envoyer"></button>
+  </div>
+</footer>
+
+<div id="layer"></div>
+<div id="toasts"></div>
+<script src="icons.js"></script>
+<script src="sms.js"></script>
+</body>
+</html>

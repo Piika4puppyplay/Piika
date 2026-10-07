@@ -45,7 +45,7 @@
     return r;
   }
   const isNet = (a) => a.pkg === defs.self && /BrowserActivity/.test(a.id);
-  const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : null;
+  const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : /SmsActivity/.test(a.id) ? 'tel' : null;
   const catOf = (a) => overrides[a.id] || selfCat(a) || flairOf(a).cat;
   const appsIn = (cat) => apps.filter((a) => catOf(a) === cat);
   const isSelf = (a) => a.pkg === defs.self;
@@ -60,6 +60,7 @@
     if (isSelf(a) && /GalleryActivity/.test(a.id)) return ['gallery', 'violet'];
     if (isSelf(a) && /VideoActivity/.test(a.id)) return ['film', 'red'];
     if (isSelf(a) && /CameraActivity/.test(a.id)) return ['camera', 'pink'];
+    if (isSelf(a) && /SmsActivity/.test(a.id)) return ['sms', 'orange'];
     if (isSelf(a)) return ['paw', 'pink'];
     if (p === 'fr.piika.pupdown') return ['piggy', 'pink'];
     if (p === defs.dial || /dialer|incallui/.test(p) || l === 'telephone' || l === 'phone') return ['phone', 'green'];
@@ -276,7 +277,7 @@
     S.set('fresh', fresh);
     if (!home || !home.pages) { home = defaultHome(); saveHome(); }
     const net = apps.find(isNet);
-    for (const re of [/GalleryActivity/, /VideoActivity/, /CameraActivity/]) {
+    for (const re of [/GalleryActivity/, /VideoActivity/, /CameraActivity/, /SmsActivity/]) {
       const m = apps.find((x) => isSelf(x) && re.test(x.id));
       const flag = 'added_' + re.source;
       if (m && !cfg[flag]) { cfg[flag] = true; S.set('cfg', cfg); if (!onHome({ t: 'app', id: m.id })) { home.pages[0].unshift({ t: 'app', id: m.id }); saveHome(); } }
