@@ -113,6 +113,7 @@
     recPaused = false;
     $('#recchip').hidden = false;
     $('#recchip').classList.remove('paused');
+    $('#recsafe').textContent = '🛟 sauvegarde en direct';
     $('#recq').textContent = info.q ? info.q.replace(' i/s', '') + ' · ' + info.codec + ' · ' + info.mbps + ' Mb/s' : '';
     $('#lenses').style.visibility = 'hidden';
     $('#modes').style.visibility = 'hidden';
@@ -285,6 +286,8 @@
     else if (ev === 'rec') startRecUi(J(data, {}));
     else if (ev === 'recstop') stopRecUi();
     else if (ev === 'paused') { recPaused = data === '1'; $('#recchip').classList.toggle('paused', recPaused); renderThumb(); }
+    else if (ev === 'seg') { $('#recsafe').textContent = '🛟 ' + fmt(+data * 5000) + ' sécurisées'; }
+    else if (ev === 'merge') { const m = $('#merge'); if (data === 'done') m.hidden = true; else { m.hidden = false; m.textContent = '🐾 Assemblage de la vidéo… ' + data + ' %'; } }
     else if (ev === 'key') shutter();
     else if (ev === 'perm') { $('#perm').hidden = data === 'ok'; lenses = J(call('lenses'), []) || []; call('state'); }
     else if (ev === 'orient') { const r = +data; const rot = r === 90 ? -90 : r === 270 ? 90 : r === 180 ? 180 : 0; $$('.tb2 .pi,.thumb,.flip .pi,.lens,.therm span').forEach((el) => { el.style.transition = 'transform .3s'; el.style.transform = `rotate(${rot}deg)`; }); }

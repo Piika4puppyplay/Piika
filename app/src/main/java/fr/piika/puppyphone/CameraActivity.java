@@ -27,7 +27,10 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaActionSound;
+import android.media.MediaCodec;
 import android.media.MediaCodecList;
+import android.media.MediaExtractor;
+import android.media.MediaMuxer;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.net.Uri;
@@ -41,6 +44,7 @@ import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.os.PowerManager;
 import android.provider.MediaStore;
+import android.system.Os;
 import android.util.Range;
 import android.util.Size;
 import android.util.SizeF;
@@ -650,7 +654,7 @@ public class CameraActivity extends Activity {
                 v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/PuppyPhone");
                 v.put(MediaStore.MediaColumns.IS_PENDING, 1);
                 u = cr.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
-                try (OutputStream o = cr.openOutputStream(u)) { o.write(data); }
+                try (ParcelFileDescriptor pf = cr.openFileDescriptor(u, "w"); FileOutputStream o = new FileOutputStream(pf.getFileDescriptor())) { o.write(data); o.flush(); o.getFD().sync(); }
                 v.clear();
                 v.put(MediaStore.MediaColumns.IS_PENDING, 0);
                 cr.update(u, v, null, null);
@@ -709,14 +713,16 @@ public class CameraActivity extends Activity {
                 recPfd = getContentResolver().openFileDescriptor(captureOut, "w");
                 rec.setOutputFile(recPfd.getFileDescriptor());
             } else if (Build.VERSION.SDK_INT >= 29) {
-                ContentValues v = new ContentValues();
-                v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
-                v.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
-                v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/PuppyPhone");
-                v.put(MediaStore.MediaColumns.IS_PENDING, 1);
-                recUri = getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, v);
-                recPfd = getContentResolver().openFileDescriptor(recUri, "w");
-                rec.setOutputFile(recPfd.getFileDescriptor());
+                // sauvegarde en temps réel : un petit fichier complet toutes les SEG_SEC secondes
+                segmented = true;
+                recBase = "PUP_" + stamp();
+                parts.clear();
+                partPfds.clear();
+                finalized = 0;
+                Uri u0 = newPart();
+                ParcelFileDescriptor p0 = getContentResolver().openFileDescriptor(u0, "w");
+                partPfds.add(p0);
+                rec.setOutputFile(p0.getFileDescriptor());
             } else {
                 File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "PuppyPhone");
                 dir.mkdirs();
@@ -731,7 +737,24 @@ public class CameraActivity extends Activity {
             rec.setAudioEncodingBitRate(256_000);
             rec.setAudioSamplingRate(48_000);
             rec.setAudioChannels(2);
-            rec.setOrientationHint(jpegOrientation());
+            recOrient = jpegOrientation();
+            rec.setOrientationHint(recOrient);
+            if (segmented) {
+                rec.setMaxFileSize((long) br / 8 * SEG_SEC + 256_000L / 8 * SEG_SEC + 400_000);
+                rec.setOnInfoListener((mr, what, extra) -> {
+                    try {
+                        if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_APPROACHING) {
+                            Uri nu = newPart();
+                            ParcelFileDescriptor np = getContentResolver().openFileDescriptor(nu, "w");
+                            partPfds.add(np);
+                            mr.setNextOutputFile(np.getFileDescriptor());
+                        } else if (what == MediaRecorder.MEDIA_RECORDER_INFO_NEXT_OUTPUT_FILE_STARTED) {
+                            finalizePart(finalized++);
+                            emit("seg", String.valueOf(finalized));
+                        }
+                    } catch (Exception ignored) { }
+                });
+            }
             rec.prepare();
             final boolean codecH = useHevc;
             final int brF = br;
@@ -767,6 +790,151 @@ public class CameraActivity extends Activity {
         }
     }
 
+    // ------------------------------------------------------------------ sauvegarde en temps réel (segments)
+    static final int SEG_SEC = 5;
+    boolean segmented;
+    String recBase;
+    int recOrient, finalized;
+    final List<Uri> parts = new ArrayList<>();
+    final List<ParcelFileDescriptor> partPfds = new ArrayList<>();
+
+    Uri newPart() {
+        ContentValues v = new ContentValues();
+        v.put(MediaStore.MediaColumns.DISPLAY_NAME, recBase + "_part" + String.format(Locale.ROOT, "%03d", parts.size() + 1) + ".mp4");
+        v.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
+        v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/PuppyPhone");
+        v.put(MediaStore.MediaColumns.IS_PENDING, 1);
+        Uri u = getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, v);
+        parts.add(u);
+        return u;
+    }
+
+    /** Segment terminé : écrit physiquement sur le stockage puis rendu visible (survit à une coupure). */
+    void finalizePart(int i) {
+        if (i < 0 || i >= partPfds.size()) return;
+        ParcelFileDescriptor p = partPfds.get(i);
+        try { Os.fsync(p.getFileDescriptor()); } catch (Exception ignored) { }
+        try { p.close(); } catch (Exception ignored) { }
+        try {
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            getContentResolver().update(parts.get(i), v, null, null);
+        } catch (Exception ignored) { }
+    }
+
+    /** Recolle les segments en une seule vidéo, sans réencodage (aucune perte de qualité). */
+    boolean mergeParts(List<Uri> src, Uri out) {
+        ParcelFileDescriptor pfd = null;
+        MediaMuxer mux = null;
+        try {
+            pfd = getContentResolver().openFileDescriptor(out, "rw");
+            mux = new MediaMuxer(pfd.getFileDescriptor(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
+            mux.setOrientationHint(recOrient);
+            MediaExtractor e0 = new MediaExtractor();
+            e0.setDataSource(this, src.get(0), null);
+            int n = e0.getTrackCount();
+            String[] mimes = new String[n];
+            int[] dst = new int[n];
+            for (int i = 0; i < n; i++) {
+                MediaFormat f = e0.getTrackFormat(i);
+                mimes[i] = f.getString(MediaFormat.KEY_MIME);
+                dst[i] = mux.addTrack(f);
+            }
+            e0.release();
+            mux.start();
+            ByteBuffer buf = ByteBuffer.allocateDirect(24 * 1024 * 1024);
+            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+            long offset = 0;
+            for (int k = 0; k < src.size(); k++) {
+                MediaExtractor ex = new MediaExtractor();
+                ex.setDataSource(this, src.get(k), null);
+                int[] map = new int[ex.getTrackCount()];
+                for (int i = 0; i < ex.getTrackCount(); i++) {
+                    String m = ex.getTrackFormat(i).getString(MediaFormat.KEY_MIME);
+                    map[i] = -1;
+                    for (int j = 0; j < n; j++) if (mimes[j].equals(m)) { map[i] = dst[j]; break; }
+                    if (map[i] >= 0) ex.selectTrack(i);
+                }
+                long start = ex.getSampleTime();
+                if (start < 0) start = 0;
+                long maxPts = 0;
+                while (true) {
+                    int size = ex.readSampleData(buf, 0);
+                    if (size < 0) break;
+                    int ti = ex.getSampleTrackIndex();
+                    long pts = ex.getSampleTime() - start;
+                    if (pts < 0) pts = 0;
+                    if (ti >= 0 && map[ti] >= 0) {
+                        info.set(0, size, pts + offset, (ex.getSampleFlags() & MediaExtractor.SAMPLE_FLAG_SYNC) != 0 ? MediaCodec.BUFFER_FLAG_KEY_FRAME : 0);
+                        mux.writeSampleData(map[ti], buf, info);
+                    }
+                    if (pts > maxPts) maxPts = pts;
+                    ex.advance();
+                }
+                ex.release();
+                offset += maxPts + 1_000_000L / Math.max(1, videoFps);
+                emit("merge", String.valueOf(Math.round((k + 1) * 100f / src.size())));
+            }
+            mux.stop();
+            mux.release();
+            mux = null;
+            try { Os.fsync(pfd.getFileDescriptor()); } catch (Exception ignored) { }
+            pfd.close();
+            return true;
+        } catch (Exception e) {
+            try { if (mux != null) mux.release(); } catch (Exception ignored) { }
+            try { if (pfd != null) pfd.close(); } catch (Exception ignored) { }
+            return false;
+        }
+    }
+
+    void finishSegments(boolean ok) {
+        for (int i = finalized; i < partPfds.size(); i++) finalizePart(i);
+        finalized = partPfds.size();
+        final List<Uri> src = new ArrayList<>(parts);
+        segmented = false;
+        if (!ok || src.isEmpty()) return;
+        if (src.size() == 1) {
+            try {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.MediaColumns.DISPLAY_NAME, recBase + ".mp4");
+                getContentResolver().update(src.get(0), v, null, null);
+            } catch (Exception ignored) { }
+            lastUri = src.get(0);
+            lastKind = "v";
+            lastThumb = null;
+            emit("saved", "v");
+            return;
+        }
+        final String base = recBase;
+        new Thread(() -> {
+            Uri out = null;
+            try {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.MediaColumns.DISPLAY_NAME, base + ".mp4");
+                v.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
+                v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM + "/PuppyPhone");
+                v.put(MediaStore.MediaColumns.IS_PENDING, 1);
+                out = getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, v);
+            } catch (Exception ignored) { }
+            if (out != null && mergeParts(src, out)) {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                getContentResolver().update(out, v, null, null);
+                for (Uri u : src) try { getContentResolver().delete(u, null, null); } catch (Exception ignored) { }
+                lastUri = out;
+            } else {
+                if (out != null) try { getContentResolver().delete(out, null, null); } catch (Exception ignored) { }
+                lastUri = src.get(src.size() - 1);
+                toast("Assemblage impossible : ta vidéo est gardée en " + src.size() + " morceaux dans DCIM/PuppyPhone");
+            }
+            lastKind = "v";
+            lastThumb = null;
+            emit("saved", "v");
+            emit("merge", "done");
+        }, "pupcam-merge").start();
+    }
+
     String qualityLabel() {
         String r = videoSize.getHeight() >= 4320 ? "8K" : videoSize.getHeight() >= 2160 ? "4K" : videoSize.getHeight() >= 1080 ? "1080p" : videoSize.getHeight() + "p";
         return r + " · " + videoFps + " i/s";
@@ -790,6 +958,13 @@ public class CameraActivity extends Activity {
         rec = null;
         try { if (recPfd != null) recPfd.close(); } catch (Exception ignored) { }
         recPfd = null;
+        if (deleteFile && segmented) {
+            for (ParcelFileDescriptor p : partPfds) try { p.close(); } catch (Exception ignored) { }
+            for (Uri u : parts) try { getContentResolver().delete(u, null, null); } catch (Exception ignored) { }
+            parts.clear();
+            partPfds.clear();
+            segmented = false;
+        }
         if (deleteFile) {
             try { if (recUri != null) getContentResolver().delete(recUri, null, null); } catch (Exception ignored) { }
             if (recFile != null) recFile.delete();
@@ -804,6 +979,22 @@ public class CameraActivity extends Activity {
         boolean ok = true;
         try { rec.stop(); } catch (Exception e) { ok = false; }
         if (sp.getBoolean("sound", true)) sound.play(MediaActionSound.STOP_VIDEO_RECORDING);
+        if (segmented) {
+            try { if (rec != null) rec.release(); } catch (Exception ignored) { }
+            rec = null;
+            // même si stop() échoue, les segments déjà terminés sont gardés
+            if (!ok && parts.size() > finalized) {
+                int last = parts.size() - 1;
+                try { partPfds.get(last).close(); } catch (Exception ignored) { }
+                try { getContentResolver().delete(parts.get(last), null, null); } catch (Exception ignored) { }
+                parts.remove(last);
+                partPfds.remove(last);
+            }
+            finishSegments(true);
+            emit("recstop", "");
+            if (dev != null) startPreview();
+            return;
+        }
         Uri u = recUri;
         File f = recFile;
         releaseRec(!ok);
