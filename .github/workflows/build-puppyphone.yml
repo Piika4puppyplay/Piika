@@ -34,7 +34,9 @@ jobs:
       - name: Construire
         env:
           VERSION_CODE: ${{ github.run_number }}
-        run: gradle --no-daemon :app:assembleRelease
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:assembleRelease 2>&1 | tee build.log || { grep -E "error:|e: |\.java:[0-9]+: |What went wrong|Exception" build.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done; exit 1; }
       - name: Renommer
         run: cp app/build/outputs/apk/release/app-release.apk PuppyPhone.apk
       - uses: actions/upload-artifact@v4
