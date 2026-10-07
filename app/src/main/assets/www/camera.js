@@ -107,7 +107,8 @@
     if (prim.zmax >= 2) pills.push({ id: prim.id, z: 2, label: '2' });
     if (prim.zmax >= 3) pills.push({ id: prim.id, z: 3, label: '3', sub: 'télé' });
     if (prim.zmax >= 10 && !st.front) pills.push({ id: prim.id, z: 10, label: '10' });
-    side.slice(1).forEach((l) => {
+    const bad = J(localStorage.getItem('pc_badlens'), []) || [];
+    side.slice(1).filter((l) => !bad.includes(l.id)).forEach((l) => {
       const ratio = prim.eq && l.eq ? l.eq / prim.eq : 1;
       pills.push({ id: l.id, z: 1, phys: true, label: (Math.round(ratio * 10) / 10 + '').replace(/^0/, '') + '×', sub: (l.eq || '?') + ' mm' });
     });
@@ -370,6 +371,7 @@
     else if (ev === 'voice') { const vc = $('#voicechip'); vc.classList.toggle('hear', data === 'hear'); }
     else if (ev === 'voicecmd') { const v = $('#vcmd'); v.textContent = data === 'photo' ? '📸 PHOTO !' : data === 'film' ? '🎬 ÇA TOURNE !' : '🔦 LUMIÈRE !'; v.hidden = false; v.style.animation = 'none'; void v.offsetWidth; v.style.animation = ''; setTimeout(() => { v.hidden = true; }, 1300); }
     else if (ev === 'raw') { call('toast', '🎞️ DNG enregistré'); }
+    else if (ev === 'lenserr') { const bad = J(localStorage.getItem('pc_badlens'), []) || []; if (!bad.includes(data)) bad.push(data); localStorage.setItem('pc_badlens', JSON.stringify(bad)); renderLenses(); }
     else if (ev === 'key') shutter();
     else if (ev === 'perm') { $('#perm').hidden = data === 'ok'; lenses = J(call('lenses'), []) || []; call('state'); }
     else if (ev === 'orient') { const r = +data; const rot = r === 90 ? -90 : r === 270 ? 90 : r === 180 ? 180 : 0; $$('.tb2 .pi,.thumb,.flip .pi,.lens,.therm span').forEach((el) => { el.style.transition = 'transform .3s'; el.style.transform = `rotate(${rot}deg)`; }); }

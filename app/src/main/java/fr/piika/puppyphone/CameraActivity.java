@@ -166,6 +166,11 @@ public class CameraActivity extends Activity {
         sp = getSharedPreferences("pupcam", MODE_PRIVATE);
         cm = (CameraManager) getSystemService(CAMERA_SERVICE);
         pm = (PowerManager) getSystemService(POWER_SERVICE);
+        final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try { getSharedPreferences("pupcam", MODE_PRIVATE).edit().remove("cam").commit(); } catch (Exception ignored) { }
+            if (prev != null) prev.uncaughtException(t, e);
+        });
         sound = new MediaActionSound();
         sound.load(MediaActionSound.SHUTTER_CLICK);
 
@@ -416,7 +421,10 @@ public class CameraActivity extends Activity {
         if (ch == null) return a;
         StreamConfigurationMap map = ch.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         if (map == null) return a;
-        List<Size> rs = Arrays.asList(map.getOutputSizes(MediaRecorder.class));
+        Size[] mr;
+        try { mr = map.getOutputSizes(MediaRecorder.class); } catch (Exception e) { mr = null; }
+        if (mr == null || mr.length == 0) return a;
+        List<Size> rs = Arrays.asList(mr);
         for (String[] q : QUALITIES) {
             Size s = new Size(Integer.parseInt(q[1]), Integer.parseInt(q[2]));
             int fps = Integer.parseInt(q[3]);
@@ -484,12 +492,37 @@ public class CameraActivity extends Activity {
     // ------------------------------------------------------------------ ouverture caméra
     void openIfReady() {
         if (!hasPerms() || !tex.isAvailable() || bg == null || dev != null || opening) return;
-        if (camId == null) camId = sp.getString("cam", defaultCamId(false));
+        if (camId == null) {
+            camId = sp.getString("cam", defaultCamId(false));
+            boolean known = false;
+            try { for (String x : cm.getCameraIdList()) if (x.equals(camId)) known = true; } catch (Exception ignored) { }
+            if (!known) camId = defaultCamId(false);
+        }
         openCam(camId);
     }
 
+    String lastGoodCam;
+
+    /** Ouvre un capteur ; si ce module refuse les applis, on revient sans planter sur le précédent. */
     void openCam(String id) {
         try {
+            openCamUnsafe(id);
+        } catch (Throwable e) {
+            opening = false;
+            fallbackCam(id, e);
+        }
+    }
+
+    void fallbackCam(String badId, Throwable e) {
+        String back = lastGoodCam != null && !lastGoodCam.equals(badId) ? lastGoodCam : defaultCamId(front);
+        sp.edit().remove("cam").apply();
+        toast("Ce module refuse d'être utilisé par les applis (" + (e == null ? "erreur" : e.getClass().getSimpleName()) + ") → retour au principal");
+        emit("lenserr", badId);
+        if (back != null && !back.equals(badId)) ui.postDelayed(() -> { try { openCamUnsafe(back); } catch (Throwable t) { toast("Caméra indisponible"); } }, 300);
+    }
+
+    void openCamUnsafe(String id) throws Exception {
+        {
             closeCam();
             camId = id;
             ch = cm.getCameraCharacteristics(id);
@@ -506,13 +539,16 @@ public class CameraActivity extends Activity {
             layoutPreview();
             opening = true;
             cm.openCamera(id, new CameraDevice.StateCallback() {
-                @Override public void onOpened(CameraDevice d) { opening = false; dev = d; startPreview(); }
+                @Override public void onOpened(CameraDevice d) {
+                    opening = false; dev = d; lastGoodCam = id; sp.edit().putString("cam", id).apply();
+                    try { startPreview(); } catch (Throwable t) { fallbackCam(id, t); }
+                }
                 @Override public void onDisconnected(CameraDevice d) { opening = false; d.close(); dev = null; }
-                @Override public void onError(CameraDevice d, int e) { opening = false; d.close(); dev = null; toast("Caméra indisponible (" + e + ")"); }
+                @Override public void onError(CameraDevice d, int e) {
+                    opening = false; try { d.close(); } catch (Exception ignored) { } dev = null;
+                    fallbackCam(id, new Exception("code " + e));
+                }
             }, bg);
-        } catch (SecurityException | CameraAccessException e) {
-            opening = false;
-            toast("Impossible d'ouvrir la caméra");
         }
     }
 
@@ -558,7 +594,7 @@ public class CameraActivity extends Activity {
                     Size rs = rawSize();
                     if (rs != null) {
                         if (rawReader != null) rawReader.close();
-                        rawReader = ImageReader.newInstance(rs.getWidth(), rs.getHeight(), ImageFormat.RAW_SENSOR, 3);
+                        rawReader = ImageReader.newInstance(rs.getWidth(), rs.getHeight(), ImageFormat.RAW_SENSOR, 2);
                         rawReader.setOnImageAvailableListener(r -> {
                             try {
                                 Image img = r.acquireNextImage();
@@ -576,10 +612,10 @@ public class CameraActivity extends Activity {
                 @Override public void onConfigured(CameraCaptureSession s) { sess = s; repeat(); emitState(); }
                 @Override public void onConfigureFailed(CameraCaptureSession s) {
                     if (triedRaw) { rawOn = false; try { rawReader.close(); } catch (Exception ignored) { } rawReader = null; toast("RAW refusé par ce capteur"); startPreview(); }
-                    else toast("Configuration caméra refusée");
+                    else fallbackCam(camId, new Exception("configuration refusée"));
                 }
             }, bg);
-        } catch (Exception e) { toast("Aperçu impossible"); }
+        } catch (Throwable e) { toast("Aperçu impossible : " + e.getClass().getSimpleName()); }
     }
 
     void common(CaptureRequest.Builder b) {
@@ -1534,7 +1570,6 @@ public class CameraActivity extends Activity {
             ui.post(() -> {
                 if (recording) return;
                 if (id.equals(camId) && dev != null) { setZoomNow(z); return; }
-                sp.edit().putString("cam", id).apply();
                 openCam(id);
                 if (z > 0) zoom = Math.max(zoomRange.getLower(), Math.min(zoomRange.getUpper(), z));
                 emitState();
