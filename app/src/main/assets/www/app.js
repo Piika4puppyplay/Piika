@@ -17,7 +17,7 @@
   const XSVG = '<svg viewBox="0 0 20 20"><path d="M4 4L16 16M16 4L4 16" stroke="#fff" stroke-width="3.4" stroke-linecap="round" style="filter:drop-shadow(0 1px 1px #0008)"/></svg>';
 
   // ------------------------------------------------------------------ réglages
-  const DEF = { accent: 'pink', iconStyle: 'framed', iconShape: 'tile', pack: true, size: 58, cols: 4, labels: true, showClock: true, showPower: true, showSearch: true, welcomed: false };
+  const DEF = { accent: 'pink', iconStyle: 'framed', iconShape: 'tile', pack: true, size: 58, cols: 4, labels: true, showClock: true, showPower: true, showSearch: true, welcomed: false, fx: 'auto' };
   const ACCENTS = { pink: ['#ff3fa4', '#29e6ff'], cyan: ['#29e6ff', '#ff3fa4'], violet: ['#9b5cff', '#29e6ff'], amber: ['#ffb627', '#ff3fa4'], green: ['#3dffb0', '#9b5cff'], red: ['#ff4d5e', '#ffb627'] };
   let cfg = Object.assign({}, DEF, S.get('cfg', {}));
   const saveCfg = () => { S.set('cfg', cfg); applyCfg(); };
@@ -27,6 +27,8 @@
     r.setProperty('--acc', ac[0]); r.setProperty('--acc2', ac[1]);
     r.setProperty('--is', cfg.size + 'px'); r.setProperty('--cols', cfg.cols);
     document.body.classList.toggle('nolabels', !cfg.labels);
+    document.body.classList.toggle('fx-max', cfg.fx === 'max');
+    document.body.classList.toggle('fx-turbo', cfg.fx === 'turbo');
     $('#wclock').hidden = !cfg.showClock; $('#wpower').hidden = !cfg.showPower; $('#searchbar').hidden = !cfg.showSearch;
   }
 
@@ -73,7 +75,11 @@
     if (a.system && /music/.test(p)) return ['music', 'violet'];
     return null;
   }
-  const iconUrl = (id, raw) => MOCK ? N.iconUrl(id) : 'https://pup.local/icon?id=' + encodeURIComponent(id) + '&raw=' + (raw ? 1 : 0);
+  const iconUrl = (id, raw) => {
+    if (MOCK) return N.iconUrl(id);
+    const a = byId.get(id);
+    return 'https://pup.local/icon?id=' + encodeURIComponent(id) + '&raw=' + (raw ? 1 : 0) + '&v=' + (a && a.updated || 0);
+  };
   const initial = (s) => (String(s || '?').trim()[0] || '?').toUpperCase();
   function appIcon(a) {
     const r = cfg.pack ? role(a) : null;
@@ -180,7 +186,11 @@
     { k: 'torch', g: 'torch', c: 'amber', l: 'Lampe' },
     { k: 'wallsound', g: 'speaker', c: 'pink', l: 'Son fond' },
   ];
+  let powerSig = '';
   function renderPower() {
+    const sig = [status.wifi, status.bt, status.data, status.airplane, status.torch, wall.type, wall.muted, status.operator].join('|');
+    if (sig === powerSig) return;
+    powerSig = sig;
     $('#wpower').innerHTML = PW.map((p) => {
       let st = '';
       if (p.k === 'wifi') st = status.wifi ? 'on' : '';
@@ -236,12 +246,16 @@
 
   // ------------------------------------------------------------------ applis
   function loadDefaults() { defs = J(call('defaults'), {}) || {}; }
+  let appsSig = '';
   function refreshApps(reason) {
     const list = (J(call('apps'), []) || []).filter((a) => !(a.pkg === defs.self && /MainActivity/.test(a.id)));
     list.sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
     apps = list;
     byId = new Map(apps.map((a) => [a.id, a]));
-    flairCache.clear();
+    const sig = apps.map((a) => a.id + '@' + (a.updated || 0)).join(',');
+    const changed = sig !== appsSig;
+    appsSig = sig;
+    if (changed) flairCache.clear();
     let known = S.get('known', null);
     const added = [];
     if (!known) known = apps.map((a) => a.id);
@@ -255,7 +269,7 @@
     S.set('known', apps.map((a) => a.id));
     S.set('fresh', fresh);
     if (!home || !home.pages) { home = defaultHome(); saveHome(); }
-    renderAll();
+    if (changed || added.length || reason === 'force') renderAll();
     added.slice(0, 4).forEach((a, i) => setTimeout(() => announceNew(a), 400 + i * 900));
   }
   function announceNew(a) {
@@ -289,7 +303,7 @@
   }
   pager.addEventListener('scroll', () => {
     const p = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
-    if (p !== curPage) { curPage = p; renderDots(); }
+    if (p !== curPage) { curPage = p; renderDots(); document.body.classList.toggle('on-niche', p === 1); }
   }, { passive: true });
 
   let ts = null;
@@ -807,6 +821,15 @@
       </div>
 
       <div class="cp">
+        <div class="cp-h">${I('pulse', 'green')}<div><b>Fluidité</b><small>Le GPU est déjà utilisé à fond. Ici tu choisis combien d'effets il doit calculer.</small></div></div>
+        <div class="choices c3">
+          <button class="choice ${cfg.fx === 'turbo' ? 'on' : ''}" data-fx="turbo" type="button">${I('torch', 'green', { on: true })}<b>Turbo</b><small>ultra fluide, effets figés</small></button>
+          <button class="choice ${cfg.fx === 'auto' ? 'on' : ''}" data-fx="auto" type="button">${I('paw', 'pink')}<b>Équilibré</b><small>animé et fluide</small></button>
+          <button class="choice ${cfg.fx === 'max' ? 'on' : ''}" data-fx="max" type="button">${I('sparkle', 'violet')}<b>Max</b><small>+ flou de verre réel</small></button>
+        </div>
+      </div>
+
+      <div class="cp">
         <div class="cp-h">${I('sparkle', 'amber')}<div><b>Couleur néon</b><small>La lueur de tout PuppyPhone.</small></div></div>
         <div class="swatches">${Object.keys(ACCENTS).map((k) => `<button class="swatch ${cfg.accent === k ? 'on' : ''}" data-acc="${k}" style="--s:${ACCENTS[k][0]}" type="button"></button>`).join('')}</div>
       </div>
@@ -847,6 +870,7 @@
         if (d.is) { cfg.iconStyle = d.is; saveCfg(); renderAll(); w.refresh(); }
         if (d.shape) { cfg.iconShape = d.shape; saveCfg(); renderAll(); w.refresh(); }
         if (d.cols) { cfg.cols = +d.cols; saveCfg(); renderAll(); w.refresh(); }
+        if (d.fx) { cfg.fx = d.fx; saveCfg(); w.refresh(); }
         if (d.acc) { cfg.accent = d.acc; saveCfg(); renderAll(); w.refresh(); }
         if (d.act === 'opensort') openFolder('sort');
         if (d.act === 'forget') { overrides = {}; learn = {}; S.set('cats', overrides); S.set('learn', learn); flairCache.clear(); renderAll(); w.refresh(); toast('Flair remis à zéro', 'Toutes les applis sont re-triées automatiquement.'); }
@@ -880,7 +904,8 @@
   // ------------------------------------------------------------------ pont natif
   window.PupNative = {
     on(ev, data) {
-      if (ev === 'resume') { refreshApps('resume'); updateStatus(); takePins(); tick(); }
+      if (ev === 'resume') { document.body.classList.remove('paused'); refreshApps('resume'); updateStatus(); takePins(); tick(); }
+      else if (ev === 'pause') document.body.classList.add('paused');
       else if (ev === 'apps') refreshApps(data);
       else if (ev === 'status') updateStatus();
       else if (ev === 'wall') { wall = J(data, wall) || wall; applyWall(); renderPower(); const t = winStack[winStack.length - 1]; if (t && t.refresh) t.refresh(); }
@@ -916,10 +941,10 @@
   loadDefaults();
   wall = J(call('wallInfo'), {}) || {};
   updateStatus();
-  refreshApps('start');
+  refreshApps('force');
   renderDots();
   tick();
   setInterval(tick, 1000);
-  setInterval(() => { if (!document.hidden) updateStatus(); }, 15000);
+  setInterval(() => { if (!document.hidden && !document.body.classList.contains('paused')) updateStatus(); }, 15000);
   if (!cfg.welcomed) setTimeout(welcome, 500);
 })();

@@ -51,6 +51,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -66,6 +67,9 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.file.Files;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -159,7 +163,9 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(true);
         s.setTextZoom(100);
-        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setOffscreenPreRaster(true);              // pré-calcule l'écran sur le GPU : défilement plus fluide
+        web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);
 
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -195,8 +201,22 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (web != null) web.onResume();
         emit("resume", "");
     }
+
+    @Override
+    protected void onStop() {
+        // une autre appli est devant : on fige les animations pour qu'elle reste fluide
+        emit("pause", "");
+        ui.postDelayed(() -> { if (web != null && stopped) web.onPause(); }, 120);
+        stopped = true;
+        super.onStop();
+    }
+
+    boolean stopped;
+
+    @Override protected void onStart() { stopped = false; super.onStart(); if (web != null) web.onResume(); }
 
     @Override
     protected void onNewIntent(Intent intent) {
@@ -243,7 +263,7 @@ public class MainActivity extends Activity {
         h.put("Access-Control-Allow-Origin", "*");
         try {
             if (p.equals("/icon")) {
-                byte[] png = appIcon(u.getQueryParameter("id"), "1".equals(u.getQueryParameter("raw")));
+                byte[] png = appIcon(u.getQueryParameter("id"), "1".equals(u.getQueryParameter("raw")), String.valueOf(u.getQueryParameter("v")));
                 if (png == null) return notFound();
                 h.put("Cache-Control", "max-age=31536000");
                 return new WebResourceResponse("image/png", null, 200, "OK", h, new ByteArrayInputStream(png));
@@ -284,19 +304,27 @@ public class MainActivity extends Activity {
         return "application/octet-stream";
     }
 
-    byte[] appIcon(String id, boolean raw) {
+    byte[] appIcon(String id, boolean raw, String ver) {
         if (id == null) return null;
         String key = id + (raw ? "#r" : "#o");
         synchronized (iconCache) {
             if (iconCache.containsKey(key)) return iconCache.get(key);
         }
+        File f = new File(new File(getCacheDir(), "icons"), Integer.toHexString((key + "@" + ver).hashCode()) + ".png");
+        try {
+            if (f.exists()) {
+                byte[] b = Files.readAllBytes(f.toPath());
+                synchronized (iconCache) { iconCache.put(key, b); }
+                return b;
+            }
+        } catch (Exception ignored) { }
         Drawable d = null;
         try {
             ComponentName cn = ComponentName.unflattenFromString(id);
             if (cn != null) {
-                for (LauncherActivityInfo a : la.getActivityList(cn.getPackageName(), user)) {
-                    if (a.getComponentName().equals(cn)) { d = a.getIcon(getResources().getDisplayMetrics().densityDpi); break; }
-                }
+                Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(cn);
+                LauncherActivityInfo a = la.resolveActivity(i, user);
+                if (a != null) d = a.getIcon(getResources().getDisplayMetrics().densityDpi);
                 if (d == null) d = getPackageManager().getApplicationIcon(cn.getPackageName());
             } else {
                 d = getPackageManager().getApplicationIcon(id);
@@ -304,6 +332,10 @@ public class MainActivity extends Activity {
         } catch (Exception e) { return null; }
         byte[] png = toPng(d, raw);
         synchronized (iconCache) { iconCache.put(key, png); }
+        try {
+            f.getParentFile().mkdirs();
+            try (FileOutputStream o = new FileOutputStream(f)) { o.write(png); }
+        } catch (Exception ignored) { }
         return png;
     }
 
@@ -416,6 +448,12 @@ public class MainActivity extends Activity {
     void applyWallMode() {
         ui.post(() -> {
             String type = wallPrefs().getString("wall_type", "neon");
+            Window win = getWindow();
+            if ("system".equals(type)) win.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
+            else win.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
+            boolean transparent = "system".equals(type) || "video".equals(type);
+            web.setBackgroundColor(transparent ? Color.TRANSPARENT : 0xFF0B0614);
+            root.setBackgroundColor(transparent ? Color.TRANSPARENT : 0xFF0B0614);
             if ("video".equals(type)) {
                 tex.setVisibility(View.VISIBLE);
                 Intent i = new Intent(this, PupWallService.class).setAction(PupWallService.ACT_START);
@@ -586,6 +624,7 @@ public class MainActivity extends Activity {
                     o.put("sysCat", Build.VERSION.SDK_INT >= 26 ? ai.category : -1);
                     o.put("system", (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
                     o.put("installed", a.getFirstInstallTime());
+                    try { o.put("updated", getPackageManager().getPackageInfo(cn.getPackageName(), 0).lastUpdateTime); } catch (Exception ignored) { }
                     arr.put(o);
                 }
             } catch (Exception ignored) { }

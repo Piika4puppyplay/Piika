@@ -76,7 +76,7 @@
     contacts: () => `<circle cx="50" cy="37" r="13" fill="F"/><path d="M24 78C24 61 37 54 50 54S76 61 76 78Z" fill="F"/>`,
     calendar: (o) => `<rect x="20" y="24" width="60" height="56" rx="8" fill="F"/><path d="M20 32a8 8 0 0 1 8-8H72a8 8 0 0 1 8 8V40H20Z" fill="A"/>
       <rect x="32" y="16" width="6" height="14" rx="3" fill="D"/><rect x="62" y="16" width="6" height="14" rx="3" fill="D"/>
-      <text x="50" y="73" text-anchor="middle" font-family="Bungee,Impact,sans-serif" font-size="27" fill="D">${o.day || new Date().getDate()}</text>`,
+      <text x="50" y="73" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="27" fill="D">${o.day || new Date().getDate()}</text>`,
     store: () => `<path d="M26 38H74L69 81H31Z" fill="F"/><path d="M39 40V33a11 11 0 0 1 22 0V40" fill="none" stroke="F" stroke-width="5.5" stroke-linecap="round"/><path d="M44 52L60 61L44 70Z" fill="A"/>`,
     folder: () => `<path d="M16 30a6 6 0 0 1 6-6H41L48 31H78a6 6 0 0 1 6 6V72a6 6 0 0 1-6 6H22a6 6 0 0 1-6-6Z" fill="F"/><path d="M16 42H84V72a6 6 0 0 1-6 6H22a6 6 0 0 1-6-6Z" fill="A" opacity=".45"/>`,
     weather: () => `<circle cx="40" cy="40" r="13" fill="#ffd34d"/><g stroke="#ffd34d" stroke-width="3.5" stroke-linecap="round"><path d="M40 18V22M22 40H26M27 27L30 30M53 27L50 30"/></g>
@@ -88,7 +88,7 @@
       : `<g fill="none" stroke="F" stroke-width="5.5" stroke-linecap="round"><path d="M61 39a14 14 0 0 1 0 22"/><path d="M69 30a26 26 0 0 1 0 40"/></g>`),
     wifi: () => `<g fill="none" stroke="F" stroke-width="7.5" stroke-linecap="round"><path d="M20 43a42 42 0 0 1 60 0"/><path d="M30 54a28 28 0 0 1 40 0"/><path d="M40 65a14 14 0 0 1 20 0"/></g><circle cx="50" cy="75" r="5.5" fill="F"/>`,
     bt: () => `<path d="M34 35L66 63L50 78V22L66 37L34 65" fill="none" stroke="F" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>`,
-    data: () => `<text x="50" y="69" text-anchor="middle" font-family="Bungee,Impact,sans-serif" font-size="31" fill="F">4G</text>
+    data: () => `<text x="50" y="69" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="31" fill="F">4G</text>
       <path d="M33 33L41 22L49 33Z" fill="F"/><path d="M53 22L61 33L69 22Z" fill="A"/>`,
     torch: (o) => (o.on ? `<g stroke="#ffe27a" stroke-width="3.5" stroke-linecap="round"><path d="M50 8V16M30 12L35 19M70 12L65 19"/></g>` : '') +
       `<path d="M30 24H70L61 44H39Z" fill="F"/><path d="M39 46H61V80a5 5 0 0 1-5 5H44a5 5 0 0 1-5-5Z" fill="F"/><rect x="46" y="55" width="8" height="12" rx="3" fill="A"/>`,
@@ -105,7 +105,7 @@
       <circle cx="66" cy="49" r="4" fill="A"/><circle cx="74" cy="56" r="4" fill="A"/><circle cx="58" cy="56" r="4" fill="A"/><circle cx="66" cy="63" r="4" fill="A"/>`,
     cart: () => `<path d="M16 24H28L36 62H72L80 36H31" fill="none" stroke="F" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><circle cx="40" cy="74" r="6" fill="F"/><circle cx="68" cy="74" r="6" fill="F"/>`,
     coin: () => `<circle cx="50" cy="50" r="28" fill="F"/><circle cx="50" cy="50" r="21" fill="none" stroke="A" stroke-width="3"/>
-      <text x="50" y="62" text-anchor="middle" font-family="Bungee,Impact,sans-serif" font-size="32" fill="A">€</text>`,
+      <text x="50" y="62" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="32" fill="A">€</text>`,
     plane: () => mat('M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z', 2.7, 17.6, 18),
     bone: () => `<g fill="F"><rect x="32" y="45" width="36" height="10" rx="5"/><circle cx="31" cy="44" r="7"/><circle cx="31" cy="56" r="7"/><circle cx="69" cy="44" r="7"/><circle cx="69" cy="56" r="7"/></g>`,
     bowl: () => `<g fill="F"><rect x="36" y="30" width="28" height="8" rx="4"/><circle cx="35" cy="30" r="5.5"/><circle cx="35" cy="38" r="5.5"/><circle cx="65" cy="30" r="5.5"/><circle cx="65" cy="38" r="5.5"/></g>
@@ -119,11 +119,11 @@
       <rect x="16" y="52" width="68" height="5" fill="A"/><rect x="44" y="48" width="12" height="13" rx="3" fill="A"/>`,
     wrench: () => mat('M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z', 2.6, 19, 19),
     box: () => `<path d="M20 40L50 51L80 40V70L50 83L20 70Z" fill="F"/><path d="M20 40L50 28L80 40L50 51Z" fill="A"/>
-      <path d="M50 51V83" stroke="D" stroke-width="2" opacity=".5"/><text x="36" y="74" text-anchor="middle" font-family="Bungee,Impact,sans-serif" font-size="20" fill="D">?</text>`,
+      <path d="M50 51V83" stroke="D" stroke-width="2" opacity=".5"/><text x="36" y="74" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="20" fill="D">?</text>`,
     search: () => `<circle cx="44" cy="44" r="17" fill="none" stroke="F" stroke-width="8"/><path d="M57 57L75 75" stroke="F" stroke-width="10" stroke-linecap="round"/>`,
     piggy: () => `<ellipse cx="48" cy="56" rx="27" ry="20" fill="F"/><path d="M30 42L27 28L41 37Z" fill="F"/><ellipse cx="75" cy="56" rx="7" ry="6" fill="A"/>
       <rect x="32" y="70" width="8" height="12" rx="3" fill="F"/><rect x="54" y="70" width="8" height="12" rx="3" fill="F"/><rect x="41" y="38" width="15" height="4" rx="2" fill="D"/><circle cx="62" cy="49" r="3" fill="D"/>
-      <circle cx="49" cy="25" r="8" fill="#ffd34d"/><text x="49" y="29.5" text-anchor="middle" font-family="Bungee,Impact,sans-serif" font-size="11" fill="#7a4a00">€</text>`,
+      <circle cx="49" cy="25" r="8" fill="#ffd34d"/><text x="49" y="29.5" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="11" fill="#7a4a00">€</text>`,
     apps: () => { let d = ''; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) d += `<circle cx="${30 + c * 20}" cy="${30 + r * 20}" r="6.5" fill="F"/>`; return d; },
     home: () => `<path d="M50 20L82 48H73V80H57V62H43V80H27V48H18Z" fill="F"/>`,
     link: () => `<g fill="none" stroke="F" stroke-width="7" stroke-linecap="round"><path d="M44 56a12 12 0 0 0 17 0l10-10a12 12 0 0 0-17-17l-4 4"/><path d="M56 44a12 12 0 0 0-17 0L29 54a12 12 0 0 0 17 17l4-4"/></g>`,
@@ -138,8 +138,20 @@
   }
 
   /** Icône complète avec corps 3D. shape: tile | orb | none */
+  // Cache : chaque icône est dessinée une seule fois puis réutilisée comme image (rapide pour le GPU).
+  const cache = new Map();
   function icon(glyph, color, opt) {
     opt = opt || {};
+    const key = glyph + '|' + color + '|' + JSON.stringify(opt);
+    let out = cache.get(key);
+    if (!out) {
+      const svg = draw(glyph, color, opt).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+      out = `<img class="pi" alt="" draggable="false" decoding="async" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}">`;
+      cache.set(key, out);
+    }
+    return out;
+  }
+  function draw(glyph, color, opt) {
     const shape = opt.shape || 'tile';
     const [L, M, D] = PAL[color] || PAL.pink;
     const u = 'pp' + (++uid);
@@ -166,6 +178,7 @@
         <linearGradient id="${u}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".6" stop-color="#fff6fc"/><stop offset="1" stop-color="${L}"/></linearGradient>
         <clipPath id="${u}c">${body('#000')}</clipPath>
       </defs>
+      <g transform="translate(0 4)" opacity=".3">${body('#000')}</g><g transform="translate(0 2)" opacity=".3">${body('#000')}</g>
       ${body(`url(#${u}b)`, `stroke="${D}" stroke-width="2"`)}
       <g clip-path="url(#${u}c)"><ellipse cx="50" cy="98" rx="46" ry="30" fill="url(#${u}r)"/></g>
       <g transform="translate(0 2.8)" opacity=".55">${paint(g, D, D, D)}</g>
