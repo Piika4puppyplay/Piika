@@ -555,6 +555,7 @@
 
         <service
             android:name=".PupKeyboard"
+            android:process=":kbd"
             android:label="PupKeyboard"
             android:icon="@mipmap/ic_pupkeyboard"
             android:exported="true"

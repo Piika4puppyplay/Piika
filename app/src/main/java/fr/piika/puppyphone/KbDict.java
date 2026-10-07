@@ -25,6 +25,7 @@ final class KbDict {
     int[] freq = new int[0];
     final Map<String, Integer> exact = new HashMap<>();
     final Map<String, Integer> user = new HashMap<>();
+    final Map<String, String> normCache = new HashMap<>();
     volatile boolean ready;
 
     KbDict(String lang) { this.lang = lang; }
@@ -64,7 +65,7 @@ final class KbDict {
         ready = true;
     }
 
-    SharedPreferences up(Context c) { return c.getSharedPreferences("pupkbd_words_" + lang, Context.MODE_PRIVATE); }
+    SharedPreferences up(Context c) { return c.getSharedPreferences("pupkbd_words_" + lang, Context.MODE_MULTI_PROCESS); }
     void loadUser(Context c) {
         try {
             JSONObject o = new JSONObject(up(c).getString("w", "{}"));
@@ -115,7 +116,8 @@ final class KbDict {
             }
         }
         for (Map.Entry<String, Integer> e : user.entrySet()) {
-            String uk = norm(e.getKey());
+            String uk = normCache.get(e.getKey());
+            if (uk == null) { uk = norm(e.getKey()); normCache.put(e.getKey(), uk); }
             if (uk.startsWith(k)) score.merge(e.getKey(), 20000.0 * e.getValue() * (uk.length() == k.length() ? 3 : 1), Double::sum);
         }
         // corrections (distance 1) si peu de résultats

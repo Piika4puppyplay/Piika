@@ -48,8 +48,10 @@ class KbView extends View {
     int keyH, stripH, navInset;
     boolean bubble = true, hints = true;
     Typeface tf, tfHead;
-    Bitmap base, leather, logo;
-    boolean dirty = true;
+    Bitmap base, leather, logo, stripBmp;
+    boolean dirty = true, stripDirty = true;
+    final java.util.HashMap<String, Bitmap> cache = new java.util.HashMap<>();
+    int rowsVer = 0;
 
     // toucher
     KbLayouts.Key pressed;
@@ -71,7 +73,6 @@ class KbView extends View {
         super(c);
         this.ime = ime;
         dp = getResources().getDisplayMetrics().density;
-        setLayerType(LAYER_TYPE_SOFTWARE, null);
         try { tf = Typeface.createFromAsset(c.getAssets(), "www/fonts/ChakraPetch-SemiBold.ttf"); } catch (Exception e) { tf = Typeface.DEFAULT_BOLD; }
         try { tfHead = Typeface.createFromAsset(c.getAssets(), "www/fonts/Bungee-Regular.ttf"); } catch (Exception e) { tfHead = Typeface.DEFAULT_BOLD; }
         leather = BitmapFactory.decodeResource(getResources(), R.drawable.nav_leather);
@@ -79,11 +80,17 @@ class KbView extends View {
         setOnApplyWindowInsetsListener((v, ins) -> { int b = ins.getSystemWindowInsetBottom(); if (b != navInset) { navInset = b; requestLayout(); } return ins; });
     }
 
-    void setRows(List<List<KbLayouts.Key>> r) { rows = r; layoutKeys(); dirty = true; requestLayout(); invalidate(); }
-    void setSuggestions(List<String> s) { sugg = s == null ? new ArrayList<>() : s; dirty = true; invalidate(); }
-    void setMode(int m) { mode = m; scroll = 0; dirty = true; requestLayout(); invalidate(); }
-    void setTheme(Theme t) { th = t; dirty = true; invalidate(); }
-    void refresh() { dirty = true; invalidate(); }
+    void clearCache() { cache.clear(); base = null; stripDirty = true; } // pas de recycle() : le rendu matériel peut encore les lire
+    void setRows(List<List<KbLayouts.Key>> r) { rows = r; rowsVer++; clearCache(); layoutKeys(); requestLayout(); invalidate(); }
+    void setSuggestions(List<String> s) {
+        List<String> n = s == null ? new ArrayList<>() : s;
+        if (n.equals(sugg)) return;
+        sugg = n; stripDirty = true; invalidate();
+    }
+    void setMode(int m) { if (m == mode) return; mode = m; scroll = 0; requestLayout(); invalidate(); }
+    void setTheme(Theme t) { if (th != null && t.name.equals(th.name) && keyHApplied == keyH) return; th = t; keyHApplied = keyH; clearCache(); invalidate(); }
+    int keyHApplied = -1;
+    void refresh() { stripDirty = true; invalidate(); }
 
     int rowsCount() { return Math.max(4, rows.size()); }
 
@@ -93,7 +100,7 @@ class KbView extends View {
         int hgt = stripH + (int) (6 * dp) + n * keyH + (n - 1) * (int) (7 * dp) + (int) (8 * dp) + navInset;
         setMeasuredDimension(w, hgt);
     }
-    @Override protected void onSizeChanged(int w, int hh, int ow, int oh) { layoutKeys(); dirty = true; }
+    @Override protected void onSizeChanged(int w, int hh, int ow, int oh) { layoutKeys(); clearCache(); }
 
     void layoutKeys() {
         int W = getWidth();
@@ -116,17 +123,26 @@ class KbView extends View {
 
     // ================================================================== DESSIN
     @Override protected void onDraw(Canvas c) {
-        if (getWidth() == 0) return;
-        if (dirty || base == null || base.getWidth() != getWidth() || base.getHeight() != getHeight()) {
-            if (base == null || base.getWidth() != getWidth() || base.getHeight() != getHeight()) {
-                if (base != null) base.recycle();
-                base = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
-            }
-            base.eraseColor(0);
-            drawBase(new Canvas(base));
-            dirty = false;
+        int W = getWidth(), H = getHeight();
+        if (W == 0 || H == 0) return;
+        // fond + touches : rendu une seule fois par état (majuscules / disposition / mode) puis réutilisé
+        String key = rowsVer + "|" + mode + "|" + (mode == 0 ? ime.shift : 0) + "|" + W + "x" + H;
+        Bitmap b = cache.get(key);
+        if (b == null) {
+            b = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
+            drawBase(new Canvas(b));
+            if (cache.size() > 4) clearCache();
+            cache.put(key, b);
         }
-        c.drawBitmap(base, 0, 0, null);
+        c.drawBitmap(b, 0, 0, null);
+        // bande des suggestions : petit bitmap redessiné seulement quand les mots changent
+        if (stripDirty || stripBmp == null || stripBmp.getWidth() != W) {
+            if (stripBmp == null || stripBmp.getWidth() != W || stripBmp.getHeight() != stripH) { stripBmp = Bitmap.createBitmap(W, Math.max(1, stripH), Bitmap.Config.ARGB_8888); }
+            stripBmp = Bitmap.createBitmap(W, Math.max(1, stripH), Bitmap.Config.ARGB_8888);
+            drawStrip(new Canvas(stripBmp));
+            stripDirty = false;
+        }
+        c.drawBitmap(stripBmp, 0, 0, null);
         if (mode != 0) { drawPanel(c); return; }
         if (stripPressed >= 0) drawStripPress(c);
         if (pressed != null && popAlts == null && !cursorMode) {
@@ -156,7 +172,6 @@ class KbView extends View {
         Paint ne = new Paint(Paint.ANTI_ALIAS_FLAG);
         ne.setStrokeWidth(2 * dp); ne.setColor(th.acc); ne.setShadowLayer(8 * dp, 0, 0, th.acc);
         c.drawLine(0, stripH, W, stripH, ne);
-        drawStrip(c);
         if (mode == 0) for (List<KbLayouts.Key> r : rows) for (KbLayouts.Key k : r) drawKey(c, k, false);
     }
 
@@ -255,7 +270,7 @@ class KbView extends View {
         // bordure
         Paint b = new Paint(Paint.ANTI_ALIAS_FLAG); b.setStyle(Paint.Style.STROKE); b.setStrokeWidth(1.2f * dp);
         b.setColor(down || kind == 2 || shiftOn ? 0xFFFFFFFF : 0x80FFFFFF);
-        if (kind == 2 || shiftOn) b.setShadowLayer(6 * dp, 0, 0, th.acc);
+        if (kind == 2 || shiftOn) b.setShadowLayer(4 * dp, 0, 0, th.acc);
         c.drawRoundRect(r, rad, rad, b);
         // libellé
         String label = labelOf(k);
@@ -274,7 +289,7 @@ class KbView extends View {
         else if (label.length() > 2) { tp.setTypeface(tfHead); size = 12.5f * dp; }
         else { tp.setTypeface(Typeface.DEFAULT_BOLD); size = 24 * dp; }
         tp.setTextSize(size);
-        if (!emoji) tp.setShadowLayer(7 * dp, 0, 0, down ? Color.WHITE : th.acc);
+        if (!emoji) tp.setShadowLayer(4 * dp, 0, 0, down ? Color.WHITE : th.acc);
         Paint.FontMetrics fm = tp.getFontMetrics();
         c.drawText(label, r.centerX(), r.centerY() - (fm.ascent + fm.descent) / 2, tp);
         tp.clearShadowLayer();

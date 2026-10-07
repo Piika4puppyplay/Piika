@@ -47,7 +47,7 @@ public class PupKeyboard extends InputMethodService {
     @Override public void onCreate() {
         super.onCreate();
         I = this;
-        sp = getSharedPreferences("pupkbd", MODE_PRIVATE);
+        sp = getSharedPreferences("pupkbd", MODE_MULTI_PROCESS);
         vib = getSystemService(Vibrator.class);
         am = getSystemService(AudioManager.class);
         cm = getSystemService(ClipboardManager.class);
@@ -56,7 +56,9 @@ public class PupKeyboard extends InputMethodService {
             for (int i = 0; i < a.length(); i++) clips.add(a.getString(i));
         } catch (Exception ignored) { }
         if (cm != null) cm.addPrimaryClipChangedListener(this::grabClip);
-        loadDict("fr"); loadDict("en");
+        lang = sp.getString("lang", "fr");
+        loadDict(lang);
+        resetVer = sp.getInt("resetVer", 0);
     }
 
     void loadDict(String l) {
@@ -66,7 +68,7 @@ public class PupKeyboard extends InputMethodService {
         dicts[i] = d;
         new Thread(() -> d.load(this)).start();
     }
-    KbDict dict() { return dicts["fr".equals(lang) ? 0 : 1]; }
+    KbDict dict() { KbDict d = dicts["fr".equals(lang) ? 0 : 1]; if (d == null) { loadDict(lang); d = dicts["fr".equals(lang) ? 0 : 1]; } return d; }
 
     void grabClip() {
         try {
@@ -91,7 +93,18 @@ public class PupKeyboard extends InputMethodService {
         return view;
     }
 
+    int resetVer;
     void applyPrefs() {
+        sp = getSharedPreferences("pupkbd", MODE_MULTI_PROCESS); // relit le fichier si les réglages ont changé
+        int rv = sp.getInt("resetVer", 0);
+        if (rv != resetVer) {
+            resetVer = rv;
+            clips.clear();
+            try { JSONArray a = new JSONArray(sp.getString("clips", "[]")); for (int i = 0; i < a.length(); i++) clips.add(a.getString(i)); } catch (Exception ignored) { }
+            for (KbDict d : dicts) if (d != null) { d.user.clear(); d.loadUser(this); }
+        }
+        lang = sp.getString("lang", "fr");
+        loadDict(lang);
         if (view == null) return;
         int[] sizes = {50, 56, 62, 70};
         view.keyH = (int) (sizes[Math.max(0, Math.min(3, sp.getInt("size", 2)))] * view.dp);
@@ -99,7 +112,6 @@ public class PupKeyboard extends InputMethodService {
         view.bubble = sp.getBoolean("bubble", true);
         view.hints = sp.getBoolean("hints", true);
         view.setTheme(KbView.theme(sp.getString("theme", "rose")));
-        lang = sp.getString("lang", "fr");
     }
 
     @Override public void onStartInputView(EditorInfo info, boolean restarting) {
@@ -127,8 +139,12 @@ public class PupKeyboard extends InputMethodService {
     boolean enterIsEmoji() { return false; }
     String commaKey() { return email ? "@" : url ? "/" : ","; }
 
+    String rowsSig = "";
     void buildRows() {
         if (view == null) return;
+        String sig = layer + "|" + sp.getString("layout", "") + "|" + lang + "|" + sp.getBoolean("numRow", false) + "|" + commaKey();
+        if (sig.equals(rowsSig) && !view.rows.isEmpty() && view.mode == 0) return; // même clavier : on garde le rendu en cache
+        rowsSig = sig;
         List<List<KbLayouts.Key>> rows;
         switch (layer) {
             case 1: rows = KbLayouts.symbols(1, commaKey()); break;
@@ -357,7 +373,7 @@ public class PupKeyboard extends InputMethodService {
             case 3: requestHideSelf(0); break;
         }
     }
-    void backToKeys() { view.setMode(0); buildRows(); }
+    void backToKeys() { rowsSig = ""; view.setMode(0); buildRows(); }
     void openSettings() {
         try { startActivity(new Intent(this, KbSettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
     }

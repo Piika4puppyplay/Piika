@@ -70,7 +70,7 @@ public class KbSettingsActivity extends Activity {
 
     void emit(String ev) { ui.post(() -> { if (web != null) web.evaluateJavascript("window.KbdUI&&KbdUI.on(" + JSONObject.quote(ev) + ")", null); }); }
     void pushInsets() { final float t = insT / dp, bt = insB / dp; ui.post(() -> web.evaluateJavascript("window.KbdUI&&KbdUI.insets(" + t + "," + bt + ")", null)); }
-    SharedPreferences sp() { return getSharedPreferences("pupkbd", MODE_PRIVATE); }
+    SharedPreferences sp() { return getSharedPreferences("pupkbd", MODE_MULTI_PROCESS); }
     String imeId() { return new ComponentName(this, PupKeyboard.class).flattenToShortString(); }
 
     boolean enabled() {
@@ -102,7 +102,7 @@ public class KbSettingsActivity extends Activity {
         @JavascriptInterface public String state() {
             try {
                 int learned = 0;
-                for (String l : new String[]{"fr", "en"}) learned += new JSONObject(getSharedPreferences("pupkbd_words_" + l, MODE_PRIVATE).getString("w", "{}")).length();
+                for (String l : new String[]{"fr", "en"}) learned += new JSONObject(getSharedPreferences("pupkbd_words_" + l, MODE_MULTI_PROCESS).getString("w", "{}")).length();
                 return new JSONObject().put("enabled", enabled()).put("current", current()).put("learned", learned)
                         .put("clips", new org.json.JSONArray(sp().getString("clips", "[]")).length()).toString();
             } catch (Exception e) { return "{}"; }
@@ -124,16 +124,15 @@ public class KbSettingsActivity extends Activity {
                     String k = it.next(); Object v = o.get(k);
                     if (v instanceof Boolean) e.putBoolean(k, (Boolean) v); else if (v instanceof Integer) e.putInt(k, (Integer) v); else e.putString(k, String.valueOf(v));
                 }
-                e.apply();
+                e.commit();
             } catch (Exception ignored) { }
         }
         @JavascriptInterface public void openList() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void pick() { ui.post(() -> { InputMethodManager m = getSystemService(InputMethodManager.class); if (m != null) m.showInputMethodPicker(); }); }
         @JavascriptInterface public void forget() {
-            for (String l : new String[]{"fr", "en"}) getSharedPreferences("pupkbd_words_" + l, MODE_PRIVATE).edit().clear().apply();
-            PupKeyboard k = PupKeyboard.I;
-            if (k != null) for (KbDict d : k.dicts) if (d != null) d.user.clear();
+            for (String l : new String[]{"fr", "en"}) getSharedPreferences("pupkbd_words_" + l, MODE_MULTI_PROCESS).edit().clear().commit();
+            sp().edit().putInt("resetVer", sp().getInt("resetVer", 0) + 1).commit();
         }
-        @JavascriptInterface public void clearClips() { sp().edit().putString("clips", "[]").apply(); PupKeyboard k = PupKeyboard.I; if (k != null) k.clips.clear(); }
+        @JavascriptInterface public void clearClips() { sp().edit().putString("clips", "[]").putInt("resetVer", sp().getInt("resetVer", 0) + 1).commit(); }
     }
 }
