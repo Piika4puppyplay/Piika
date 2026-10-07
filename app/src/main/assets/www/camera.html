@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupCamera</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="camera.css">
+</head>
+<body class="cam">
+<div id="pv"><div id="gridl" hidden><i></i><i></i><i></i><i></i></div><div id="ring" hidden></div><div id="evs" hidden><input type="range" id="ev" min="-4" max="4" step="1" value="0"><span id="evi"></span></div><div id="zbub" hidden></div><div id="flashfx"></div><div id="count" hidden></div></div>
+<header id="topbar">
+  <button class="tb2" data-a="flash" type="button"></button>
+  <button class="tb2" data-a="timer" type="button"></button>
+  <button class="tb2 chip" data-a="ratio" type="button"></button>
+  <button class="tb2" data-a="grid" type="button"></button>
+  <button class="therm" id="therm" data-a="therm" type="button" hidden><span id="thi"></span><b id="tht"></b></button>
+  <button class="tb2" data-a="settings" type="button"></button>
+</header>
+<div id="recchip" hidden><i></i><b id="rect">00:00</b><small id="recq"></small></div>
+<footer id="bottom">
+  <div class="lenses" id="lenses"></div>
+  <div class="modes" id="modes"><button data-m="photo" type="button">PHOTO</button><button data-m="video" type="button">VIDÉO</button></div>
+  <div class="ctrl">
+    <button class="thumb" id="thumb" type="button"></button>
+    <button class="shut" id="shut" type="button" aria-label="Déclencheur"><i></i></button>
+    <button class="flip" id="flip" type="button" aria-label="Changer de caméra"></button>
+  </div>
+</footer>
+<div id="sheet" hidden><div class="sh" id="shin"></div></div>
+<div id="perm" hidden><div class="permcard2"><span id="permi"></span><b class="chrome">PupCamera a besoin de la caméra et du micro</b><button class="ab wide" id="permb" type="button">Autoriser</button></div></div>
+<script src="icons.js"></script>
+<script src="camera.js"></script>
+</body>
+</html>

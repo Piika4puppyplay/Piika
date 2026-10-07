@@ -155,6 +155,25 @@
     slides: () => `<rect x="14" y="24" width="52" height="40" rx="5" fill="A"/><rect x="26" y="34" width="60" height="44" rx="6" fill="F"/><path d="M50 46L66 56L50 66Z" fill="D"/>`,
     edit: () => `<path d="M24 68L66 26L76 36L34 78L20 82Z" fill="F"/><path d="M62 30L72 40" stroke="A" stroke-width="4"/>`,
     sun: () => `<circle cx="50" cy="50" r="16" fill="F"/><g stroke="F" stroke-width="6" stroke-linecap="round"><path d="M50 14V22M50 78V86M14 50H22M78 50H86M25 25L31 31M69 69L75 75M25 75L31 69M69 31L75 25"/></g>`,
+    bolt: (o) => `<path d="M56 12L24 56H46L40 88L76 40H54Z" fill="F" stroke="D" stroke-width="2" stroke-linejoin="round"/>` +
+      (o.off ? `<path d="M18 18L82 82" stroke="#ff4d5e" stroke-width="8" stroke-linecap="round"/>` : '') +
+      (o.auto ? `<text x="80" y="88" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="30" fill="A">A</text>` : ''),
+    grid: () => `<rect x="16" y="16" width="68" height="68" rx="8" fill="none" stroke="F" stroke-width="6"/><path d="M39 16V84M61 16V84M16 39H84M16 61H84" stroke="F" stroke-width="4"/>`,
+    switchcam: () => `<rect x="16" y="30" width="68" height="46" rx="9" fill="F"/><rect x="38" y="22" width="24" height="12" rx="4" fill="F"/>
+      <path d="M36 52a14 14 0 0 1 24-9" fill="none" stroke="A" stroke-width="5" stroke-linecap="round"/><path d="M57 36L64 45L53 46Z" fill="A"/>
+      <path d="M64 56a14 14 0 0 1-24 9" fill="none" stroke="A" stroke-width="5" stroke-linecap="round"/><path d="M43 72L36 63L47 62Z" fill="A"/>`,
+    timer: (o) => `<circle cx="50" cy="54" r="28" fill="F"/><rect x="42" y="14" width="16" height="9" rx="3" fill="F"/><path d="M50 54V36" stroke="D" stroke-width="6" stroke-linecap="round"/>` +
+      (o.n ? `<text x="50" y="66" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="26" fill="A">${o.n}</text>` : ''),
+    pupface: (o) => {
+      const lv = o.level || 0;
+      const drops = [[78, 30], [20, 40], [84, 56], [16, 64]].slice(0, Math.min(4, lv)).map(([x, y]) =>
+        `<path d="M${x} ${y - 10}C${x + 6} ${y - 1} ${x + 7} ${y + 3} ${x} ${y + 6}C${x - 7} ${y + 3} ${x - 6} ${y - 1} ${x} ${y - 10}Z" fill="#7fe3ff" stroke="#0a5a7a" stroke-width="1.5"/>`).join('');
+      return `<ellipse cx="25" cy="44" rx="11" ry="20" fill="A" transform="rotate(18 25 44)"/><ellipse cx="75" cy="44" rx="11" ry="20" fill="A" transform="rotate(-18 75 44)"/>
+        <circle cx="50" cy="54" r="28" fill="F"/><ellipse cx="50" cy="66" rx="14" ry="10" fill="#fff" opacity=".7"/>
+        <circle cx="40" cy="50" r="4" fill="D"/><circle cx="60" cy="50" r="4" fill="D"/><ellipse cx="50" cy="61" rx="5.5" ry="4" fill="D"/>` +
+        (lv >= 2 ? `<path d="M45 68h10v8a5 5 0 0 1-10 0Z" fill="#ff5c8a"/>` : `<path d="M44 68Q50 73 56 68" fill="none" stroke="D" stroke-width="2.5" stroke-linecap="round"/>`) +
+        (lv >= 3 ? `<path d="M34 42L44 45M66 42L56 45" stroke="D" stroke-width="3" stroke-linecap="round"/>` : '') + drops;
+    },
     apps: () => { let d = ''; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) d += `<circle cx="${30 + c * 20}" cy="${30 + r * 20}" r="6.5" fill="F"/>`; return d; },
     home: () => `<path d="M50 20L82 48H73V80H57V62H43V80H27V48H18Z" fill="F"/>`,
     link: () => `<g fill="none" stroke="F" stroke-width="7" stroke-linecap="round"><path d="M44 56a12 12 0 0 0 17 0l10-10a12 12 0 0 0-17-17l-4 4"/><path d="M56 44a12 12 0 0 0-17 0L29 54a12 12 0 0 0 17 17l4-4"/></g>`,
