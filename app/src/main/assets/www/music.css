@@ -275,3 +275,7 @@ body.unlocked .bands{border-color:rgba(255,77,94,.6);box-shadow:0 0 22px -8px va
 
 body.fx-turbo .pbg img{filter:brightness(.4);}
 @media (max-height:700px){.tools{grid-template-columns:repeat(6,1fr)}.tool span{display:none}.playorb{width:80px;height:80px}.cbtn.mid{width:54px;height:54px}#spec{height:46px}}
+/* fenêtres et menus toujours au-dessus des panneaux plein écran */
+#layer>.veil{z-index:50}
+#layer>.win,#layer>.menu{z-index:51}
+#toasts{z-index:70}

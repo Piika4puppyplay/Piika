@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupFile</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="file.css">
+</head>
+<body class="pfile wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+
+<section id="app">
+  <header class="fhead" id="fhead">
+    <div class="frow" id="frow">
+      <button class="hbtn" id="fback" type="button" hidden></button>
+      <span class="flogo" id="flogo"></span>
+      <div class="ftitle"><div class="neon ft2">PUP<span>FILE</span></div><small id="fsub">Explorateur</small></div>
+      <button class="hbtn" id="fsearch" type="button"></button>
+      <button class="hbtn" id="fmenu" type="button"></button>
+    </div>
+    <div class="selbar" id="selbar" hidden></div>
+    <div class="seg" id="ftabs"><button data-tab="local" class="on" type="button">Local</button><button data-tab="lib" type="button">Bibliothèque</button><button data-tab="apps" type="button">Applis</button></div>
+    <div class="crumbs" id="crumbs" hidden></div>
+  </header>
+  <div class="fbody" id="fbody"></div>
+  <button class="fab" id="fab" type="button" hidden></button>
+  <div class="pastebar" id="pastebar" hidden></div>
+  <div class="actbar" id="actbar" hidden></div>
+</section>
+
+<div id="layer"></div>
+<div id="toasts"></div>
+<script src="icons.js"></script>
+<script src="file.js"></script>
+</body>
+</html>
