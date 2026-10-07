@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="fr.piika.puppyphone.KbSettingsActivity"
+    android:supportsSwitchingToNextInputMethod="true"
+    android:isDefault="false">
+    <subtype android:label="@string/kbd_fr" android:imeSubtypeLocale="fr_FR" android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="AsciiCapable" />
+    <subtype android:label="@string/kbd_en" android:imeSubtypeLocale="en_US" android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="AsciiCapable" />
+</input-method>

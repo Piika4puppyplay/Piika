@@ -2,4 +2,6 @@
 <resources>
     <string name="pupnav_desc">PupNav affiche la barre de navigation puppyplay (Retour 🐾, Niche 🛖, PupTasks 🦴) par-dessus les applis. Le service utilise l\'accessibilité uniquement pour le bouton Retour, l\'accueil, cacher la barre quand le clavier est ouvert et savoir quelle appli est au premier plan. Il ne lit pas le contenu de tes écrans.</string>
     <string name="pupnav_sum">Barre de navigation puppyplay et multitâche PupTasks</string>
+    <string name="kbd_fr">Français 🐾</string>
+    <string name="kbd_en">English 🐾</string>
 </resources>

@@ -31,6 +31,14 @@ jobs:
           mkdir -p app/src/main/assets/adblock
           curl -fsSL https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts -o app/src/main/assets/adblock/hosts.txt || echo "# liste indisponible" > app/src/main/assets/adblock/hosts.txt
           wc -l app/src/main/assets/adblock/hosts.txt
+      - name: Dictionnaires PupKeyboard (FrequencyWords)
+        run: |
+          mkdir -p app/src/main/assets/kbd
+          for L in fr en; do
+            curl -fsSL "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/$L/${L}_50k.txt" -o /tmp/$L.txt || : > /tmp/$L.txt
+            grep -E "^[[:alpha:]'àâäçéèêëîïôöùûüÿœæÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸŒÆ-]+ [0-9]+$" /tmp/$L.txt | head -n 30000 > app/src/main/assets/kbd/$L.txt || true
+            wc -l app/src/main/assets/kbd/$L.txt
+          done
       - name: Construire
         env:
           VERSION_CODE: ${{ github.run_number }}

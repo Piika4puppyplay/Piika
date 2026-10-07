@@ -552,5 +552,36 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".PupKeyboard"
+            android:label="PupKeyboard"
+            android:icon="@mipmap/ic_pupkeyboard"
+            android:exported="true"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data android:name="android.view.im" android:resource="@xml/pupkbd_method" />
+        </service>
+
+        <activity
+            android:name=".KbSettingsActivity"
+            android:label="PupKeyboard"
+            android:icon="@mipmap/ic_pupkeyboard"
+            android:roundIcon="@mipmap/ic_pupkeyboard"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.kbd"
+            android:theme="@style/PupNetTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>
