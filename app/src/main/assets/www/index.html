@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PuppyPhone</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+<div id="wallimg" aria-hidden="true"></div>
+<div class="scrimtop" aria-hidden="true"></div>
+
+<main id="home">
+  <div id="pager">
+    <section class="page" id="p0">
+      <button class="vsearch" id="searchbar" type="button">
+        <span class="pw" id="searchpaw"></span>
+        <span class="ph">Chercher une appli ou sur le web…</span>
+        <span class="go" id="searchgo"></span>
+      </button>
+      <div class="w-clock" id="wclock">
+        <div class="in">
+          <div class="cl-brand neon">PUPPY<span>PHONE</span></div>
+          <div class="flip" style="margin-top:14px">
+            <div class="fcard" id="fh"><i class="rv l"></i><b>00</b><i class="rv r"></i></div>
+            <div class="colon"><i></i><i></i></div>
+            <div class="fcard" id="fm"><i class="rv l"></i><b>00</b><i class="rv r"></i></div>
+          </div>
+          <div class="cl-row">
+            <div class="cl-date"><span class="d1 chrome" id="d1">—</span><span class="d2" id="d2">—</span></div>
+            <button class="batt" id="batt" type="button"><span class="cell"><span class="liq" id="liq" style="width:70%"></span><span class="bolt" id="bolt"></span></span><b id="bpct">--%</b></button>
+          </div>
+        </div>
+      </div>
+      <div class="w-power" id="wpower"></div>
+      <div class="grid" id="g0"></div>
+    </section>
+    <section class="page" id="p1">
+      <div class="ptitle"><span id="nicheico"></span><span class="chrome">LA NICHE</span></div>
+      <div class="psub">Tes dossiers flottants · rangés par Flair</div>
+      <div class="niche" id="niche"></div>
+    </section>
+    <section class="page" id="p2">
+      <div class="ptitle"><span id="scico"></span><span class="chrome c2">RACCOURCIS</span></div>
+      <div class="psub">Applis, raccourcis d'applis &amp; liens</div>
+      <div class="grid" id="g1"></div>
+    </section>
+  </div>
+  <div id="dots"></div>
+  <nav id="dock"><div class="shelf"></div></nav>
+</main>
+
+<div id="drawer" aria-hidden="true">
+  <header>
+    <div class="dr-top">
+      <div class="dr-title chrome">MES APPLIS</div>
+      <button class="ibtn" id="drclose" type="button" aria-label="Fermer"></button>
+    </div>
+    <label class="vsearch"><span class="pw" id="drpaw"></span><input id="q" type="search" placeholder="Chercher…" autocomplete="off" enterkeyhint="search"></label>
+    <div class="seg" id="tabs">
+      <button data-tab="all" class="on" type="button">Toutes</button>
+      <button data-tab="folders" type="button">Dossiers</button>
+      <button data-tab="new" type="button">Nouveautés</button>
+    </div>
+  </header>
+  <div class="dr-body" id="drbody"></div>
+</div>
+
+<div id="layer"></div>
+<div id="toasts"></div>
+
+<script src="icons.js"></script>
+<script src="flair.js"></script>
+<script src="mock.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

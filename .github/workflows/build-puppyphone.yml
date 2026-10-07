@@ -1,0 +1,46 @@
+name: Construire l'APK PuppyPhone
+on:
+  push:
+    branches: [ puppyphone ]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Polices puppyplay (hors ligne)
+        run: |
+          D=app/src/main/assets/www/fonts
+          mkdir -p $D
+          B=https://raw.githubusercontent.com/google/fonts/main/ofl
+          for f in bungee/Bungee-Regular.ttf bungeeshade/BungeeShade-Regular.ttf monoton/Monoton-Regular.ttf sharetechmono/ShareTechMono-Regular.ttf chakrapetch/ChakraPetch-Regular.ttf chakrapetch/ChakraPetch-Medium.ttf chakrapetch/ChakraPetch-SemiBold.ttf chakrapetch/ChakraPetch-Bold.ttf; do
+            curl -fsSL "$B/$f" -o "$D/$(basename $f)" || echo "police manquante $f"
+          done
+          ls -la $D
+      - name: Construire
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: gradle --no-daemon :app:assembleRelease
+      - name: Renommer
+        run: cp app/build/outputs/apk/release/app-release.apk PuppyPhone.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PuppyPhone-apk
+          path: PuppyPhone.apk
+      - name: Publier la version
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: puppyphone-v${{ github.run_number }}
+          name: PuppyPhone v1.0.${{ github.run_number }} 🐾📱
+          body: "Télécharge **PuppyPhone.apk** ci-dessous, ouvre-le sur ton téléphone et autorise l'installation. Puis appuie sur le bouton Accueil et choisis PuppyPhone (« Toujours »). 🐾"
+          files: PuppyPhone.apk
+          make_latest: true
