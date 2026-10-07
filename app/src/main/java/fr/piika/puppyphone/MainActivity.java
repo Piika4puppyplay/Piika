@@ -786,6 +786,14 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface public void openUrl(String url) { go(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
 
+        /** Ouvre une adresse ou une recherche dans PuppyInternet. */
+        @JavascriptInterface public void browse(String url, String q) {
+            Intent i = new Intent(MainActivity.this, BrowserActivity.class);
+            if (url != null && !url.isEmpty()) { i.setAction(Intent.ACTION_VIEW); i.setData(Uri.parse(url)); }
+            else if (q != null && !q.isEmpty()) i.putExtra("q", q);
+            go(i);
+        }
+
         @JavascriptInterface public void dial(String num) { go(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(num == null ? "" : num)))); }
 
         @JavascriptInterface public String get(String k) {

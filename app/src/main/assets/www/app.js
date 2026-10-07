@@ -44,7 +44,8 @@
     if (!r) { r = Flair.classify(a, learn); flairCache.set(a.id, r); }
     return r;
   }
-  const catOf = (a) => overrides[a.id] || flairOf(a).cat;
+  const isNet = (a) => a.pkg === defs.self && /BrowserActivity/.test(a.id);
+  const catOf = (a) => overrides[a.id] || (isNet(a) ? 'web' : flairOf(a).cat);
   const appsIn = (cat) => apps.filter((a) => catOf(a) === cat);
   const isSelf = (a) => a.pkg === defs.self;
   const isSon = (a) => isSelf(a) && /PupSon/.test(a.id);
@@ -54,6 +55,7 @@
   function role(a) {
     const p = a.pkg || '', l = norm(a.label);
     if (isSon(a)) return ['speaker', 'pink', { muted: wall.muted }];
+    if (isNet(a)) return ['pupnet', 'pink'];
     if (isSelf(a)) return ['paw', 'pink'];
     if (p === 'fr.piika.pupdown') return ['piggy', 'pink'];
     if (p === defs.dial || /dialer|incallui/.test(p) || l === 'telephone' || l === 'phone') return ['phone', 'green'];
@@ -269,6 +271,8 @@
     S.set('known', apps.map((a) => a.id));
     S.set('fresh', fresh);
     if (!home || !home.pages) { home = defaultHome(); saveHome(); }
+    const net = apps.find(isNet);
+    if (net && !cfg.netAdded) { cfg.netAdded = true; S.set('cfg', cfg); if (!onHome({ t: 'app', id: net.id })) { home.pages[0].unshift({ t: 'app', id: net.id }); saveHome(); } }
     if (changed || added.length || reason === 'force') renderAll();
     added.slice(0, 4).forEach((a, i) => setTimeout(() => announceNew(a), 400 + i * 900));
   }
@@ -282,6 +286,7 @@
     if (!a) return;
     haptic();
     if (isSon(a)) return openPupSon();
+    if (isNet(a)) return call('launch', id);
     if (isSelf(a)) return openSettings();
     if (fresh[id]) { delete fresh[id]; S.set('fresh', fresh); setTimeout(renderAll, 600); }
     call('launch', id);
@@ -289,7 +294,7 @@
   function takePins() {
     const pins = J(call('takePins'), []) || [];
     if (!pins.length) return;
-    for (const p of pins) home.pages[1].push({ t: 'sc', pkg: p.pkg, sid: p.sid, label: p.label });
+    for (const p of pins) home.pages[1].push(p.type === 'link' ? { t: 'link', url: p.url, label: p.label, color: 'cyan' } : { t: 'sc', pkg: p.pkg, sid: p.sid, label: p.label });
     saveHome(); renderAll();
     toast('Raccourci ajouté', `${pins.map((p) => p.label).join(', ')} → page Raccourcis`, `<div class="ico svg">${I('link', 'cyan')}</div>`);
   }
@@ -372,7 +377,7 @@
     if (it.t === 'app') return launchApp(it.id);
     if (it.t === 'folder') { haptic(); return openFolder(it.cat); }
     if (it.t === 'sc') { haptic(); return call('startShortcut', it.pkg, it.sid); }
-    if (it.t === 'link') { haptic(); return call('openUrl', it.url); }
+    if (it.t === 'link') { haptic(); return call('browse', it.url, ''); }
     if (it.t === 'pup') { haptic(); const p = PUP[it.app]; return p && p.open(); }
   }
 
@@ -714,7 +719,7 @@
     }
     body.innerHTML = html;
     const ws = $('#websearch');
-    if (ws) ws.onclick = () => { call('openUrl', 'https://duckduckgo.com/?q=' + encodeURIComponent($('#q').value)); closeDrawer(); };
+    if (ws) ws.onclick = () => { call('browse', '', $('#q').value); closeDrawer(); };
   }
   $('#q').addEventListener('input', renderDrawer);
   $('#q').addEventListener('keydown', (e) => {
@@ -722,7 +727,7 @@
     const n = norm(e.target.value);
     const first = apps.find((a) => norm(a.label).startsWith(n)) || apps.find((a) => norm(a.label).includes(n));
     if (first && n) { closeDrawer(); launchApp(first.id); }
-    else if (n) { call('openUrl', 'https://duckduckgo.com/?q=' + encodeURIComponent(e.target.value)); closeDrawer(); }
+    else if (n) { call('browse', '', e.target.value); closeDrawer(); }
   });
   $('#tabs').addEventListener('click', (e) => {
     const b = e.target.closest('[data-tab]');

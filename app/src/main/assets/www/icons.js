@@ -124,6 +124,24 @@
     piggy: () => `<ellipse cx="48" cy="56" rx="27" ry="20" fill="F"/><path d="M30 42L27 28L41 37Z" fill="F"/><ellipse cx="75" cy="56" rx="7" ry="6" fill="A"/>
       <rect x="32" y="70" width="8" height="12" rx="3" fill="F"/><rect x="54" y="70" width="8" height="12" rx="3" fill="F"/><rect x="41" y="38" width="15" height="4" rx="2" fill="D"/><circle cx="62" cy="49" r="3" fill="D"/>
       <circle cx="49" cy="25" r="8" fill="#ffd34d"/><text x="49" y="29.5" text-anchor="middle" font-family="Bungee,Impact,Arial Black,sans-serif" font-weight="900" font-size="11" fill="#7a4a00">€</text>`,
+    pupnet: () => `<circle cx="46" cy="46" r="27" fill="F"/>
+      <g fill="none" stroke="A" stroke-width="2.6"><ellipse cx="46" cy="46" rx="11" ry="27"/><path d="M19 46H73M23 33H69M23 59H69"/></g>
+      <circle cx="70" cy="72" r="15" fill="D"/><g fill="F"><ellipse cx="70" cy="76" rx="6.5" ry="5.2"/><circle cx="62.5" cy="69" r="2.7"/><circle cx="67" cy="65" r="2.7"/><circle cx="73" cy="65" r="2.7"/><circle cx="77.5" cy="69" r="2.7"/></g>`,
+    shield: () => `<path d="M50 14L80 25V48C80 66 67 79 50 86C33 79 20 66 20 48V25Z" fill="F"/><path d="M50 22L72 30V48C72 61 63 71 50 77Z" fill="A" opacity=".55"/>
+      <path d="M37 50L46 59L64 40" fill="none" stroke="D" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`,
+    star: () => `<path d="M50 14L60 38L86 40L66 57L72 83L50 69L28 83L34 57L14 40L40 38Z" fill="F"/>`,
+    share: () => `<g fill="F"><circle cx="70" cy="26" r="11"/><circle cx="30" cy="50" r="11"/><circle cx="70" cy="74" r="11"/></g><path d="M30 50L70 26M30 50L70 74" stroke="F" stroke-width="6"/>`,
+    tabs: () => `<rect x="30" y="18" width="50" height="50" rx="9" fill="A"/><rect x="20" y="30" width="50" height="52" rx="9" fill="F"/>`,
+    refresh: () => `<path d="M74 50A24 24 0 1 1 64 30" fill="none" stroke="F" stroke-width="9" stroke-linecap="round"/><path d="M56 14L78 26L58 40Z" fill="F"/>`,
+    left: () => `<path d="M62 18L30 50L62 82" fill="none" stroke="F" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>`,
+    right: () => `<path d="M38 18L70 50L38 82" fill="none" stroke="F" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>`,
+    download: () => `<path d="M50 16V58" stroke="F" stroke-width="10" stroke-linecap="round"/><path d="M30 42L50 64L70 42" fill="none" stroke="F" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><rect x="20" y="72" width="60" height="10" rx="5" fill="F"/>`,
+    desktop: () => `<rect x="14" y="20" width="72" height="48" rx="6" fill="F"/><rect x="20" y="26" width="60" height="36" rx="3" fill="A"/><path d="M40 68L36 80H64L60 68Z" fill="F"/><rect x="30" y="79" width="40" height="6" rx="3" fill="F"/>`,
+    external: () => `<rect x="16" y="28" width="52" height="54" rx="9" fill="none" stroke="F" stroke-width="8"/><path d="M48 52L80 20M58 18H82V42" fill="none" stroke="A" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`,
+    trash: () => `<rect x="22" y="26" width="56" height="9" rx="4" fill="F"/><rect x="40" y="16" width="20" height="10" rx="3" fill="F"/><path d="M28 38H72L67 84H33Z" fill="F"/><g stroke="A" stroke-width="4" stroke-linecap="round"><path d="M42 48V74M58 48V74M50 48V74"/></g>`,
+    lock: () => `<rect x="24" y="44" width="52" height="40" rx="8" fill="F"/><path d="M34 44V34a16 16 0 0 1 32 0V44" fill="none" stroke="F" stroke-width="8"/><circle cx="50" cy="62" r="6" fill="A"/>`,
+    upload: () => `<path d="M50 64V22" stroke="F" stroke-width="10" stroke-linecap="round"/><path d="M30 38L50 16L70 38" fill="none" stroke="F" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><rect x="20" y="72" width="60" height="10" rx="5" fill="F"/>`,
+    menu: () => `<g fill="F"><circle cx="50" cy="24" r="9"/><circle cx="50" cy="50" r="9"/><circle cx="50" cy="76" r="9"/></g>`,
     apps: () => { let d = ''; for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) d += `<circle cx="${30 + c * 20}" cy="${30 + r * 20}" r="6.5" fill="F"/>`; return d; },
     home: () => `<path d="M50 20L82 48H73V80H57V62H43V80H27V48H18Z" fill="F"/>`,
     link: () => `<g fill="none" stroke="F" stroke-width="7" stroke-linecap="round"><path d="M44 56a12 12 0 0 0 17 0l10-10a12 12 0 0 0-17-17l-4 4"/><path d="M56 44a12 12 0 0 0-17 0L29 54a12 12 0 0 0 17 17l4-4"/></g>`,

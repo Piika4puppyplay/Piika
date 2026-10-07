@@ -32,7 +32,7 @@
     A('com.sncf.fusion', 'SNCF Connect'), A('com.ubercab', 'Uber'),
     A('com.deliveroo.orderapp', 'Deliveroo'),
     A('com.openai.chatgpt', 'ChatGPT'), A('com.anthropic.claude', 'Claude'),
-    A('fr.piika.pupdown', 'PupDown'), A('fr.piika.puppyphone', 'PupSon', '.PupSonActivity'),
+    A('fr.piika.pupdown', 'PupDown'), A('fr.piika.puppyphone', 'PupSon', '.PupSonActivity'), A('fr.piika.puppyphone', 'PuppyInternet', '.BrowserActivity'),
     A('com.gaybarfinder.ultra', 'Pup Night Radar', '', { installed: now - 6e4 }),
     A('net.zxkq.helper', 'Zx Helper', '', { installed: now - 3e4 }),
   ];
