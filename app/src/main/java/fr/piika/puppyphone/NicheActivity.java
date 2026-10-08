@@ -116,6 +116,14 @@ public class NicheActivity extends Activity {
                         .put("lastBackup", p.getLong("lastBackup", 0)).put("lastBackupName", p.getString("lastBackupName", ""))
                         .put("restoredAt", p.getLong("restoredAt", 0)).put("live", liveWallpaperOn())
                         .put("siesteBright", p.getBoolean("siesteBright", false)).put("busy", busy)
+                        .put("sons", p.getBoolean("sons", true)).put("sonsVol", p.getInt("sonsVol", 60))
+                        .put("sonsNav", p.getBoolean("sonsNav", true)).put("sonsClavier", p.getBoolean("sonsClavier", false))
+                        .put("sonsCharge", p.getBoolean("sonsCharge", true)).put("sonsVerrou", p.getBoolean("sonsVerrou", false))
+                        .put("silent", PupSons.silent(NicheActivity.this))
+                        .put("verrou", p.getBoolean("verrou", false)).put("verrouCadre", p.getBoolean("verrouCadre", true))
+                        .put("verrouPattes", p.getBoolean("verrouPattes", true)).put("verrouChiot", p.getBoolean("verrouChiot", true))
+                        .put("verrouEtoiles", p.getBoolean("verrouEtoiles", true)).put("verrouCharge", p.getBoolean("verrouCharge", true))
+                        .put("verrouForce", p.getInt("verrouForce", 1)).put("a11y", PupNavA11y.I != null)
                         .put("version", PupUpdate.current(NicheActivity.this)).toString();
             } catch (Exception e) { return "{}"; }
         }
@@ -172,7 +180,29 @@ public class NicheActivity extends Activity {
                 catch (Exception e) { try { startActivity(new Intent(Settings.ACTION_DISPLAY_SETTINGS)); } catch (Exception ignored) { } }
             });
         }
-        @JavascriptInterface public void set(String k, boolean v) { if ("siesteBright".equals(k)) Pelage.sp(NicheActivity.this).edit().putBoolean(k, v).apply(); }
+        @JavascriptInterface public void set(String k, boolean v) {
+            if (!k.matches("siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge")) return;
+            android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putBoolean(k, v);
+            if ("sons".equals(k)) e.putLong("ver", System.currentTimeMillis()); // les Pup-apps rechargent leurs sons
+            e.commit();
+            if (k.startsWith("verrou")) decoRefresh();
+        }
+        @JavascriptInterface public void setInt(String k, int v) {
+            if (!k.matches("sonsVol|verrouForce")) return;
+            android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putInt(k, v);
+            if ("sonsVol".equals(k)) e.putLong("ver", System.currentTimeMillis());
+            e.commit();
+            if (k.startsWith("verrou")) decoRefresh();
+        }
+        void decoRefresh() { ui.post(() -> { PupNavA11y a = PupNavA11y.I; if (a != null && a.deco != null) a.deco.refresh(); }); }
+        /** Montre la déco par-dessus l'écran actuel pendant quelques secondes. */
+        @JavascriptInterface public boolean decoPreview() {
+            PupNavA11y a = PupNavA11y.I;
+            if (a == null || a.deco == null) return false;
+            ui.post(() -> a.deco.preview(7000));
+            return true;
+        }
+        @JavascriptInterface public void openA11y() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void close() { ui.post(NicheActivity.this::finish); }
     }
 }

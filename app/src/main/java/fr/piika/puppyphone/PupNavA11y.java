@@ -16,12 +16,15 @@ public class PupNavA11y extends AccessibilityService implements PupNav.Host {
     static PupNavA11y I;
     static volatile String fgPkg = "", fgClass = "";
     PupNav nav;
+    LockDeco deco;
 
     @Override protected void onServiceConnected() {
         I = this;
         PupNav.stopOverlay(this);
         nav = new PupNav(this, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, this);
         nav.attach();
+        deco = new LockDeco(this);
+        deco.start();
     }
 
     @Override public void onAccessibilityEvent(AccessibilityEvent e) {
@@ -38,6 +41,7 @@ public class PupNavA11y extends AccessibilityService implements PupNav.Host {
             }
         }
         if (nav != null) nav.setImeVisible(imeShown());
+        if (deco != null && (e.getEventType() == AccessibilityEvent.TYPE_WINDOWS_CHANGED || e.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)) deco.check();
     }
 
     boolean imeShown() {
@@ -52,10 +56,11 @@ public class PupNavA11y extends AccessibilityService implements PupNav.Host {
 
     @Override public boolean onUnbind(android.content.Intent i) {
         if (nav != null) nav.detach();
-        nav = null; I = null;
+        if (deco != null) deco.stop();
+        nav = null; deco = null; I = null;
         return super.onUnbind(i);
     }
-    @Override public void onDestroy() { if (nav != null) nav.detach(); nav = null; I = null; super.onDestroy(); }
+    @Override public void onDestroy() { if (nav != null) nav.detach(); if (deco != null) deco.stop(); nav = null; deco = null; I = null; super.onDestroy(); }
 
     @Override public boolean back() { return performGlobalAction(GLOBAL_ACTION_BACK); }
     @Override public boolean home() { return performGlobalAction(GLOBAL_ACTION_HOME); }

@@ -143,6 +143,7 @@ public class PupNav {
     }
 
     void act(String what) {
+        PupSons.play(ctx, "sonsNav", "back".equals(what) ? "tap" : "home".equals(what) ? "jappe" : "ouvre");
         switch (what) {
             case "back": if (!host.back()) Toast.makeText(ctx, "Retour 🐾 : active « PupNav » dans l'accessibilité (voir PupTasks → Réglages)", Toast.LENGTH_LONG).show(); break;
             case "home": if (!host.home()) goHome(ctx); break;

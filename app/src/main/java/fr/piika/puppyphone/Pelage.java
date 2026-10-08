@@ -62,6 +62,11 @@ public final class Pelage {
     /** Ouvre un fichier www/… en ajoutant le pelage à style.css. */
     static InputStream open(Context c, String path) throws java.io.IOException {
         InputStream in = c.getAssets().open("www" + path);
+        if ("/icons.js".equals(path)) {
+            // la boîte à couinements suit icons.js dans toutes les Pup-apps
+            InputStream extra = new SequenceInputStream(new ByteArrayInputStream(PupSons.js(c).getBytes(StandardCharsets.UTF_8)), c.getAssets().open("www/pupsons.js"));
+            return new SequenceInputStream(in, extra);
+        }
         if (!"/style.css".equals(path)) return in;
         String extra = css(c);
         if (extra.isEmpty()) return in;

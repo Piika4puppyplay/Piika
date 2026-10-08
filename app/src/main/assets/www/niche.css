@@ -87,3 +87,60 @@
   background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,.04)),#1d0f30;border:1px solid rgba(255,255,255,.4);box-shadow:0 10px 24px rgba(0,0,0,.7),0 0 20px -6px var(--acc);transition:.35s}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 .nlogo .pi{width:100%;height:100%}.ab .pi{width:20px;height:20px}
+
+/* boîte à couinements */
+.toybox{display:grid;grid-template-columns:repeat(5,1fr);gap:8px 4px;padding:12px 8px;border-radius:16px;margin:0 -4px;
+  background:radial-gradient(90% 60% at 50% 0%,rgba(255,255,255,.12),transparent 70%),repeating-linear-gradient(90deg,#5a3418 0 22px,#6a3e1e 22px 24px,#4e2c14 24px 46px),#5a3418;
+  border:3px solid #2a1206;box-shadow:inset 0 3px 0 rgba(255,255,255,.18),inset 0 -10px 18px rgba(0,0,0,.55),0 6px 14px rgba(0,0,0,.6)}
+.toy{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.toy .ball{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:23px;
+  background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.9),rgba(255,255,255,0) 35%),radial-gradient(circle at 50% 60%,var(--acc),color-mix(in srgb,var(--acc) 45%,#000));
+  box-shadow:inset 0 -5px 8px rgba(0,0,0,.45),0 0 0 1.5px #000,0 5px 8px rgba(0,0,0,.6),0 0 14px -2px var(--acc)}
+.toy:nth-child(even) .ball{background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.9),rgba(255,255,255,0) 35%),radial-gradient(circle at 50% 60%,var(--acc2),color-mix(in srgb,var(--acc2) 45%,#000));box-shadow:inset 0 -5px 8px rgba(0,0,0,.45),0 0 0 1.5px #000,0 5px 8px rgba(0,0,0,.6),0 0 14px -2px var(--acc2)}
+.toy b{font-family:var(--f-head);font-weight:400;font-size:10px;color:#fff;text-shadow:0 1px 2px #000;text-align:center;line-height:1.1}
+.toy small{font-family:var(--f-num);font-size:8.5px;letter-spacing:.04em;color:#ffd9b0;text-align:center;line-height:1.1;text-shadow:0 1px 1px #000}
+.toy.boing .ball{animation:boing .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes boing{0%{transform:scale(.8,1.15)}40%{transform:scale(1.18,.86)}100%{transform:scale(1)}}
+.row.dim,.seg.dim{opacity:.45}
+input[type=range]:disabled{opacity:.4}
+
+/* aperçu de l'écran de verrouillage */
+.lockprev{position:relative;display:flex;justify-content:center;padding:14px 0 30px;margin:0 -4px;border-radius:16px;background:radial-gradient(60% 50% at 50% 40%,color-mix(in srgb,var(--acc) 22%,transparent),transparent),#0a0512;border:1px solid #000;box-shadow:inset 0 2px 8px rgba(0,0,0,.8)}
+.lockprev .phone{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);white-space:nowrap;padding:3px 9px;border-radius:9px;font-family:var(--f-num);font-size:9.5px;letter-spacing:.12em;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25)}
+.lscreen{position:relative;width:170px;height:340px;border-radius:26px;overflow:hidden;
+  background:radial-gradient(80% 50% at 30% 20%,rgba(80,120,255,.35),transparent),radial-gradient(70% 50% at 80% 80%,rgba(255,90,160,.25),transparent),linear-gradient(#1a2348,#0b0d22);
+  box-shadow:0 0 0 5px #111,0 0 0 6.5px #6b6480,0 14px 30px rgba(0,0,0,.8)}
+.lclock{position:absolute;left:16px;top:34px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.lclock b{display:block;font-weight:300;font-size:40px;line-height:1;letter-spacing:-.02em}
+.lclock small{font-size:10px;opacity:.85}
+.lnotif{position:absolute;left:10px;right:10px;top:150px;height:34px;border-radius:12px;background:rgba(255,255,255,.18);backdrop-filter:blur(4px)}
+.lnotif.s{top:190px;height:26px;opacity:.7}
+.lfinger{position:absolute;left:50%;bottom:52px;width:22px;height:26px;margin-left:-11px;border-radius:50%;border:2px solid rgba(255,255,255,.55)}
+.lsc{position:absolute;bottom:16px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.2)}
+.lsc.l{left:14px}.lsc.r{right:14px}
+.lockprev.off .lframe,.lockprev.off .ltrail,.lockprev.off .lstar,.lockprev.off .lpup{display:none}
+.lframe{position:absolute;inset:2px;border-radius:24px;padding:2px;opacity:var(--f);
+  background:conic-gradient(from var(--ang,0deg),var(--acc),var(--acc2),var(--acc),var(--acc2),var(--acc));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  filter:drop-shadow(0 0 4px var(--acc)) drop-shadow(0 0 8px var(--acc2));animation:ang 20s linear infinite}
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes ang{to{--ang:360deg}}
+.ltrail{position:absolute;top:0;bottom:0;width:20px;opacity:var(--f)}
+.ltrail.a{left:4px}.ltrail.b{right:4px;transform:scaleY(-1)}
+.lp{position:absolute;left:3px;width:12px;height:12px;top:calc(74% - var(--i) * 7%);opacity:0;animation:step 6s linear infinite;animation-delay:calc(var(--i) * .85s)}
+.lp:nth-child(even){left:9px}
+.ltrail.a .lp svg{fill:var(--acc);filter:drop-shadow(0 0 4px var(--acc))}
+.ltrail.b .lp{top:calc(74% - var(--i) * 7% + 0px)}
+.ltrail.b .lp svg{fill:var(--acc2);filter:drop-shadow(0 0 4px var(--acc2));transform:rotate(180deg)}
+.lp svg{width:100%;height:100%;transform:rotate(-8deg)}
+@keyframes step{0%{opacity:0}6%{opacity:1}70%{opacity:1}85%,100%{opacity:0}}
+.lstar{position:absolute;width:10px;height:10px;opacity:var(--f);background:radial-gradient(circle,#fff 0 1.5px,transparent 2px),conic-gradient(from 45deg,transparent 0 20deg,#fff 20deg 25deg,transparent 25deg 110deg,#fff 110deg 115deg,transparent 115deg 200deg,#fff 200deg 205deg,transparent 205deg 290deg,#fff 290deg 295deg,transparent 295deg);
+  filter:drop-shadow(0 0 3px var(--acc));animation:tw 2.4s ease-in-out infinite alternate}
+.lstar.s1{left:12px;top:14px}.lstar.s2{right:22px;top:24px;animation-delay:-.8s}.lstar.s3{right:12px;top:60px;animation-delay:-1.6s}.lstar.s4{left:8px;top:110px;animation-delay:-1.2s}
+.lpup{position:absolute;right:-18px;top:46%;width:62px;height:62px;transform:rotate(-12deg);animation:peek 3s ease-in-out infinite;opacity:calc(var(--f) + .2)}
+.lpup svg{width:100%;height:100%;filter:drop-shadow(0 4px 6px rgba(0,0,0,.6))}
+.lpup .eyes{animation:blink 4.2s steps(1) infinite;transform-origin:50% 46%}
+@keyframes peek{50%{transform:rotate(-12deg) translate(-3px,-3px)}}
+@keyframes blink{0%,94%{transform:none}95%,100%{transform:scaleY(.1)}}
+@keyframes tw{to{opacity:.25;transform:scale(.7)}}
+.warnbox{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;font-size:12.5px;color:#ffe7c2;background:rgba(232,154,16,.14);border:1px solid rgba(255,182,39,.55)}

@@ -179,7 +179,9 @@ public class PupKeyboard extends InputMethodService {
     void feedback(KbLayouts.Key k) {
         int v = sp.getInt("vibe", 2);
         if (v > 0) vibe(new int[]{0, 8, 14, 24}[Math.min(3, v)]);
-        if (sp.getBoolean("sound", false) && am != null) {
+        if (PupSons.on(this, "sonsClavier")) {
+            PupSons.play(this, "sonsClavier", k != null && k.code == KbLayouts.DEL ? "croc" : k != null && k.code == KbLayouts.ENTER ? "pouic" : "tap");
+        } else if (sp.getBoolean("sound", false) && am != null) {
             int fx = k == null ? AudioManager.FX_KEYPRESS_STANDARD : k.code == KbLayouts.DEL ? AudioManager.FX_KEYPRESS_DELETE : k.code == KbLayouts.SPACE ? AudioManager.FX_KEYPRESS_SPACEBAR : k.code == KbLayouts.ENTER ? AudioManager.FX_KEYPRESS_RETURN : AudioManager.FX_KEYPRESS_STANDARD;
             am.playSoundEffect(fx, sp.getInt("soundVol", 50) / 100f);
         }
