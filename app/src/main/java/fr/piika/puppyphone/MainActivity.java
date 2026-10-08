@@ -203,6 +203,7 @@ public class MainActivity extends Activity {
         super.onResume();
         if (web != null) web.onResume();
         try { PupNav.ensure(this); } catch (Exception ignored) { }
+        try { PupUpdate.autoCheck(this); } catch (Exception ignored) { }
         // fond choisi depuis PupGalery / PupVidéo ?
         long ver = wallPrefs().getLong("wall_ver", 0);
         if (ver != appliedWallVer) { applyWallMode(); emit("wall", wallInfo()); }

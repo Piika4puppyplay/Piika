@@ -51,11 +51,18 @@ jobs:
         with:
           name: PuppyPhone-apk
           path: PuppyPhone.apk
+      - name: Notes de version (nouveautés)
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          printf '%s\n' "$MSG" | grep -v -E '^(Co-Authored-By|Claude-Session):' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > notes.md
+          printf '\n---\nTélécharge **PuppyPhone.apk** ci-dessous (ou laisse PupUpdate faire 🦴).\n' >> notes.md
+          cat notes.md
       - name: Publier la version
         uses: softprops/action-gh-release@v2
         with:
           tag_name: puppyphone-v${{ github.run_number }}
           name: PuppyPhone v1.0.${{ github.run_number }} 🐾📱
-          body: "Télécharge **PuppyPhone.apk** ci-dessous, ouvre-le sur ton téléphone et autorise l'installation. Puis appuie sur le bouton Accueil et choisis PuppyPhone (« Toujours »). 🐾"
+          body_path: notes.md
           files: PuppyPhone.apk
           make_latest: true
