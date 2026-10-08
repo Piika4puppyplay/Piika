@@ -8,36 +8,76 @@
   const CFG = Object.assign({ deco: true, words: true }, window.__pupCfg || {});
   const host = location.hostname.replace(/^(www|m|mobile)\./, '');
 
-  // ============================================================== DESSINS (originaux)
-  const FUR = '<linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe7c9"/><stop offset="1" stop-color="#e3a462"/></linearGradient><linearGradient id="d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c97a3a"/><stop offset="1" stop-color="#8a4a1c"/></linearGradient>';
-  const svg = (vb, body) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}"><defs>${FUR}<filter id="g"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#000" flood-opacity=".5"/></filter></defs><g filter="url(#g)">${body}</g></svg>`);
+  // ============================================================== DESSINS (originaux, style skeuomorphique puppyplay)
+  // Volume 3D (dégradés radiaux), reflets verre Vista, mèches de poils, coussinets brillants, liseré néon rose.
+  const DEFS = `
+    <radialGradient id="fur" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#fff6e8"/><stop offset=".45" stop-color="#f6cf9a"/><stop offset=".8" stop-color="#d9934f"/><stop offset="1" stop-color="#9c5a24"/></radialGradient>
+    <radialGradient id="furD" cx=".4" cy=".25" r=".9"><stop offset="0" stop-color="#d98c4a"/><stop offset=".6" stop-color="#9a531f"/><stop offset="1" stop-color="#5a2c0c"/></radialGradient>
+    <radialGradient id="muz" cx=".45" cy=".35" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#fff0dc"/><stop offset="1" stop-color="#e8c49a"/></radialGradient>
+    <radialGradient id="eye" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#5a3a8a"/><stop offset=".55" stop-color="#1e0e36"/><stop offset="1" stop-color="#05020c"/></radialGradient>
+    <radialGradient id="nose" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#6a5070"/><stop offset=".5" stop-color="#241530"/><stop offset="1" stop-color="#05020a"/></radialGradient>
+    <radialGradient id="bean" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffd0e6"/><stop offset=".6" stop-color="#ff7ab8"/><stop offset="1" stop-color="#c2185b"/></radialGradient>
+    <radialGradient id="cheek" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff7ab8" stop-opacity=".75"/><stop offset="1" stop-color="#ff7ab8" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="neonC" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff3fa4"/><stop offset=".5" stop-color="#ff8fd0"/><stop offset="1" stop-color="#ff3fa4"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c9"/><stop offset=".45" stop-color="#ffd34d"/><stop offset=".55" stop-color="#d99a10"/><stop offset="1" stop-color="#ffe9a0"/></linearGradient>
+    <linearGradient id="boneG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#fff1f7"/><stop offset=".52" stop-color="#f2c9dc"/><stop offset="1" stop-color="#fbe3ee"/></linearGradient>
+    <radialGradient id="orbP" cx=".5" cy=".3" r=".75"><stop offset="0" stop-color="#ffb3d9"/><stop offset=".5" stop-color="#ff3fa4"/><stop offset="1" stop-color="#7a0a44"/></radialGradient>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="1.6" flood-color="#000" flood-opacity=".55"/><feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#ff3fa4" flood-opacity=".75"/></filter>
+    <filter id="soft"><feGaussianBlur stdDeviation=".6"/></filter>`;
+  const svg = (vb, body) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}"><defs>${DEFS}</defs><g filter="url(#sh)">${body}</g></svg>`);
+  // mèches de poils (traits fins clairs/foncés)
+  const tufts = (cx, cy, rx, ry, n, col) => { let d = ''; for (let i = 0; i < n; i++) { const a = -Math.PI * (.15 + .7 * i / Math.max(1, n - 1)); const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry; d += `M${x.toFixed(1)} ${y.toFixed(1)}l${(Math.cos(a) * 3.2).toFixed(1)} ${(Math.sin(a) * 3.2 - 1).toFixed(1)}`; } return `<path d="${d}" stroke="${col}" stroke-width="1.3" stroke-linecap="round" fill="none" opacity=".7"/>`; };
+  const ear = (side) => side < 0
+    ? `<path d="M30 22C14 20 6 40 11 58c3 11 15 11 18 2l6-26z" fill="url(#furD)" stroke="#4a2208" stroke-width=".8"/><path d="M27 28C18 30 14 42 16 54" stroke="#ffb3d6" stroke-width="3" fill="none" opacity=".45" stroke-linecap="round"/>`
+    : `<path d="M70 22c16-2 24 18 19 36-3 11-15 11-18 2l-6-26z" fill="url(#furD)" stroke="#4a2208" stroke-width=".8"/><path d="M73 28c9 2 13 14 11 26" stroke="#ffb3d6" stroke-width="3" fill="none" opacity=".45" stroke-linecap="round"/>`;
   const face = (mood) => {
-    const eyes = mood === 'sad' ? '<path d="M38 40q5-4 10 0M52 40q5-4 10 0" stroke="#1a0b2e" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="43" cy="45" rx="4" ry="5" fill="#1a0b2e"/><ellipse cx="57" cy="45" rx="4" ry="5" fill="#1a0b2e"/>'
-      : '<ellipse cx="42" cy="42" rx="5" ry="6" fill="#1a0b2e"/><ellipse cx="58" cy="42" rx="5" ry="6" fill="#1a0b2e"/><circle cx="43.5" cy="40" r="1.8" fill="#fff"/><circle cx="59.5" cy="40" r="1.8" fill="#fff"/>';
-    const mouth = mood === 'sad' ? '<path d="M44 60q6-4 12 0" stroke="#1a0b2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
-      : '<path d="M50 55v4M50 59q-5 5-9 1M50 59q5 5 9 1" stroke="#1a0b2e" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M47 62q3 9 6 0z" fill="#ff5e9e"/>';
-    return `<path d="M24 26c-10 2-14 22-6 32 5 6 12 2 12-6z" fill="url(#d)"/><path d="M76 26c10 2 14 22 6 32-5 6-12 2-12-6z" fill="url(#d)"/>
-      <ellipse cx="50" cy="44" rx="28" ry="25" fill="url(#f)"/><ellipse cx="50" cy="56" rx="15" ry="11" fill="#fff6ea"/>
-      ${eyes}<ellipse cx="50" cy="53" rx="5.5" ry="4" fill="#1a0b2e"/>${mouth}<ellipse cx="36" cy="52" rx="4" ry="2.5" fill="#ff7ab8" opacity=".55"/><ellipse cx="64" cy="52" rx="4" ry="2.5" fill="#ff7ab8" opacity=".55"/>`;
+    const sad = mood === 'sad';
+    const eyes = sad
+      ? `<path d="M35 36q7-5 13-1M52 35q6-4 13 1" stroke="#3a1a0c" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+         <ellipse cx="42" cy="44" rx="5.5" ry="6.5" fill="url(#eye)"/><ellipse cx="58" cy="44" rx="5.5" ry="6.5" fill="url(#eye)"/>
+         <circle cx="43.6" cy="41.5" r="2.2" fill="#fff"/><circle cx="59.6" cy="41.5" r="2.2" fill="#fff"/><path d="M38 50q1 5 3 7" stroke="#7fdcff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".85"/>`
+      : `<ellipse cx="42" cy="42" rx="6.2" ry="7.4" fill="url(#eye)"/><ellipse cx="58" cy="42" rx="6.2" ry="7.4" fill="url(#eye)"/>
+         <circle cx="44" cy="39" r="2.6" fill="#fff"/><circle cx="60" cy="39" r="2.6" fill="#fff"/><circle cx="40.5" cy="45.5" r="1.2" fill="#fff" opacity=".8"/><circle cx="56.5" cy="45.5" r="1.2" fill="#fff" opacity=".8"/>
+         <path d="M36 33q6-4 11-1M53 32q6-3 11 1" stroke="#7a3d12" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".7"/>`;
+    const mouth = sad
+      ? `<path d="M43 63q7-5 14 0" stroke="#3a1a0c" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+      : `<path d="M50 56v4M50 60q-5 6-10 1.5M50 60q5 6 10 1.5" stroke="#3a1a0c" stroke-width="2.3" fill="none" stroke-linecap="round"/>
+         <path d="M46.5 63q3.5 11 7 0z" fill="#ff5e9e" stroke="#c2185b" stroke-width=".8"/><path d="M50 63.5v5" stroke="#c2185b" stroke-width=".8"/><ellipse cx="48.6" cy="65" rx="1" ry="1.6" fill="#fff" opacity=".6"/>`;
+    return `${ear(-1)}${ear(1)}
+      <ellipse cx="50" cy="45" rx="29" ry="26" fill="url(#fur)" stroke="#7a3d12" stroke-width=".8"/>
+      ${tufts(50, 45, 27, 25, 9, '#fff6e8')}
+      <path d="M40 22q10-6 20 0q-4 8-10 8t-10-8z" fill="#d9934f" opacity=".55"/>
+      <ellipse cx="50" cy="57" rx="16" ry="12" fill="url(#muz)"/>
+      <ellipse cx="34" cy="53" rx="6" ry="4" fill="url(#cheek)"/><ellipse cx="66" cy="53" rx="6" ry="4" fill="url(#cheek)"/>
+      ${eyes}
+      <ellipse cx="50" cy="53.5" rx="6.2" ry="4.6" fill="url(#nose)"/><ellipse cx="48" cy="51.8" rx="2.4" ry="1.2" fill="#fff" opacity=".75"/>
+      ${mouth}
+      <ellipse cx="42" cy="28" rx="16" ry="7" fill="url(#gloss)" opacity=".55" transform="rotate(-12 42 28)"/>`;
   };
-  const paw = (x, y, r) => `<g transform="translate(${x} ${y}) scale(${r})"><ellipse cx="0" cy="0" rx="11" ry="9" fill="url(#f)" stroke="#b56a2c" stroke-width="1.5"/><path d="M-5 -4v6M0 -6v7M5 -4v6" stroke="#b56a2c" stroke-width="1.5" stroke-linecap="round"/></g>`;
+  // patte avec coussinets roses brillants
+  const paw = (x, y, r) => `<g transform="translate(${x} ${y}) scale(${r})">
+      <ellipse cx="0" cy="0" rx="12" ry="10" fill="url(#fur)" stroke="#7a3d12" stroke-width=".9"/>
+      <ellipse cx="0" cy="2.5" rx="5" ry="3.8" fill="url(#bean)"/>
+      <ellipse cx="-6.5" cy="-3" rx="2.4" ry="2.7" fill="url(#bean)"/><ellipse cx="-2.2" cy="-6" rx="2.4" ry="2.7" fill="url(#bean)"/><ellipse cx="2.2" cy="-6" rx="2.4" ry="2.7" fill="url(#bean)"/><ellipse cx="6.5" cy="-3" rx="2.4" ry="2.7" fill="url(#bean)"/>
+      <ellipse cx="-3" cy="-5" rx="6" ry="2.6" fill="url(#gloss)" opacity=".5"/></g>`;
+  const collarBand = `<rect x="2" y="4" width="96" height="11" rx="5.5" fill="url(#neonC)" stroke="#fff" stroke-width="1.4"/>
+      <rect x="6" y="5.2" width="88" height="3.4" rx="1.7" fill="url(#gloss)" opacity=".7"/>
+      ${[16, 30, 70, 84].map((x) => `<circle cx="${x}" cy="9.5" r="1.9" fill="#fff"/><circle cx="${x - .5}" cy="9" r=".7" fill="#ffd0e6"/>`).join('')}
+      <circle cx="50" cy="16" r="6" fill="url(#gold)" stroke="#8a5a00" stroke-width="1.2"/><path d="M47 15.5h6M50 13v5" stroke="#8a5a00" stroke-width="1" opacity=".6"/><ellipse cx="48" cy="13.6" rx="2" ry="1" fill="#fff" opacity=".8"/>`;
   const ART = {
-    // chiot qui dépasse derrière, pattes posées sur le bord
-    peek: svg('0 0 100 76', face('happy') + paw(30, 70, 1) + paw(70, 70, 1)),
-    // chiot câlin : tête + deux bras qui entourent
-    hugHead: svg('0 0 100 76', face('happy') + paw(26, 70, .9) + paw(74, 70, .9)),
-    hugArm: svg('0 0 40 40', `<path d="M4 6c14 0 26 10 26 22" stroke="url(#f)" stroke-width="12" fill="none" stroke-linecap="round"/>` + paw(30, 30, .85)),
-    // oreilles de chien + collier néon
-    earL: svg('0 0 40 50', '<path d="M30 6C12 4 2 24 8 42c4 10 14 6 14-4L28 14z" fill="url(#d)"/><path d="M26 12C16 12 10 26 13 38" stroke="#ffb3d6" stroke-width="3" fill="none" opacity=".6"/>'),
-    earR: svg('0 0 40 50', '<path d="M10 6c18-2 28 18 22 36-4 10-14 6-14-4L12 14z" fill="url(#d)"/><path d="M14 12c10 0 16 14 13 26" stroke="#ffb3d6" stroke-width="3" fill="none" opacity=".6"/>'),
-    collar: svg('0 0 100 20', '<rect x="2" y="4" width="96" height="10" rx="5" fill="#ff3fa4" stroke="#fff" stroke-width="1.5"/><circle cx="20" cy="9" r="2" fill="#fff"/><circle cx="80" cy="9" r="2" fill="#fff"/><circle cx="50" cy="15" r="5" fill="#ffd34d" stroke="#8a5a00" stroke-width="1.5"/>'),
-    // pattes qui tiennent un bouton
-    pawL: svg('0 0 30 30', paw(15, 15, 1.15)),
-    pawR: svg('0 0 30 30', paw(15, 15, 1.15)),
-    likeHead: svg('0 0 100 76', face('happy')),
-    sadHead: svg('0 0 100 76', face('sad')),
-    bone: svg('0 0 60 30', '<g fill="#fff3fa" stroke="#ff3fa4" stroke-width="2"><rect x="14" y="10" width="32" height="10" rx="5"/><circle cx="13" cy="10" r="7"/><circle cx="13" cy="20" r="7"/><circle cx="47" cy="10" r="7"/><circle cx="47" cy="20" r="7"/></g><rect x="15" y="11" width="30" height="8" fill="#fff3fa"/>'),
-    stickPaw: svg('0 0 40 40', '<circle cx="20" cy="20" r="18" fill="#ff3fa4" stroke="#fff" stroke-width="2.5"/><g fill="#fff"><ellipse cx="20" cy="24" rx="7" ry="6"/><circle cx="12" cy="16" r="3"/><circle cx="17" cy="11" r="3"/><circle cx="23" cy="11" r="3"/><circle cx="28" cy="16" r="3"/></g>'),
+    peek: svg('0 0 100 80', face('happy') + paw(30, 72, 1) + paw(70, 72, 1)),
+    hugHead: svg('0 0 100 80', face('happy') + paw(26, 72, .9) + paw(74, 72, .9)),
+    hugArm: svg('-4 -4 50 50', `<path d="M5 7c15 0 28 11 28 24" stroke="#7a3d12" stroke-width="14" fill="none" stroke-linecap="round"/><path d="M5 7c15 0 28 11 28 24" stroke="url(#fur)" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M8 6c10 1 18 6 22 13" stroke="#fff6e8" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>` + paw(33, 33, .85)),
+    earL: svg('0 0 40 56', `<path d="M31 6C12 3 1 26 7 46c4 12 16 9 17-2L30 16z" fill="url(#furD)" stroke="#4a2208" stroke-width=".9"/><path d="M27 12C15 13 9 28 12 42" stroke="#ffb3d6" stroke-width="4" fill="none" opacity=".45" stroke-linecap="round"/><path d="M24 9C16 10 11 18 10 26" stroke="#fff" stroke-width="2" fill="none" opacity=".45" stroke-linecap="round"/>`),
+    earR: svg('0 0 40 56', `<path d="M9 6c19-3 30 20 24 40-4 12-16 9-17-2L10 16z" fill="url(#furD)" stroke="#4a2208" stroke-width=".9"/><path d="M13 12c12 1 18 16 15 30" stroke="#ffb3d6" stroke-width="4" fill="none" opacity=".45" stroke-linecap="round"/><path d="M16 9c8 1 13 9 14 17" stroke="#fff" stroke-width="2" fill="none" opacity=".45" stroke-linecap="round"/>`),
+    collar: svg('0 0 100 24', collarBand),
+    pawL: svg('0 0 30 30', paw(15, 15, 1.1)),
+    pawR: svg('0 0 30 30', paw(15, 15, 1.1)),
+    likeHead: svg('0 0 100 80', face('happy')),
+    sadHead: svg('0 0 100 80', face('sad')),
+    bone: svg('0 0 64 32', `<g stroke="#ff3fa4" stroke-width="2"><rect x="15" y="10.5" width="34" height="11" rx="5.5" fill="url(#boneG)"/><circle cx="14" cy="10.5" r="7.5" fill="url(#boneG)"/><circle cx="14" cy="21.5" r="7.5" fill="url(#boneG)"/><circle cx="50" cy="10.5" r="7.5" fill="url(#boneG)"/><circle cx="50" cy="21.5" r="7.5" fill="url(#boneG)"/></g><rect x="16" y="12" width="32" height="8" fill="url(#boneG)"/><ellipse cx="30" cy="12.5" rx="14" ry="2" fill="#fff" opacity=".9"/>`),
+    stickPaw: svg('0 0 44 44', `<circle cx="22" cy="22" r="19" fill="url(#orbP)" stroke="#fff" stroke-width="2.6"/><g fill="#fff"><ellipse cx="22" cy="26" rx="7.5" ry="6.2"/><ellipse cx="13.5" cy="18" rx="3.1" ry="3.5"/><ellipse cx="18.5" cy="12.5" rx="3.1" ry="3.5"/><ellipse cx="25.5" cy="12.5" rx="3.1" ry="3.5"/><ellipse cx="30.5" cy="18" rx="3.1" ry="3.5"/></g><ellipse cx="22" cy="11" rx="13" ry="6" fill="url(#gloss)" opacity=".75"/>`),
   };
 
   // ============================================================== CIBLES
