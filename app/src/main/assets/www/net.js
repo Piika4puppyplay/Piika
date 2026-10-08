@@ -68,6 +68,7 @@
     else if (mode === 'favs') renderFavs();
     else if (mode === 'history') renderHistory();
     else if (mode === 'settings') renderSettings();
+    else if (mode === 'guard') renderGuard();
   }
   function favTile(f, i) {
     return `<button class="fav" data-fav="${i}" type="button"><span class="orbt" style="--c:${PAL[colorOf(hostOf(f.url))][1]}">${esc((f.title || hostOf(f.url) || '?').trim()[0].toUpperCase())}</span><span class="lb">${esc(f.title || hostOf(f.url))}</span></button>`;
@@ -162,6 +163,7 @@
         ${item('closetab', 'trash', 'red', 'Fermer l\'onglet')}
         ${item('adblock', 'shield', st.adblock === false ? 'chrome' : 'green', st.adblock === false ? 'Bloqueur OFF' : 'Bloqueur ON', { on: st.adblock !== false })}
         ${item('skin', 'sparkle', st.skinHere ? 'pink' : 'chrome', st.skinHere ? 'Thème puppy ici' : 'Thème d\'origine ici', { on: !!st.skinHere, dis: a.blank })}
+        ${item('guard', 'shield', st.guardHere === 'rouge' ? 'red' : st.guardHere === 'verte' ? 'green' : 'cyan', 'Chien de garde', { on: !!st.guardHere, dis: a.blank })}
         ${item('phone', 'paw', 'pink', 'PuppyPhone')}
       </div></div>`;
   }
@@ -204,6 +206,12 @@
         <div class="row"><span>Mode sombre automatique<small style="display:block;font-weight:400;color:var(--muted);font-size:12px">Assombrit les sites clairs</small></span>${sw('skinDark', st.skinDark !== false)}</div>
         <p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">🏦 Les sites sensibles (banques, paiement, impôts, Ameli, CAF…) gardent leur look officiel : c'est plus sûr pour repérer une fausse page. Menu → « Thème puppy ici » pour l'activer ou le couper site par site.${st.skinOffN ? ` ${st.skinOffN} site(s) exclu(s) à la main.` : ''}</p>
         ${st.skinOffN ? `<button class="ab small glass" data-act="skinreset" type="button" style="margin-top:8px">Réinitialiser les exceptions</button>` : ''}
+        <div class="row"><span>Accessoires puppy<small style="display:block;font-weight:400;color:var(--muted);font-size:12px">Chiots sur les logos, pattes autour des J'aime (jamais cliquables)</small></span>${sw('deco', st.deco !== false)}</div>
+        <div class="row"><span>Vocabulaire puppy<small style="display:block;font-weight:400;color:var(--muted);font-size:12px">lit → panier, assiette → gamelle… (souligné, touche pour voir l'original)</small></span>${sw('words', st.words !== false)}</div>
+      </div>
+      <div class="cp">
+        <div class="cp-h">${I('shield', 'cyan')}<div><b>Chien de garde des CGU</b><small>Vérifie une fois par jour les règles officielles des sites visités (robots.txt pour les IA, protocole TDMRep, balises « noai ») et te prévient si elles changent. Sans IA.</small></div></div>
+        <div class="row"><span>Chien de garde</span>${sw('guard', st.guard !== false)}</div>
       </div>
       <div class="cp">
         <div class="cp-h">${I('lock', 'red')}<div><b>Ouverture des autres applis</b><small>Toujours bloquée : aucun site ne peut lancer une appli (WhatsApp, Play Store, appli d'un magasin…) tout seul. Tu décides avec « Ouvrir quand même ».</small></div></div>
@@ -306,6 +314,7 @@
         case 'closetab': call('close', a.id); setMode(null); break;
         case 'adblock': call('setSetting', 'adblock', String(st.adblock === false)); break;
         case 'skin': call('skinToggle'); setMode(null); break;
+        case 'guard': setMode('guard'); break;
         case 'phone': call('home'); setMode(null); break;
       }
     }
@@ -336,6 +345,49 @@
     noticeTimer = setTimeout(() => { box.hidden = true; }, n.kind === 'app' ? 7000 : 3000);
   }
 
+  // ------------------------------------------------------------------ Chien de garde des CGU
+  let tosLinks = [];
+  function renderGuard() {
+    const g = J(call('guardInfo'), {}) || {};
+    const h = g.here, a = act();
+    const fmtD = (t) => t ? new Date(t).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    const badge = (s) => s === 'rouge' ? `<span class="gbadge red">LISTE ROUGE</span>` : s === 'verte' ? `<span class="gbadge green">LISTE VERTE</span>` : `<span class="gbadge">PAS ENCORE VÉRIFIÉ</span>`;
+    const proofs = (arr) => (arr || []).map((p) => `<div class="gproof"><small>${esc(p.where)} · ${esc(p.who || '')}</small><code>${esc(p.text)}</code><button class="ab small glass" data-gopen="${esc(p.src)}" type="button">Voir la preuve</button></div>`).join('');
+    const all = (g.all || []).sort((x, y) => y.t - x.t);
+    const red = all.filter((x) => x.status === 'rouge'), green = all.filter((x) => x.status === 'verte');
+    let html = `<div class="secth">${I('shield', 'cyan', { shape: 'orb' })}<span class="chrome c2">CHIEN DE GARDE 🐕‍🦺</span></div>`;
+    if (!a.blank) {
+      html += `<div class="cp"><div class="cp-h">${I('globe', h && h.status === 'rouge' ? 'red' : 'green')}<div><b>${esc(g.host || '')}</b><small>${h ? 'Vérifié le ' + fmtD(h.t) : 'Vérification automatique à la fin du chargement'}</small></div></div>
+        ${badge(h && h.status)}
+        <p class="gtxt">${!h ? '' : h.status === 'rouge' ? 'L\'éditeur refuse officiellement les IA et/ou la fouille automatique de ses pages. Les futures fonctions IA de PuppyInternet resteront coupées ici.' : 'Aucune interdiction IA ou fouille déclarée par l\'éditeur dans ses règles officielles.'}</p>
+        ${h && h.status === 'rouge' ? proofs(h.proofs) : ''}
+        ${h && h.changedAt ? `<div class="galert">⚠️ Changement détecté le ${fmtD(h.changedAt)} : liste ${esc(h.oldStatus || '?')} → liste ${esc(h.status)}${(h.oldProofs || []).length ? `<details><summary>Anciennes règles</summary>${proofs(h.oldProofs)}</details>` : ''}</div>` : ''}
+        <div class="gacts"><button class="ab small" data-gact="recheck" type="button">${I('refresh', 'chrome', { shape: 'none' })}Revérifier</button><button class="ab small c2" data-gact="find" type="button">${I('search', 'chrome', { shape: 'none' })}Trouver les CGU</button><button class="ab small violet" data-gact="sniff" type="button">${I('paw', 'chrome', { shape: 'none' })}Renifler cette page</button></div>
+        ${tosLinks.length ? `<div class="gtos"><small>Liens trouvés sur la page :</small>${tosLinks.map((l) => `<button class="srow" data-gsniff="${esc(l.u)}" type="button">${I('news', 'amber', { shape: 'orb' })}<span class="tx"><b>${esc(l.t || 'Conditions')}</b><small>${esc(l.u)}</small></span></button>`).join('')}</div>` : ''}
+        ${g.tos ? `<div class="gtosinfo">📜 CGU reniflées le ${fmtD(g.tos.t)} · ${g.tos.count} passage(s) à lire${(g.tos.kinds || []).length ? ' (' + esc(g.tos.kinds.join(', ')) + ')' : ''}${g.tos.changedAt ? `<br><b style="color:#ffb627">⚠️ Le texte a changé depuis ta lecture du ${fmtD(g.tos.prevT)}</b>` : ''}<br><button class="srow" data-gopen="${esc(g.tos.url)}" type="button" style="margin-top:6px">${I('external', 'cyan', { shape: 'orb' })}<span class="tx"><b>Rouvrir les CGU</b><small>${esc(g.tos.url)}</small></span></button></div>` : ''}
+      </div>`;
+    }
+    html += `<div class="cp"><div class="cp-h">${I('info', 'violet')}<div><b>Bon à savoir</b><small>Le thème puppyplay, les accessoires et le vocabulaire ne sont pas concernés par ces règles : ils changent seulement l'affichage sur ton téléphone. Les règles robots.txt et TDMRep visent les robots et l'IA. Ce n'est pas un avis juridique : en cas de doute, lis les CGU (bouton « Renifler »).</small></div></div></div>`;
+    if ((g.log || []).length) html += `<div class="day">Changements de règles</div>` + g.log.slice(0, 20).map((l) => `<div class="glog">${fmtD(l.t)} · <b>${esc(l.host)}</b> : ${esc(l.from)} → <b class="${l.to === 'rouge' ? 'r' : 'g'}">${esc(l.to)}</b>${(l.proofs || []).length ? `<details><summary>Preuves</summary>${proofs(l.proofs)}</details>` : ''}</div>`).join('');
+    html += `<div class="day">Liste rouge · ${red.length}</div>` + (red.map((x) => `<div class="glist r"><b>${esc(x.host)}</b><small>${fmtD(x.t)}</small><button class="del" data-gforget="${esc(x.host)}" type="button">✕</button></div>`).join('') || `<div class="empty" style="padding:8px">Aucun site.</div>`);
+    html += `<div class="day">Liste verte · ${green.length}</div>` + (green.slice(0, 80).map((x) => `<div class="glist g"><b>${esc(x.host)}</b><small>${fmtD(x.t)}</small><button class="del" data-gforget="${esc(x.host)}" type="button">✕</button></div>`).join('') || `<div class="empty" style="padding:8px">Aucun site.</div>`);
+    html += `<button class="ab wide glass" data-gact="export" type="button" style="margin-top:10px">${I('download', 'chrome', { shape: 'none' })}Enregistrer les listes (fichier)</button>`;
+    ovin.innerHTML = html;
+  }
+  ovin.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-gact],[data-gopen],[data-gsniff],[data-gforget]'); if (!b || mode !== 'guard') return;
+    e.stopPropagation(); haptic();
+    const d = b.dataset;
+    if (d.gact === 'recheck') { call('guardRecheck'); toast('Le chien renifle les règles… 🐕‍🦺'); }
+    if (d.gact === 'find') call('guardFindTos');
+    if (d.gact === 'sniff') { call('guardSniffHere'); setMode(null); }
+    if (d.gact === 'export') call('guardExport');
+    if (d.gopen) { call('newTab', d.gopen); setMode(null); }
+    if (d.gsniff) { call('guardOpenSniff', d.gsniff); tosLinks = []; setMode(null); }
+    if (d.gforget) { call('guardForget', d.gforget); setTimeout(render, 150); }
+  }, true);
+  function toast(m) { call('toast', m); }
+
   // ------------------------------------------------------------------ pont natif
   window.NetUI = {
     on(ev, data) {
@@ -349,11 +401,13 @@
       } else if (ev === 'collapse') { autoStart = false; if (mode) setMode(null); }
       else if (ev === 'notice') notice(J(data, {}));
       else if (ev === 'import') importBackup(data);
+      else if (ev === 'guard' || ev === 'guardAlert') { if (mode === 'guard') render(); }
+      else if (ev === 'tosLinks') { tosLinks = J(data, []) || []; if (mode !== 'guard') setMode('guard'); else render(); }
     },
     back() {
       if (!mode) return false;
       if (mode === 'start' && act().blank) return false;
-      if (mode === 'favs' || mode === 'history' || mode === 'settings') { setMode('menu'); return true; }
+      if (mode === 'favs' || mode === 'history' || mode === 'settings' || mode === 'guard') { setMode('menu'); return true; }
       setMode(null);
       return true;
     },

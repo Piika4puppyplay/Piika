@@ -120,3 +120,24 @@ body.net{background:transparent}
 .mi:active{background:rgba(255,255,255,.12)}
 .mi[disabled]{opacity:.35;pointer-events:none}
 .mi.on span{color:var(--good)}
+/* Chien de garde des CGU */
+.gbadge{display:inline-block;align-self:flex-start;padding:5px 12px;border-radius:10px;font-family:var(--f-head);font-size:12px;letter-spacing:.06em;color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(255,255,255,.06) 50%,rgba(0,0,0,.1) 51%),#4a3a66;border:1px solid rgba(255,255,255,.7)}
+.gbadge.green{background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,.08) 50%,rgba(0,0,0,.1) 51%),#0e7a52;box-shadow:0 0 14px -2px #3dffb0}
+.gbadge.red{background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,.08) 50%,rgba(0,0,0,.1) 51%),#b3122a;box-shadow:0 0 14px -2px #ff4d5e}
+.gtxt{margin:2px 0;font-size:13px;color:#eadcf7}
+.gproof{display:flex;flex-direction:column;gap:4px;padding:8px;border-radius:12px;background:rgba(0,0,0,.35);border:1px solid rgba(255,77,94,.45)}
+.gproof small{font-family:var(--f-num);font-size:10.5px;letter-spacing:.06em;color:#ff9aa5;text-transform:uppercase}
+.gproof code{font-family:var(--f-num);font-size:12px;color:#fff;white-space:pre-wrap;word-break:break-word}
+.gproof .ab{align-self:flex-start}
+.galert{padding:8px 10px;border-radius:12px;font-size:13px;background:rgba(255,182,39,.12);border:1px solid rgba(255,182,39,.6);color:#ffe2a6}
+.galert summary,.glog summary{cursor:pointer;color:var(--acc2);margin-top:4px}
+.gacts{display:flex;flex-wrap:wrap;gap:8px}
+.gtos{display:flex;flex-direction:column;gap:4px}
+.gtos>small{color:var(--muted);font-size:12px}
+.gtosinfo{font-size:13px;color:#eadcf7;padding:8px 10px;border-radius:12px;background:rgba(41,230,255,.08);border:1px solid rgba(41,230,255,.35)}
+.glog{font-size:12.5px;padding:8px 10px;margin-bottom:6px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)}
+.glog b.r{color:#ff6b7a}.glog b.g{color:#3dffb0}
+.glist{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:4px;border-radius:12px;background:rgba(255,255,255,.05);border-left:4px solid #3dffb0}
+.glist.r{border-left-color:#ff4d5e}
+.glist b{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.glist small{font-family:var(--f-num);font-size:10.5px;color:var(--muted)}

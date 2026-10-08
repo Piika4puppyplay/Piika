@@ -460,7 +460,187 @@ public class BrowserActivity extends Activity {
             v.evaluateJavascript("(function(){window.__pupSkinOn=true;var d=document,id='pupnet-skin',s=d.getElementById(id);if(!s){s=d.createElement('style');s.id=id;(d.head||d.documentElement).appendChild(s);}s.textContent=" + JSONObject.quote(css) + ";"
                     + "if(!window.__pupSkinObs){window.__pupSkinObs=new MutationObserver(function(){if(window.__pupSkinOn&&!d.getElementById(id))(d.head||d.documentElement).appendChild(s);});window.__pupSkinObs.observe(d.documentElement,{childList:true,subtree:false});}})()", null);
         } else v.evaluateJavascript("(function(){window.__pupSkinOn=false;var e=document.getElementById('pupnet-skin');if(e)e.remove();})()", null);
+        applyDeco(v, on);
     }
+    // ------------------------------------------------------------------ PupDeco (accessoires + vocabulaire) et Chien de garde des CGU
+    static String decoJs, sniffJs;
+    String asset(String p) {
+        try (InputStream in = getAssets().open(p)) {
+            ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] b = new byte[8192]; int n;
+            while ((n = in.read(b)) > 0) o.write(b, 0, n);
+            return o.toString("UTF-8");
+        } catch (Exception e) { return ""; }
+    }
+    void applyDeco(WebView v, boolean on) {
+        if (decoJs == null) decoJs = asset("skin/pupdeco.js");
+        if (!on) { v.evaluateJavascript("window.__pupDeco&&window.__pupDeco.off()", null); return; }
+        boolean deco = sp.getBoolean("deco", true), words = sp.getBoolean("words", true);
+        if (!deco && !words) { v.evaluateJavascript("window.__pupDeco&&window.__pupDeco.off()", null); return; }
+        v.evaluateJavascript("window.__pupCfg={deco:" + deco + ",words:" + words + "};" + decoJs, null);
+    }
+
+    SharedPreferences gp() { return getSharedPreferences("pupguard", MODE_PRIVATE); }
+    static final String[] AI_AGENTS = {"gptbot", "chatgpt-user", "oai-searchbot", "claudebot", "claude-web", "claude-searchbot", "claude-user", "anthropic-ai", "google-extended",
+            "ccbot", "perplexitybot", "perplexity-user", "bytespider", "applebot-extended", "meta-externalagent", "meta-externalfetcher", "cohere-ai", "cohere-training-data-crawler",
+            "amazonbot", "diffbot", "omgilibot", "imagesiftbot", "youbot", "ai2bot", "duckassistbot", "mistralai-user"};
+    static final String META_JS = "(function(){function m(n){var e=document.querySelector('meta[name=\"'+n+'\" i]');return e?(e.getAttribute('content')||''):''}return JSON.stringify({tdm:m('tdm-reservation'),pol:m('tdm-policy'),robots:m('robots')})})()";
+    static final String TOS_FIND_JS = "(function(){var re=/(conditions? g[ée]n[ée]rales|conditions d.utilisation|conditions of use|\\bcgu\\b|\\bcgv\\b|terms( of (service|use)| and conditions)?|\\btos\\b|nutzungsbedingungen|agb|t[ée]rminos|condizioni|termos de uso|mentions l[ée]gales|legal)/i;"
+            + "var out=[],seen={};[].slice.call(document.querySelectorAll('a[href]')).forEach(function(e){var t=(e.textContent||'').trim(),h=e.getAttribute('href')||'';if(!(re.test(t)||re.test(h)))return;if(!/^https?:/.test(e.href)||seen[e.href])return;seen[e.href]=1;"
+            + "var sc=/(conditions|terms|cgu|tos|nutzungs|t[ée]rminos|condizioni|termos)/i.test(t+' '+h)?2:1;out.push({t:t.slice(0,60),u:e.href,s:sc})});out.sort(function(a,b){return b.s-a.s});return JSON.stringify(out.slice(0,6))})()";
+    static String unq(String v) { try { return new JSONArray("[" + v + "]").getString(0); } catch (Exception e) { return ""; } }
+
+    JSONObject guardGet(String host) { try { String s = gp().getString("h:" + host, null); return s == null ? null : new JSONObject(s); } catch (Exception e) { return null; } }
+
+    String fetch(String url, int max, String[] headerOut, boolean head) {
+        java.net.HttpURLConnection c = null;
+        try {
+            c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+            c.setConnectTimeout(6000); c.setReadTimeout(6000);
+            c.setInstanceFollowRedirects(true);
+            c.setRequestProperty("User-Agent", defaultUA.isEmpty() ? "Mozilla/5.0 (Linux; Android) PuppyInternet" : defaultUA);
+            if (head) c.setRequestMethod("HEAD");
+            int code = c.getResponseCode();
+            if (headerOut != null) headerOut[0] = c.getHeaderField("tdm-reservation");
+            if (head || code != 200) return null;
+            String ct = c.getContentType() == null ? "" : c.getContentType();
+            if (ct.contains("html") && !url.endsWith(".json")) return null; // page d'erreur déguisée
+            try (InputStream in = c.getInputStream()) {
+                ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] b = new byte[8192]; int n, tot = 0;
+                while ((n = in.read(b)) > 0 && tot < max) { o.write(b, 0, n); tot += n; }
+                return o.toString("UTF-8");
+            }
+        } catch (Exception e) { return null; } finally { if (c != null) c.disconnect(); }
+    }
+
+    /** Vérifie les signaux officiels « pas d'IA / pas de fouille » d'un site. Aucune IA utilisée. */
+    void guardCheck(String url, String host, String metaJson, boolean manual) {
+        new Thread(() -> {
+            try {
+                Uri u = Uri.parse(url);
+                String origin = u.getScheme() + "://" + u.getHost();
+                JSONArray proofs = new JSONArray();
+                boolean refused = false;
+                String robots = fetch(origin + "/robots.txt", 400000, null, false);
+                if (robots != null) {
+                    String[] lines = robots.split("\r?\n");
+                    List<String> agents = new ArrayList<>(); int startLine = 0; boolean inRules = false;
+                    List<String> groupLines = new ArrayList<>(); boolean full = false, allowAll = false;
+                    for (int i = 0; i <= lines.length; i++) {
+                        String raw = i < lines.length ? lines[i] : "user-agent: __fin__";
+                        String l = raw.replaceAll("#.*", "").trim();
+                        if (l.isEmpty()) continue;
+                        int k = l.indexOf(':'); if (k < 0) continue;
+                        String key = l.substring(0, k).trim().toLowerCase(java.util.Locale.ROOT), val = l.substring(k + 1).trim();
+                        if (key.equals("user-agent")) {
+                            if (inRules) {
+                                if (full && !allowAll) for (String a : agents) {
+                                    boolean ai = a.equals("*");
+                                    for (String x : AI_AGENTS) if (a.equals(x)) ai = true;
+                                    if (ai) { refused = true; proofs.put(new JSONObject().put("src", origin + "/robots.txt").put("where", "robots.txt, lignes " + startLine + "–" + i)
+                                            .put("text", android.text.TextUtils.join(" · ", groupLines)).put("who", a.equals("*") ? "tous les robots" : a)); break; }
+                                }
+                                agents.clear(); groupLines.clear(); full = false; allowAll = false; inRules = false;
+                            }
+                            if (agents.isEmpty()) startLine = i + 1;
+                            agents.add(val.toLowerCase(java.util.Locale.ROOT)); groupLines.add(raw.trim());
+                        } else if (key.equals("disallow") || key.equals("allow")) {
+                            inRules = true; groupLines.add(raw.trim());
+                            if (key.equals("disallow") && (val.equals("/") || val.equals("/*"))) full = true;
+                            if (key.equals("allow") && (val.equals("/") || val.equals("/*"))) allowAll = true;
+                        }
+                    }
+                }
+                String tdm = fetch(origin + "/.well-known/tdmrep.json", 100000, null, false);
+                if (tdm != null && tdm.trim().startsWith("[")) {
+                    JSONArray a = new JSONArray(tdm.trim());
+                    for (int i = 0; i < a.length(); i++) {
+                        JSONObject o = a.optJSONObject(i);
+                        if (o != null && o.optInt("tdm-reservation", 0) == 1) { refused = true; proofs.put(new JSONObject().put("src", origin + "/.well-known/tdmrep.json").put("where", "tdmrep.json (protocole européen TDMRep)").put("text", o.toString()).put("who", "fouille de textes et de données")); }
+                    }
+                }
+                String[] hdr = new String[1];
+                fetch(url, 0, hdr, true);
+                if ("1".equals(hdr[0] == null ? null : hdr[0].trim())) { refused = true; proofs.put(new JSONObject().put("src", url).put("where", "en-tête HTTP de la page").put("text", "tdm-reservation: 1").put("who", "fouille de textes et de données")); }
+                JSONObject meta = new JSONObject(metaJson == null || metaJson.isEmpty() ? "{}" : metaJson);
+                if ("1".equals(meta.optString("tdm").trim())) { refused = true; proofs.put(new JSONObject().put("src", url).put("where", "balise <meta name=\"tdm-reservation\">").put("text", "tdm-reservation = 1" + (meta.optString("pol").isEmpty() ? "" : " · politique : " + meta.optString("pol"))).put("who", "fouille de textes et de données")); }
+                String rb = meta.optString("robots").toLowerCase(java.util.Locale.ROOT);
+                if (rb.contains("noai") || rb.contains("noimageai")) { refused = true; proofs.put(new JSONObject().put("src", url).put("where", "balise <meta name=\"robots\">").put("text", meta.optString("robots")).put("who", "IA")); }
+                String status = refused ? "rouge" : "verte";
+                String sig = Integer.toHexString(proofs.toString().hashCode());
+                JSONObject old = guardGet(host);
+                JSONObject now = new JSONObject().put("host", host).put("status", status).put("proofs", proofs).put("t", System.currentTimeMillis()).put("sig", sig)
+                        .put("robots", robots != null).put("origin", origin);
+                if (old != null) {
+                    now.put("first", old.optLong("first", old.optLong("t")));
+                    if (old.has("changedAt")) now.put("changedAt", old.optLong("changedAt")).put("oldStatus", old.optString("oldStatus")).put("oldProofs", old.optJSONArray("oldProofs"));
+                } else now.put("first", System.currentTimeMillis());
+                boolean changed = old != null && !old.optString("status").equals(status);
+                boolean rulesMoved = old != null && !changed && !old.optString("sig").equals(sig) && refused;
+                if (changed || rulesMoved) {
+                    now.put("changedAt", System.currentTimeMillis()).put("oldStatus", old.optString("status")).put("oldProofs", old.optJSONArray("proofs") == null ? new JSONArray() : old.optJSONArray("proofs"));
+                    JSONArray log; try { log = new JSONArray(gp().getString("log", "[]")); } catch (Exception e) { log = new JSONArray(); }
+                    JSONArray nl = new JSONArray(); nl.put(new JSONObject().put("host", host).put("t", System.currentTimeMillis()).put("from", old.optString("status")).put("to", status).put("proofs", proofs).put("oldProofs", now.optJSONArray("oldProofs")));
+                    for (int i = 0; i < log.length() && nl.length() < 60; i++) nl.put(log.get(i));
+                    gp().edit().putString("log", nl.toString()).apply();
+                    toast(changed ? "🐕‍🦺 Les règles de " + host + " ont changé : liste " + status : "🐕‍🦺 Les règles IA de " + host + " ont été modifiées");
+                    emitUi("guardAlert", now.toString());
+                } else if (manual) toast("🐕‍🦺 " + host + " : liste " + status);
+                gp().edit().putString("h:" + host, now.toString()).apply();
+                saveGuardFile();
+                emitUi("guard", now.toString());
+            } catch (Exception ignored) { }
+        }).start();
+    }
+
+    /** Copie lisible des listes dans un fichier (Documents de l'appli + Téléchargements/PupGuard si possible). */
+    void saveGuardFile() {
+        try {
+            JSONObject all = new JSONObject();
+            JSONArray green = new JSONArray(), red = new JSONArray();
+            for (Map.Entry<String, ?> e : gp().getAll().entrySet()) {
+                if (!e.getKey().startsWith("h:")) continue;
+                JSONObject o = new JSONObject(String.valueOf(e.getValue()));
+                ("rouge".equals(o.optString("status")) ? red : green).put(o);
+            }
+            all.put("generated", System.currentTimeMillis()).put("liste_verte", green).put("liste_rouge", red);
+            JSONArray log; try { log = new JSONArray(gp().getString("log", "[]")); } catch (Exception e) { log = new JSONArray(); }
+            all.put("changements", log);
+            byte[] data = all.toString(2).getBytes(StandardCharsets.UTF_8);
+            try (OutputStream o = new java.io.FileOutputStream(new java.io.File(getFilesDir(), "chien_de_garde.json"))) { o.write(data); }
+        } catch (Exception ignored) { }
+    }
+
+    void guardMaybe(WebView v, String url) {
+        if (url == null || !url.startsWith("http") || !sp.getBoolean("guard", true)) return;
+        String h = skinHost(url);
+        if (h.isEmpty()) return;
+        JSONObject old = guardGet(h);
+        if (old != null && System.currentTimeMillis() - old.optLong("t") < 24L * 3600 * 1000) return;
+        v.evaluateJavascript(META_JS, val -> guardCheck(url, h, unq(val), false));
+    }
+
+    int pendingSniff = -1;
+    void sniffHere(Tab t) {
+        if (t == null || t.wv == null) return;
+        if (sniffJs == null) sniffJs = asset("skin/pupsniff.js");
+        final String url = t.url, host = skinHost(url);
+        t.wv.evaluateJavascript(sniffJs, val -> {
+            try {
+                JSONObject r = new JSONObject(unq(val));
+                SharedPreferences g = gp();
+                JSONObject old = null;
+                try { String s = g.getString("tos:" + host, null); if (s != null) old = new JSONObject(s); } catch (Exception ignored) { }
+                JSONObject now = new JSONObject().put("url", url).put("hash", r.optString("hash")).put("t", System.currentTimeMillis()).put("count", r.optInt("count")).put("kinds", r.optJSONArray("kinds")).put("title", r.optString("title"));
+                if (old != null && old.optString("url").equals(url) && !old.optString("hash").equals(r.optString("hash"))) {
+                    now.put("changedAt", System.currentTimeMillis()).put("prevT", old.optLong("t"));
+                    toast("🐕‍🦺 Ces CGU ont changé depuis ta dernière lecture du " + new java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.FRANCE).format(new java.util.Date(old.optLong("t"))));
+                } else if (old != null && old.has("changedAt") && old.optString("hash").equals(r.optString("hash"))) now.put("changedAt", old.optLong("changedAt")).put("prevT", old.optLong("prevT"));
+                g.edit().putString("tos:" + host, now.toString()).apply();
+                emitState();
+            } catch (Exception ignored) { }
+        });
+    }
+
     /** Mode sombre automatique de Chromium (comme Dark Reader), réglé site par site. */
     boolean setDark(WebView v, String url) {
         boolean want = skinOn(url) && sp.getBoolean("skinDark", true);
@@ -570,6 +750,8 @@ public class BrowserActivity extends Activity {
             if (v.getTitle() != null && !v.getTitle().isEmpty()) t.title = v.getTitle();
             if (sp.getBoolean("adblock", true)) v.evaluateJavascript(COSMETIC, null);
             applySkin(v, url);
+            guardMaybe(v, url);
+            if (t.id == pendingSniff) { pendingSniff = -1; final Tab st = t; ui.postDelayed(() -> sniffHere(st), 900); }
             addHistory(url, t.title);
             saveTabs();
             emitState();
@@ -753,7 +935,9 @@ public class BrowserActivity extends Activity {
                 o.put("skin", sp.getBoolean("skin", true));
                 o.put("skinDark", sp.getBoolean("skinDark", true));
                 o.put("skinOffN", sp.getString("skinOff", "").replace(",", " ").trim().isEmpty() ? 0 : sp.getString("skinOff", "").replaceAll("^,|,$", "").split(",").length);
-                if (cur != null) { String hh = skinHost(cur.url); o.put("skinHost", hh); o.put("skinHere", skinOn(cur.url)); o.put("skinSensitive", skinSensitive(hh)); }
+                if (cur != null) { String hh = skinHost(cur.url); o.put("skinHost", hh); o.put("skinHere", skinOn(cur.url)); o.put("skinSensitive", skinSensitive(hh));
+                    JSONObject g = guardGet(hh); if (g != null) o.put("guardHere", g.optString("status")); }
+                o.put("deco", sp.getBoolean("deco", true)); o.put("words", sp.getBoolean("words", true)); o.put("guard", sp.getBoolean("guard", true));
                 stateJson = o.toString();
                 emitUi("state", stateJson);
             } catch (Exception ignored) { }
@@ -904,7 +1088,7 @@ public class BrowserActivity extends Activity {
                     default: e.putBoolean(k, "true".equals(v));
                 }
                 e.apply();
-                for (Tab t : tabs) if (t.wv != null) { applySettings(t.wv); if (k.startsWith("skin")) { boolean ch = setDark(t.wv, t.url); applySkin(t.wv, t.url); if (ch && t == cur && !t.url.isEmpty()) t.wv.reload(); } }
+                for (Tab t : tabs) if (t.wv != null) { applySettings(t.wv); if (k.startsWith("skin") || k.equals("deco") || k.equals("words")) { boolean ch = setDark(t.wv, t.url); applySkin(t.wv, t.url); if (ch && t == cur && !t.url.isEmpty()) t.wv.reload(); } }
                 if (("desktop".equals(k) || "js".equals(k)) && cur != null && cur.wv != null && !cur.url.isEmpty()) cur.wv.reload();
                 emitState();
             });
@@ -925,6 +1109,56 @@ public class BrowserActivity extends Activity {
                 if (ch) cur.wv.reload();
                 toast(skinOn(cur.url) ? "Thème puppy activé sur " + h + " 🐾" : "Thème d'origine sur " + h);
                 emitState();
+            });
+        }
+        @JavascriptInterface public String guardInfo() {
+            try {
+                JSONObject o = new JSONObject();
+                String h = cur == null ? "" : skinHost(cur.url);
+                o.put("host", h).put("url", cur == null ? "" : cur.url);
+                JSONObject g = guardGet(h); if (g != null) o.put("here", g);
+                try { String ts = gp().getString("tos:" + h, null); if (ts != null) o.put("tos", new JSONObject(ts)); } catch (Exception ignored) { }
+                JSONArray all = new JSONArray();
+                for (Map.Entry<String, ?> e : gp().getAll().entrySet()) if (e.getKey().startsWith("h:")) { JSONObject x = new JSONObject(String.valueOf(e.getValue())); all.put(new JSONObject().put("host", x.optString("host")).put("status", x.optString("status")).put("t", x.optLong("t")).put("changedAt", x.optLong("changedAt", 0))); }
+                o.put("all", all);
+                o.put("log", new JSONArray(gp().getString("log", "[]")));
+                return o.toString();
+            } catch (Exception e) { return "{}"; }
+        }
+        @JavascriptInterface public void guardRecheck() {
+            ui.post(() -> { if (cur == null || cur.wv == null || !cur.url.startsWith("http")) return; final String u = cur.url, h = skinHost(u); cur.wv.evaluateJavascript(META_JS, v -> guardCheck(u, h, unq(v), true)); });
+        }
+        @JavascriptInterface public void guardSniffHere() { ui.post(() -> sniffHere(cur)); }
+        @JavascriptInterface public void guardFindTos() {
+            ui.post(() -> {
+                if (cur == null || cur.wv == null) return;
+                cur.wv.evaluateJavascript(TOS_FIND_JS, v -> {
+                    try {
+                        JSONArray a = new JSONArray(unq(v));
+                        if (a.length() == 0) { toast("Pas de lien vers les CGU sur cette page 🐾 Ouvre la page des conditions puis « Renifler cette page »"); return; }
+                        emitUi("tosLinks", a.toString());
+                    } catch (Exception e) { toast("Recherche des CGU impossible ici"); }
+                });
+            });
+        }
+        @JavascriptInterface public void guardOpenSniff(String url) {
+            ui.post(() -> { Tab t = BrowserActivity.this.newTab("", true, cur); load(t, url); pendingSniff = t.id; emitState(); });
+        }
+        @JavascriptInterface public void guardForget(String host) { ui.post(() -> { gp().edit().remove("h:" + host).remove("tos:" + host).apply(); saveGuardFile(); emitState(); }); }
+        @JavascriptInterface public void guardExport() {
+            ui.post(() -> {
+                if (Build.VERSION.SDK_INT < 29) { toast("Export disponible à partir d'Android 10"); return; }
+                try {
+                    saveGuardFile();
+                    java.io.File src = new java.io.File(getFilesDir(), "chien_de_garde.json");
+                    android.content.ContentValues cv = new android.content.ContentValues();
+                    cv.put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "chien_de_garde.json");
+                    cv.put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/json");
+                    cv.put(android.provider.MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/PupGuard");
+                    Uri dst = getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                    try (InputStream in = new java.io.FileInputStream(src); OutputStream out = getContentResolver().openOutputStream(dst)) { byte[] b = new byte[8192]; int n; while ((n = in.read(b)) > 0) out.write(b, 0, n); }
+                    toast("Listes enregistrées dans Téléchargements/PupGuard 🐾");
+                } catch (Exception e) { toast("Export impossible : " + e.getMessage()); }
             });
         }
         @JavascriptInterface public void skinReset() { ui.post(() -> { sp.edit().remove("skinOff").remove("skinForce").apply(); for (Tab t : tabs) if (t.wv != null) { setDark(t.wv, t.url); applySkin(t.wv, t.url); } emitState(); }); }
