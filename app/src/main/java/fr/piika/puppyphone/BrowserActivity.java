@@ -456,7 +456,7 @@ public class BrowserActivity extends Activity {
     void applySkin(WebView v, String url) {
         boolean on = skinOn(url);
         if (on) {
-            String css = skinCss() + (sp.getBoolean("skinDark", true) ? "\n:root{color-scheme:dark}" : "");
+            String css = Pelage.tint(BrowserActivity.this, skinCss()) + (sp.getBoolean("skinDark", true) ? "\n:root{color-scheme:dark}" : "");
             v.evaluateJavascript("(function(){window.__pupSkinOn=true;var d=document,id='pupnet-skin',s=d.getElementById(id);if(!s){s=d.createElement('style');s.id=id;(d.head||d.documentElement).appendChild(s);}s.textContent=" + JSONObject.quote(css) + ";"
                     + "if(!window.__pupSkinObs){window.__pupSkinObs=new MutationObserver(function(){if(window.__pupSkinOn&&!d.getElementById(id))(d.head||d.documentElement).appendChild(s);});window.__pupSkinObs.observe(d.documentElement,{childList:true,subtree:false});}})()", null);
         } else v.evaluateJavascript("(function(){window.__pupSkinOn=false;var e=document.getElementById('pupnet-skin');if(e)e.remove();})()", null);
@@ -484,7 +484,7 @@ public class BrowserActivity extends Activity {
         boolean deco = sp.getBoolean("deco", true), words = sp.getBoolean("words", true);
         if (!deco && !words) { v.evaluateJavascript("window.__pupDeco&&window.__pupDeco.off()", null); return; }
         String url = v.getUrl() == null ? "" : v.getUrl();
-        v.evaluateJavascript("window.__pupCfg={deco:" + deco + ",words:" + words + ",dict:" + dictJson() + ",adj:" + adjJson(url) + "};" + decoJs, null);
+        v.evaluateJavascript("window.__pupCfg={deco:" + deco + ",words:" + words + ",dict:" + dictJson() + ",adj:" + adjJson(url) + "};" + Pelage.tint(BrowserActivity.this, decoJs), null);
     }
     void reapplyAll() { for (Tab t : tabs) if (t.wv != null && !t.url.isEmpty()) applySkin(t.wv, t.url); }
 
@@ -1008,7 +1008,7 @@ public class BrowserActivity extends Activity {
                 return new WebResourceResponse(p.equals("/thumb") ? "image/jpeg" : "image/png", null, 200, "OK", h, new ByteArrayInputStream(out[0]));
             }
             String path = p.equals("/") ? "/net.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

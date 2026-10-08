@@ -200,7 +200,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onResume() {
-        super.onResume();
+        super.onResume(); Pelage.watch(this, web);
         if (web != null) web.onResume();
         try { PupNav.ensure(this); } catch (Exception ignored) { }
         try { PupUpdate.autoCheck(this); } catch (Exception ignored) { }
@@ -285,7 +285,7 @@ public class MainActivity extends Activity {
                 return new WebResourceResponse("image/*", null, 200, "OK", h, in);
             }
             String path = p.equals("/") ? "/index.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

@@ -200,8 +200,9 @@ public class PupNav {
             c.drawRoundRect(s, Math.max(0, rad - 5 * dp), Math.max(0, rad - 5 * dp), st);
             // liseré néon magenta
             Paint ne = new Paint(Paint.ANTI_ALIAS_FLAG);
-            ne.setStyle(Paint.Style.STROKE); ne.setStrokeWidth(2 * dp); ne.setColor(0xFFFF3FA4);
-            ne.setShadowLayer(7 * dp, 0, 0, 0xFFFF3FA4);
+            ne.setStyle(Paint.Style.STROKE); int ac = Pelage.acc(ctx);
+            ne.setStrokeWidth(2 * dp); ne.setColor(ac);
+            ne.setShadowLayer(7 * dp, 0, 0, ac);
             if (floating) c.drawRoundRect(r, rad, rad, ne);
             else c.drawLine(0, r.top + 1 * dp, getWidth(), r.top + 1 * dp, ne);
             // rivets
@@ -216,7 +217,7 @@ public class PupNav {
                 float cx = r.left + seg * i + seg / 2;
                 if (pressed == i) {
                     Paint g = new Paint(Paint.ANTI_ALIAS_FLAG);
-                    g.setShader(new RadialGradient(cx, cy, isz * .9f, new int[]{0x88FF3FA4, 0x33FF3FA4, 0x00FF3FA4}, new float[]{0, .6f, 1}, Shader.TileMode.CLAMP));
+                    g.setShader(new RadialGradient(cx, cy, isz * .9f, new int[]{(Pelage.acc(ctx) & 0x00FFFFFF) | 0x88000000, (Pelage.acc(ctx) & 0x00FFFFFF) | 0x33000000, Pelage.acc(ctx) & 0x00FFFFFF}, new float[]{0, .6f, 1}, Shader.TileMode.CLAMP));
                     c.drawCircle(cx, cy, isz * .9f, g);
                 }
                 Bitmap b = "back".equals(order[i]) ? iBack : "home".equals(order[i]) ? iHome : iTasks;
@@ -282,7 +283,7 @@ public class PupNav {
         @Override protected void onDraw(Canvas c) {
             float x = left ? 3 * dp : getWidth() - 3 * dp;
             p.setStrokeWidth(3 * dp); p.setStrokeCap(Paint.Cap.ROUND);
-            p.setColor(0xCCFF3FA4); p.setShadowLayer(6 * dp, 0, 0, 0xFFFF3FA4);
+            p.setColor((Pelage.acc(ctx) & 0x00FFFFFF) | 0xCC000000); p.setShadowLayer(6 * dp, 0, 0, Pelage.acc(ctx));
             c.drawLine(x, getHeight() * .2f, x, getHeight() * .8f, p);
         }
         @Override public boolean onTouchEvent(MotionEvent e) {

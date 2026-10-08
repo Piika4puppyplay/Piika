@@ -1,0 +1,99 @@
+package fr.piika.puppyphone;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.Uri;
+import android.os.BatteryManager;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import org.json.JSONObject;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.HashMap;
+
+/** « La sieste du chiot » : horloge-batterie néon (écran de veille de charge + horloge de nuit). */
+final class Sieste {
+    static final String HOST = "pupsieste.local";
+    final Context ctx;
+    final Handler ui = new Handler(Looper.getMainLooper());
+    WebView web;
+    String lastBattery = "{}";
+    final BroadcastReceiver batt = new BroadcastReceiver() { @Override public void onReceive(Context c, Intent i) { push(i); } };
+    final Runnable tick = new Runnable() { @Override public void run() { Intent i = ctx.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED)); if (i != null) push(i); ui.postDelayed(this, 30000); } };
+
+    Sieste(Context c) { ctx = c; }
+
+    View create() {
+        web = new WebView(ctx);
+        web.setBackgroundColor(0xFF05020A);
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(false); s.setTextZoom(100);
+        web.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return serve(r.getUrl()); }
+            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return true; }
+            @Override public void onPageFinished(WebView v, String u) { emit("battery", lastBattery); }
+        });
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public String battery() { return lastBattery; }
+            @JavascriptInterface public String prefs() {
+                try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).toString(); } catch (Exception e) { return "{}"; }
+            }
+        }, "Sieste");
+        web.loadUrl("https://" + HOST + "/sieste.html");
+        return web;
+    }
+
+    void start() {
+        Intent i = ctx.registerReceiver(batt, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (i != null) push(i);
+        ui.postDelayed(tick, 30000);
+    }
+    void stop() {
+        try { ctx.unregisterReceiver(batt); } catch (Exception ignored) { }
+        ui.removeCallbacks(tick);
+        if (web != null) { web.destroy(); web = null; }
+    }
+
+    void push(Intent i) {
+        try {
+            int level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1), scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+            int status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1), plugged = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+            long remain = -1;
+            if (Build.VERSION.SDK_INT >= 28) { try { remain = ctx.getSystemService(BatteryManager.class).computeChargeTimeRemaining(); } catch (Exception ignored) { } }
+            JSONObject o = new JSONObject().put("pct", scale > 0 ? Math.round(level * 100f / scale) : -1)
+                    .put("charging", status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL)
+                    .put("full", status == BatteryManager.BATTERY_STATUS_FULL)
+                    .put("plug", plugged == BatteryManager.BATTERY_PLUGGED_AC ? "secteur" : plugged == BatteryManager.BATTERY_PLUGGED_USB ? "USB" : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "sans fil" : "")
+                    .put("temp", i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10f)
+                    .put("remain", remain);
+            lastBattery = o.toString();
+            emit("battery", lastBattery);
+        } catch (Exception ignored) { }
+    }
+    void emit(String ev, String data) { ui.post(() -> { if (web != null) web.evaluateJavascript("window.SiesteUI&&SiesteUI.on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data) + ")", null); }); }
+
+    WebResourceResponse serve(Uri u) {
+        if (u == null || !HOST.equals(u.getHost())) return null;
+        String p = u.getPath() == null ? "/" : u.getPath();
+        try {
+            String path = p.equals("/") ? "/sieste.html" : p;
+            InputStream in = Pelage.open(ctx, path);
+            String mime = MainActivity.mime(path);
+            return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", new HashMap<>(), in);
+        } catch (Exception e) {
+            return new WebResourceResponse("text/plain", "utf-8", 404, "Introuvable", new HashMap<>(), new ByteArrayInputStream(new byte[0]));
+        }
+    }
+}

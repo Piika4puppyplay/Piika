@@ -4,4 +4,8 @@
     <string name="pupnav_sum">Barre de navigation puppyplay et multitâche PupTasks</string>
     <string name="kbd_fr">Français 🐾</string>
     <string name="kbd_en">English 🐾</string>
+    <string name="wall_name">Nuit néon 🐾</string>
+    <string name="wall_desc">Des pattes lumineuses montent dans un ciel étoilé au-dessus d\'un sol néon rétro, aux couleurs du pelage de ta niche.</string>
+    <string name="wall_author">PuppyPhone</string>
+    <string name="dream_name">La sieste du chiot</string>
 </resources>

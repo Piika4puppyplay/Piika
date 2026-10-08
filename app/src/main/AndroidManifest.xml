@@ -46,6 +46,7 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.software.live_wallpaper" android:required="false" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
@@ -78,6 +79,7 @@
     </queries>
 
     <application
+        android:name=".PupApp"
         android:requestLegacyExternalStorage="true"
         android:label="PuppyPhone"
         android:icon="@mipmap/ic_launcher"
@@ -604,5 +606,62 @@
         </activity>
 
         <receiver android:name=".UpdateReceiver" android:exported="false" />
+
+        <activity
+            android:name=".NicheActivity"
+            android:label="Ta niche"
+            android:icon="@mipmap/ic_pupniche"
+            android:roundIcon="@mipmap/ic_pupniche"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.niche"
+            android:theme="@style/PupNetTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PhoenixActivity"
+            android:process=":phoenix"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/PupInvisible" />
+
+        <activity
+            android:name=".SiesteActivity"
+            android:label="@string/dream_name"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:hardwareAccelerated="true"
+            android:theme="@style/PupNetTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density" />
+
+        <service
+            android:name=".PupLiveWallpaper"
+            android:label="@string/wall_name"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wallpaper" />
+        </service>
+
+        <service
+            android:name=".PupDream"
+            android:label="@string/dream_name"
+            android:exported="true"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

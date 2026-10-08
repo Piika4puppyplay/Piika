@@ -118,7 +118,7 @@ public class FileActivity extends Activity {
         web.loadUrl("https://" + HOST + "/file.html");
     }
 
-    @Override protected void onResume() { super.onResume(); emit("resume", hasPerm() ? "1" : "0"); }
+    @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", hasPerm() ? "1" : "0"); }
     @Override protected void onDestroy() { if (web != null) web.destroy(); jobs.shutdownNow(); bg.shutdownNow(); super.onDestroy(); }
     @Override public void onBackPressed() {
         web.evaluateJavascript("(window.FileUI&&FileUI.back())?'y':'n'", v -> { if (!"\"y\"".equals(v)) finish(); });
@@ -743,7 +743,7 @@ public class FileActivity extends Activity {
                 return new WebResourceResponse("image/png", null, 200, "OK", h, new ByteArrayInputStream(b));
             }
             String path = p.equals("/") ? "/file.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

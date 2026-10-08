@@ -1,0 +1,53 @@
+/* La sieste du chiot — horloge-batterie néon */
+body.sieste{--acc:#ff3fa4;--acc2:#29e6ff;--fc:hsl(60 100% 50%);background:#05020a;overflow:hidden}
+.sky{position:fixed;inset:0;background:radial-gradient(70% 45% at 20% 0%,color-mix(in srgb,var(--acc) 30%,transparent),transparent 70%),radial-gradient(60% 40% at 100% 60%,color-mix(in srgb,var(--acc2) 18%,transparent),transparent 70%),linear-gradient(#0b0518,#05020a 70%)}
+#stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:tw var(--d,3s) ease-in-out infinite alternate;opacity:.2}
+@keyframes tw{to{opacity:.9;transform:scale(1.6)}}
+.floor{position:absolute;left:-20%;right:-20%;bottom:0;height:30%;transform:perspective(300px) rotateX(60deg);transform-origin:bottom;
+  background-image:linear-gradient(color-mix(in srgb,var(--acc) 50%,transparent) 1.5px,transparent 1.5px),linear-gradient(90deg,color-mix(in srgb,var(--acc2) 40%,transparent) 1.5px,transparent 1.5px);background-size:44px 44px;opacity:.35;animation:floor 6s linear infinite;mask-image:linear-gradient(transparent,#000 60%)}
+@keyframes floor{to{background-position:0 44px,0 0}}
+#wrap{position:fixed;left:50%;top:50%;width:min(86vw,560px);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:16px;transition:transform 8s ease-in-out,filter 2s}
+#pup{width:min(46vw,230px);aspect-ratio:1.4;filter:drop-shadow(0 10px 18px rgba(0,0,0,.7)) drop-shadow(0 0 22px color-mix(in srgb,var(--acc) 55%,transparent))}
+#pup svg{width:100%;height:100%;overflow:visible}
+.zzz{font-family:var(--f-head);fill:#fff;animation:zz 3.6s ease-in infinite;opacity:0}
+.zzz:nth-of-type(2){animation-delay:1.2s}.zzz:nth-of-type(3){animation-delay:2.4s}
+@keyframes zz{0%{opacity:0;transform:translate(0,0) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translate(26px,-60px) scale(1.4)}}
+.breath{animation:breath 4s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes breath{50%{transform:scaleY(1.035) scaleX(1.015)}}
+
+/* batterie */
+.sbatt{position:relative;display:block;container-type:inline-size;width:calc(100% - 26px);margin-right:26px;box-sizing:border-box;aspect-ratio:2.25;padding:10px;border-radius:34px;
+  background:conic-gradient(from 210deg,#fff,#8d84a3 12%,#f2eef8 22%,#5c556c 35%,#d9d3e6 50%,#6b6480 64%,#fbf9ff 78%,#7a7290 90%,#fff);
+  box-shadow:0 0 0 1.5px #000,0 26px 50px rgba(0,0,0,.85),0 0 40px -6px var(--fc),0 0 90px -20px var(--fc)}
+.nub{position:absolute;right:-22px;top:32%;bottom:32%;width:22px;border-radius:0 12px 12px 0;background:linear-gradient(90deg,#9a92b0,#fff 40%,#7a7290);box-shadow:0 0 0 1.5px #000,0 0 18px -4px var(--fc)}
+.rv{position:absolute;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#c9c2d8 35%,#4c4658);box-shadow:0 1px 2px #000}
+.r1{left:14px;top:14px}.r2{right:14px;top:14px}.r3{left:14px;bottom:14px}.r4{right:14px;bottom:14px}
+.bin{position:absolute;inset:10px;border-radius:26px;overflow:hidden;background:radial-gradient(120% 90% at 50% 120%,rgba(255,255,255,.08),transparent 60%),linear-gradient(#120a20,#05020a);box-shadow:inset 0 0 0 2px rgba(0,0,0,.9),inset 0 0 30px rgba(0,0,0,.9)}
+.fill{position:absolute;left:0;top:0;bottom:0;width:0;transition:width 1.6s cubic-bezier(.2,.9,.25,1),background 1.6s;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.12) 45%,rgba(0,0,0,.05) 50%,rgba(0,0,0,.35)),var(--fc);box-shadow:0 0 40px var(--fc)}
+.wave{position:absolute;right:-18px;top:-50%;width:20px;height:200%;fill:var(--fc);animation:wave 2.4s linear infinite;filter:brightness(1.15)}
+@keyframes wave{to{transform:translateY(25%)}}
+.low .fill{animation:low 1.2s ease-in-out infinite}
+@keyframes low{50%{filter:brightness(1.8)}}
+#bubbles i{position:absolute;bottom:-10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.95),rgba(255,255,255,.25) 60%,transparent 70%);animation:bub var(--d,4s) linear infinite}
+@keyframes bub{to{transform:translateY(-120%) translateX(var(--x,6px));opacity:0}}
+.sglass{position:absolute;inset:0;border-radius:26px;pointer-events:none;background:linear-gradient(170deg,rgba(255,255,255,.32),rgba(255,255,255,.06) 38%,transparent 39%),linear-gradient(0deg,rgba(0,0,0,.25),transparent 40%)}
+.clock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:2px;padding-bottom:9%;font-family:var(--f-head);font-size:25cqw;line-height:1;color:#fff;
+  text-shadow:0 0 6px #fff,0 0 18px var(--acc),0 0 40px var(--acc),0 4px 0 rgba(0,0,0,.6)}
+.clock i{font-style:normal;animation:blink 2s steps(1) infinite}
+@keyframes blink{50%{opacity:.25}}
+.pct{position:absolute;left:0;right:0;bottom:9%;text-align:center;font-family:var(--f-num);font-size:6.5cqw;letter-spacing:.12em;color:#fff;text-shadow:0 0 10px var(--fc),0 2px 2px #000}
+.sbolt{position:absolute;right:5%;top:50%;width:8cqw;transform:translateY(-50%);opacity:0;transition:opacity .6s}
+.sbolt svg{width:100%;fill:#fff8c9;stroke:#ffb627;stroke-width:1.5;filter:drop-shadow(0 0 6px #ffd34d) drop-shadow(0 0 16px #ffb627)}
+.charging .sbolt{opacity:1;animation:sbolt 1.6s ease-in-out infinite}
+@keyframes sbolt{50%{transform:translateY(-50%) scale(1.15);filter:brightness(1.4)}}
+.date{font-family:var(--f-neon);word-spacing:.35em;white-space:nowrap;font-size:min(6.4vw,34px);color:var(--acc2);text-shadow:0 0 8px var(--acc2),0 0 22px var(--acc2);text-transform:capitalize;text-align:center}
+.say{font-family:var(--f-head);font-size:min(4vw,17px);letter-spacing:.03em;color:#ffe9f4;text-align:center;text-shadow:0 0 10px var(--acc),0 2px 2px #000;max-width:94%}
+.say small{display:block;margin-top:6px;font-family:var(--f-num);font-size:min(3.2vw,13px);letter-spacing:.14em;color:#d9cbe9;text-transform:uppercase}
+
+@media (orientation:landscape){
+  #wrap{width:min(60vw,105vh);gap:6px}
+  #pup{width:auto;height:22vh}
+  .date{font-size:min(6vh,30px)}
+  .say{font-size:min(3.6vh,16px)}
+}

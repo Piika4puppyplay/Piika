@@ -189,7 +189,7 @@ public class MediaActivity extends Activity {
         } catch (Exception e) { return "{}"; }
     }
 
-    @Override protected void onResume() { super.onResume(); emit("resume", permState()); }
+    @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", permState()); }
     @Override protected void onPause() { if (mp != null && prepared && mp.isPlaying()) { mp.pause(); emit("player", playerState()); } super.onPause(); }
     @Override protected void onDestroy() { stopPlayer(); if (web != null) web.destroy(); super.onDestroy(); }
 
@@ -345,7 +345,7 @@ public class MediaActivity extends Activity {
                 return new WebResourceResponse("image/jpeg", null, 200, "OK", h, new ByteArrayInputStream(o.toByteArray()));
             }
             String path = p.equals("/") ? "/media.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

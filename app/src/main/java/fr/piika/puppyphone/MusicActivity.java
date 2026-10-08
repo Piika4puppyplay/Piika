@@ -111,7 +111,7 @@ public class MusicActivity extends Activity {
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); readIntent(i); }
 
     @Override protected void onResume() {
-        super.onResume();
+        super.onResume(); Pelage.watch(this, web);
         MusicService.listener = () -> { MusicService s = MusicService.I; if (s != null) emit("state", s.stateJson()); };
         ui.postDelayed(() -> { MusicService s = MusicService.I; if (s != null) emit("state", s.stateJson()); }, 120);
         emit("resume", "");
@@ -189,7 +189,7 @@ public class MusicActivity extends Activity {
                 return new WebResourceResponse("image/jpeg", null, 200, "OK", h, new ByteArrayInputStream(b));
             }
             String path = p.equals("/") ? "/music.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

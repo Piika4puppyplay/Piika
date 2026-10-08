@@ -130,7 +130,7 @@ public class SmsActivity extends Activity {
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); readIntent(i); emit("open", startJson()); }
 
     @Override protected void onResume() {
-        super.onResume();
+        super.onResume(); Pelage.watch(this, web);
         SmsCore.listener = () -> emit("changed", "");
         emit("resume", "");
     }
@@ -362,7 +362,7 @@ public class SmsActivity extends Activity {
                 return new WebResourceResponse(getSharedPreferences("pupsms_names", MODE_PRIVATE).getString(f.getName() + ".mime", "application/octet-stream"), null, 200, "OK", h, new java.io.FileInputStream(f));
             }
             String path = p.equals("/") ? "/sms.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

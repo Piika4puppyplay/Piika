@@ -103,7 +103,7 @@ public class DialerActivity extends Activity {
 
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); readIntent(i); emit("start", startJson()); if (pendingCall != null) { String p = pendingCall; pendingCall = null; place(p); } }
 
-    @Override protected void onResume() { super.onResume(); emit("resume", ""); if (pendingCall != null && hasCallPerm()) { String p = pendingCall; pendingCall = null; place(p); } }
+    @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", ""); if (pendingCall != null && hasCallPerm()) { String p = pendingCall; pendingCall = null; place(p); } }
 
     @Override protected void onDestroy() { if (web != null) web.destroy(); super.onDestroy(); }
 
@@ -207,7 +207,7 @@ public class DialerActivity extends Activity {
                 return new WebResourceResponse("image/jpeg", null, 200, "OK", h, getContentResolver().openInputStream(au));
             }
             String path = p.equals("/") ? "/phone.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

@@ -112,7 +112,7 @@ public class TasksActivity extends Activity {
         current = PupNavA11y.fgPkg + "|" + PupNavA11y.fgClass;
         emit("reload", i.getBooleanExtra("settings", false) ? "settings" : "");
     }
-    @Override protected void onResume() { super.onResume(); emit("resume", ""); PupNav.ensure(this); }
+    @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", ""); PupNav.ensure(this); }
     @Override protected void onDestroy() { if (web != null) web.destroy(); super.onDestroy(); }
     @Override public void onBackPressed() { web.evaluateJavascript("(window.TasksUI&&TasksUI.back())?'y':'n'", v -> { if (!"\"y\"".equals(v)) finishAndRemoveTask(); }); }
 
@@ -276,7 +276,7 @@ public class TasksActivity extends Activity {
                 return new WebResourceResponse("image/png", null, 200, "OK", h, new ByteArrayInputStream(b));
             }
             String path = p.equals("/") ? "/tasks.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

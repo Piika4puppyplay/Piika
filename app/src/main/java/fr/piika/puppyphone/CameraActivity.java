@@ -259,7 +259,7 @@ public class CameraActivity extends Activity {
 
     @Override
     protected void onResume() {
-        super.onResume();
+        super.onResume(); Pelage.watch(this, web);
         bgT = new HandlerThread("pupcam");
         bgT.start();
         bg = new Handler(bgT.getLooper());
@@ -1484,7 +1484,7 @@ public class CameraActivity extends Activity {
                 return new WebResourceResponse("image/jpeg", null, 200, "OK", h, new ByteArrayInputStream(lastThumb));
             }
             String path = p.equals("/") ? "/camera.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

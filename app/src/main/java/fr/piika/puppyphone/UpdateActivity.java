@@ -70,7 +70,7 @@ public class UpdateActivity extends Activity {
         web.loadUrl("https://" + HOST + "/update.html");
     }
     @Override protected void onResume() {
-        super.onResume();
+        super.onResume(); Pelage.watch(this, web);
         // retour des réglages « sources inconnues » : on reprend l'installation
         if (pendingApk != null && getPackageManager().canRequestPackageInstalls()) { File f = pendingApk; pendingApk = null; doInstall(f); }
         emit("resume", "");
@@ -99,7 +99,7 @@ public class UpdateActivity extends Activity {
         Map<String, String> h = new HashMap<>();
         try {
             String path = p.equals("/") ? "/update.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {

@@ -90,7 +90,7 @@ public class KbSettingsActivity extends Activity {
         Map<String, String> h = new HashMap<>();
         try {
             String path = p.equals("/") ? "/kbd.html" : p;
-            InputStream in = getAssets().open("www" + path);
+            InputStream in = Pelage.open(this, path);
             String mime = MainActivity.mime(path);
             return new WebResourceResponse(mime, mime.startsWith("text") || mime.contains("javascript") || mime.contains("svg") ? "utf-8" : null, 200, "OK", h, in);
         } catch (Exception e) {
