@@ -141,3 +141,14 @@ body.net{background:transparent}
 .glist.r{border-left-color:#ff4d5e}
 .glist b{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .glist small{font-family:var(--f-num);font-size:10.5px;color:var(--muted)}
+/* Dictionnaire puppy */
+.dlangs{margin-top:4px}
+.dlist{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.drow{display:flex;align-items:center;gap:6px;padding:6px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.2));border:1px solid rgba(255,255,255,.14)}
+.drow.off{opacity:.5}
+.drow .sw{transform:scale(.8);margin:0 -6px}
+.din{flex:1;min-width:0;height:38px;padding:0 10px;border-radius:10px;border:1px solid rgba(255,63,164,.5);background:rgba(0,0,0,.45);color:#fff;font:600 14px var(--f-body);outline:none;-webkit-user-select:text;user-select:text}
+.din:focus{border-color:#29e6ff;box-shadow:0 0 12px -2px #29e6ff}
+.darr{color:#ff3fa4;text-shadow:0 0 8px #ff3fa4;font-weight:700}
+.dg{width:36px;height:36px;flex:none;border-radius:10px;font:700 13px var(--f-body);color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,.1) 48%,rgba(0,0,0,.15) 50%),#6a2a90;border:1px solid rgba(255,255,255,.7)}
+.drow .del{flex:none}

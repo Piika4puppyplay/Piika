@@ -69,6 +69,7 @@
     else if (mode === 'history') renderHistory();
     else if (mode === 'settings') renderSettings();
     else if (mode === 'guard') renderGuard();
+    else if (mode === 'dict') renderDict();
   }
   function favTile(f, i) {
     return `<button class="fav" data-fav="${i}" type="button"><span class="orbt" style="--c:${PAL[colorOf(hostOf(f.url))][1]}">${esc((f.title || hostOf(f.url) || '?').trim()[0].toUpperCase())}</span><span class="lb">${esc(f.title || hostOf(f.url))}</span></button>`;
@@ -163,6 +164,7 @@
         ${item('closetab', 'trash', 'red', 'Fermer l\'onglet')}
         ${item('adblock', 'shield', st.adblock === false ? 'chrome' : 'green', st.adblock === false ? 'Bloqueur OFF' : 'Bloqueur ON', { on: st.adblock !== false })}
         ${item('skin', 'sparkle', st.skinHere ? 'pink' : 'chrome', st.skinHere ? 'Thème puppy ici' : 'Thème d\'origine ici', { on: !!st.skinHere, dis: a.blank })}
+        ${item('decoedit', 'paw', 'amber', 'Placer les chiots', { dis: a.blank || !st.skinHere })}
         ${item('guard', 'shield', st.guardHere === 'rouge' ? 'red' : st.guardHere === 'verte' ? 'green' : 'cyan', 'Chien de garde', { on: !!st.guardHere, dis: a.blank })}
         ${item('phone', 'paw', 'pink', 'PuppyPhone')}
       </div></div>`;
@@ -208,6 +210,8 @@
         ${st.skinOffN ? `<button class="ab small glass" data-act="skinreset" type="button" style="margin-top:8px">Réinitialiser les exceptions</button>` : ''}
         <div class="row"><span>Accessoires puppy<small style="display:block;font-weight:400;color:var(--muted);font-size:12px">Chiots sur les logos, pattes autour des J'aime (jamais cliquables)</small></span>${sw('deco', st.deco !== false)}</div>
         <div class="row"><span>Vocabulaire puppy<small style="display:block;font-weight:400;color:var(--muted);font-size:12px">lit → panier, assiette → gamelle… (souligné, touche pour voir l'original)</small></span>${sw('words', st.words !== false)}</div>
+        <button class="ab wide c2" data-act="dict" type="button" style="margin-top:6px">${I('news', 'chrome', { shape: 'none' })}Dictionnaire puppy</button>
+        <p style="margin:6px 0 0;font-size:12.5px;color:var(--muted)">🐾 Pour déplacer, agrandir ou cacher les chiots d'un site : Menu → « Placer les chiots ».</p>
       </div>
       <div class="cp">
         <div class="cp-h">${I('shield', 'cyan')}<div><b>Chien de garde des CGU</b><small>Vérifie une fois par jour les règles officielles des sites visités (robots.txt pour les IA, protocole TDMRep, balises « noai ») et te prévient si elles changent. Sans IA.</small></div></div>
@@ -290,6 +294,7 @@
     if (d.act === 'closeall') { call('closeAll'); setMode('start'); autoStart = true; return; }
     if (d.act === 'default') { call('askDefault'); return; }
     if (d.act === 'skinreset') { call('skinReset'); return; }
+    if (d.act === 'dict') { setMode('dict'); return; }
     if (d.act === 'export') { call('exportBackup', backup()); return; }
     if (d.act === 'import') { call('importBackup'); return; }
     if (d.m) {
@@ -315,6 +320,7 @@
         case 'adblock': call('setSetting', 'adblock', String(st.adblock === false)); break;
         case 'skin': call('skinToggle'); setMode(null); break;
         case 'guard': setMode('guard'); break;
+        case 'decoedit': call('decoEdit'); setMode(null); break;
         case 'phone': call('home'); setMode(null); break;
       }
     }
@@ -344,6 +350,53 @@
     clearTimeout(noticeTimer);
     noticeTimer = setTimeout(() => { box.hidden = true; }, n.kind === 'app' ? 7000 : 3000);
   }
+
+  // ------------------------------------------------------------------ Dictionnaire puppy (personnalisable)
+  const LANGS = [['fr', '🇫🇷 FR'], ['en', '🇬🇧 EN'], ['es', '🇪🇸 ES'], ['de', '🇩🇪 DE'], ['it', '🇮🇹 IT'], ['pt', '🇵🇹 PT']];
+  let dictLang = 'fr', dictState = null, dictSaveT = 0, resetArmed = false;
+  function dictSave() { clearTimeout(dictSaveT); dictSaveT = setTimeout(() => { call('dictSet', JSON.stringify(dictState)); }, 500); }
+  function renderDict() {
+    if (!dictState) dictState = J(call('dictGet'), {}) || {};
+    const list = dictState[dictLang] = dictState[dictLang] || [];
+    const fr = dictLang === 'fr';
+    ovin.innerHTML = `<div class="secth">${I('news', 'pink', { shape: 'orb' })}<span class="chrome">DICTIONNAIRE PUPPY</span></div>
+      <div class="cp"><div class="cp-h">${I('bone', 'gold')}<div><b>Mot d'origine → devient</b><small>Les mots se remplacent sur les pages, uniquement à l'affichage. ${fr ? 'Indique si le mot puppy est masculin ou féminin : « le/la », « mon/ma », « ce/cette » s\'accordent tout seuls.' : ''}</small></div></div>
+        <div class="seg dlangs">${LANGS.map(([k, l]) => `<button class="${k === dictLang ? 'on' : ''}" data-dlang="${k}" type="button">${l}</button>`).join('')}</div></div>
+      <div class="dlist">${list.map((e, i) => `<div class="drow${e.on === false ? ' off' : ''}" data-di="${i}">
+          <button class="sw${e.on !== false ? ' on' : ''}" data-dsw="${i}" type="button"><i></i></button>
+          <input class="din" data-dk="o" value="${esc(e.o || '')}" placeholder="origine" autocapitalize="off" autocomplete="off">
+          <span class="darr">➜</span>
+          <input class="din" data-dk="r" value="${esc(e.r || '')}" placeholder="devient" autocapitalize="off" autocomplete="off">
+          ${fr ? `<button class="dg" data-dg="${i}" type="button">${e.g === 'f' ? 'la' : 'le'}</button>` : ''}
+          <button class="del" data-ddel="${i}" type="button">✕</button></div>`).join('') || `<div class="empty">${I('news', 'pink')}Aucun mot pour cette langue.</div>`}</div>
+      <button class="ab wide green" data-dadd="1" type="button">${I('plus', 'chrome', { shape: 'none' })}Ajouter un mot</button>
+      <button class="ab wide red" data-dreset="1" type="button" style="margin-top:10px">${I('refresh', 'chrome', { shape: 'none' })}${resetArmed ? 'Sûr ? Touche encore pour tout remettre à l\'origine' : 'Réparer le dictionnaire'}</button>
+      <p style="font-size:12px;color:var(--muted);margin:8px 2px">« Réparer » efface tes modifications de toutes les langues et remet le dictionnaire d'origine.</p>`;
+  }
+  ovin.addEventListener('input', (e) => {
+    if (mode !== 'dict') return;
+    const inp = e.target.closest('.din'); if (!inp) return;
+    const i = +inp.closest('[data-di]').dataset.di;
+    dictState[dictLang][i][inp.dataset.dk] = inp.value;
+    dictSave();
+  });
+  ovin.addEventListener('click', (e) => {
+    if (mode !== 'dict') return;
+    const b = e.target.closest('[data-dlang],[data-dsw],[data-dg],[data-ddel],[data-dadd],[data-dreset]'); if (!b) return;
+    e.stopPropagation(); haptic();
+    const d = b.dataset, list = dictState[dictLang];
+    if (d.dlang) { dictLang = d.dlang; resetArmed = false; }
+    if (d.dsw) { const x = list[+d.dsw]; x.on = x.on === false; dictSave(); }
+    if (d.dg) { const x = list[+d.dg]; x.g = x.g === 'f' ? 'm' : 'f'; dictSave(); }
+    if (d.ddel) { list.splice(+d.ddel, 1); dictSave(); }
+    if (d.dadd) { list.unshift(dictLang === 'fr' ? { o: '', r: '', g: 'm', on: true } : { o: '', r: '', on: true }); }
+    if (d.dreset) {
+      if (!resetArmed) { resetArmed = true; setTimeout(() => { resetArmed = false; if (mode === 'dict') render(); }, 4000); }
+      else { resetArmed = false; call('dictReset'); dictState = J(call('dictDefault'), {}) || {}; }
+    }
+    render();
+    if (d.dadd) { const f = ovin.querySelector('.din'); if (f) f.focus(); }
+  }, true);
 
   // ------------------------------------------------------------------ Chien de garde des CGU
   let tosLinks = [];
@@ -407,6 +460,7 @@
     back() {
       if (!mode) return false;
       if (mode === 'start' && act().blank) return false;
+      if (mode === 'dict') { setMode('settings'); return true; }
       if (mode === 'favs' || mode === 'history' || mode === 'settings' || mode === 'guard') { setMode('menu'); return true; }
       setMode(null);
       return true;

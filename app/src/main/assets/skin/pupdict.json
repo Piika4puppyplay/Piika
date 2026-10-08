@@ -1,0 +1,613 @@
+{
+ "fr": [
+  {
+   "o": "lit",
+   "r": "panier",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "lits",
+   "r": "paniers",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "canapé",
+   "r": "panier",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "canapés",
+   "r": "paniers",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "assiette",
+   "r": "gamelle",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "assiettes",
+   "r": "gamelles",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "maison",
+   "r": "niche",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "maisons",
+   "r": "niches",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "chambre",
+   "r": "niche",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "chambres",
+   "r": "niches",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "promenade",
+   "r": "balade",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "promenades",
+   "r": "balades",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "récompense",
+   "r": "friandise",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "récompenses",
+   "r": "friandises",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "cadeau",
+   "r": "os",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "cadeaux",
+   "r": "os",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "main",
+   "r": "patte",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "mains",
+   "r": "pattes",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "équipe",
+   "r": "meute",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "équipes",
+   "r": "meutes",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "nourriture",
+   "r": "pâtée",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "humain",
+   "r": "maître",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "humains",
+   "r": "maîtres",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "visage",
+   "r": "museau",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "visages",
+   "r": "museaux",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "cheveux",
+   "r": "poils",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "vêtement",
+   "r": "pelage",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "vêtements",
+   "r": "pelages",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "manteau",
+   "r": "pelage",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "manteaux",
+   "r": "pelages",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "boutique",
+   "r": "animalerie",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "boutiques",
+   "r": "animaleries",
+   "on": true,
+   "g": "f"
+  },
+  {
+   "o": "sommeil",
+   "r": "dodo",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "ami",
+   "r": "toutou",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "amis",
+   "r": "toutous",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "copain",
+   "r": "toutou",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "copains",
+   "r": "toutous",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "bisou",
+   "r": "câlin",
+   "on": true,
+   "g": "m"
+  },
+  {
+   "o": "bisous",
+   "r": "câlins",
+   "on": true,
+   "g": "m"
+  }
+ ],
+ "en": [
+  {
+   "o": "bed",
+   "r": "basket",
+   "on": true
+  },
+  {
+   "o": "beds",
+   "r": "baskets",
+   "on": true
+  },
+  {
+   "o": "couch",
+   "r": "basket",
+   "on": true
+  },
+  {
+   "o": "couches",
+   "r": "baskets",
+   "on": true
+  },
+  {
+   "o": "plate",
+   "r": "bowl",
+   "on": true
+  },
+  {
+   "o": "plates",
+   "r": "bowls",
+   "on": true
+  },
+  {
+   "o": "house",
+   "r": "kennel",
+   "on": true
+  },
+  {
+   "o": "houses",
+   "r": "kennels",
+   "on": true
+  },
+  {
+   "o": "team",
+   "r": "pack",
+   "on": true
+  },
+  {
+   "o": "teams",
+   "r": "packs",
+   "on": true
+  },
+  {
+   "o": "friend",
+   "r": "buddy",
+   "on": true
+  },
+  {
+   "o": "friends",
+   "r": "buddies",
+   "on": true
+  },
+  {
+   "o": "hand",
+   "r": "paw",
+   "on": true
+  },
+  {
+   "o": "hands",
+   "r": "paws",
+   "on": true
+  },
+  {
+   "o": "gift",
+   "r": "bone",
+   "on": true
+  },
+  {
+   "o": "gifts",
+   "r": "bones",
+   "on": true
+  },
+  {
+   "o": "reward",
+   "r": "treat",
+   "on": true
+  },
+  {
+   "o": "rewards",
+   "r": "treats",
+   "on": true
+  },
+  {
+   "o": "food",
+   "r": "kibble",
+   "on": true
+  },
+  {
+   "o": "face",
+   "r": "snout",
+   "on": true
+  },
+  {
+   "o": "faces",
+   "r": "snouts",
+   "on": true
+  },
+  {
+   "o": "hair",
+   "r": "fur",
+   "on": true
+  },
+  {
+   "o": "human",
+   "r": "hooman",
+   "on": true
+  },
+  {
+   "o": "humans",
+   "r": "hoomans",
+   "on": true
+  },
+  {
+   "o": "people",
+   "r": "hoomans",
+   "on": true
+  },
+  {
+   "o": "nap",
+   "r": "snooze",
+   "on": true
+  },
+  {
+   "o": "kiss",
+   "r": "lick",
+   "on": true
+  },
+  {
+   "o": "kisses",
+   "r": "licks",
+   "on": true
+  }
+ ],
+ "es": [
+  {
+   "o": "cama",
+   "r": "cesta",
+   "on": true
+  },
+  {
+   "o": "camas",
+   "r": "cestas",
+   "on": true
+  },
+  {
+   "o": "plato",
+   "r": "cuenco",
+   "on": true
+  },
+  {
+   "o": "platos",
+   "r": "cuencos",
+   "on": true
+  },
+  {
+   "o": "casa",
+   "r": "caseta",
+   "on": true
+  },
+  {
+   "o": "casas",
+   "r": "casetas",
+   "on": true
+  },
+  {
+   "o": "mano",
+   "r": "pata",
+   "on": true
+  },
+  {
+   "o": "manos",
+   "r": "patas",
+   "on": true
+  },
+  {
+   "o": "amigo",
+   "r": "cachorro",
+   "on": true
+  },
+  {
+   "o": "amigos",
+   "r": "cachorros",
+   "on": true
+  },
+  {
+   "o": "regalo",
+   "r": "hueso",
+   "on": true
+  },
+  {
+   "o": "regalos",
+   "r": "huesos",
+   "on": true
+  },
+  {
+   "o": "comida",
+   "r": "croqueta",
+   "on": true
+  }
+ ],
+ "de": [
+  {
+   "o": "Bett",
+   "r": "Körbchen",
+   "on": true
+  },
+  {
+   "o": "Betten",
+   "r": "Körbchen",
+   "on": true
+  },
+  {
+   "o": "Teller",
+   "r": "Napf",
+   "on": true
+  },
+  {
+   "o": "Hand",
+   "r": "Pfote",
+   "on": true
+  },
+  {
+   "o": "Hände",
+   "r": "Pfoten",
+   "on": true
+  },
+  {
+   "o": "Händen",
+   "r": "Pfoten",
+   "on": true
+  },
+  {
+   "o": "Team",
+   "r": "Rudel",
+   "on": true
+  },
+  {
+   "o": "Teams",
+   "r": "Rudel",
+   "on": true
+  },
+  {
+   "o": "Freund",
+   "r": "Kumpel",
+   "on": true
+  },
+  {
+   "o": "Freunde",
+   "r": "Kumpel",
+   "on": true
+  },
+  {
+   "o": "Essen",
+   "r": "Futter",
+   "on": true
+  }
+ ],
+ "it": [
+  {
+   "o": "casa",
+   "r": "cuccia",
+   "on": true
+  },
+  {
+   "o": "case",
+   "r": "cucce",
+   "on": true
+  },
+  {
+   "o": "mano",
+   "r": "zampa",
+   "on": true
+  },
+  {
+   "o": "mani",
+   "r": "zampe",
+   "on": true
+  },
+  {
+   "o": "amico",
+   "r": "cucciolo",
+   "on": true
+  },
+  {
+   "o": "amici",
+   "r": "cuccioli",
+   "on": true
+  },
+  {
+   "o": "regalo",
+   "r": "osso",
+   "on": true
+  },
+  {
+   "o": "regali",
+   "r": "ossa",
+   "on": true
+  }
+ ],
+ "pt": [
+  {
+   "o": "cama",
+   "r": "caminha",
+   "on": true
+  },
+  {
+   "o": "camas",
+   "r": "caminhas",
+   "on": true
+  },
+  {
+   "o": "casa",
+   "r": "casinha",
+   "on": true
+  },
+  {
+   "o": "casas",
+   "r": "casinhas",
+   "on": true
+  },
+  {
+   "o": "mão",
+   "r": "pata",
+   "on": true
+  },
+  {
+   "o": "mãos",
+   "r": "patas",
+   "on": true
+  },
+  {
+   "o": "equipe",
+   "r": "matilha",
+   "on": true
+  },
+  {
+   "o": "equipes",
+   "r": "matilhas",
+   "on": true
+  },
+  {
+   "o": "amigo",
+   "r": "cãozinho",
+   "on": true
+  },
+  {
+   "o": "amigos",
+   "r": "cãezinhos",
+   "on": true
+  },
+  {
+   "o": "presente",
+   "r": "osso",
+   "on": true
+  },
+  {
+   "o": "presentes",
+   "r": "ossos",
+   "on": true
+  },
+  {
+   "o": "comida",
+   "r": "ração",
+   "on": true
+  }
+ ]
+}

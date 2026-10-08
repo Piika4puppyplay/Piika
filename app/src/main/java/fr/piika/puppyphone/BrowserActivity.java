@@ -471,13 +471,22 @@ public class BrowserActivity extends Activity {
             return o.toString("UTF-8");
         } catch (Exception e) { return ""; }
     }
+    static String dictDefault;
+    String dictJson() {
+        if (dictDefault == null) dictDefault = asset("skin/pupdict.json");
+        String d = sp.getString("dict", null);
+        return d == null || d.trim().isEmpty() ? dictDefault : d;
+    }
+    String adjJson(String url) { String a = sp.getString("adj:" + skinHost(url), "{}"); return a == null || a.isEmpty() ? "{}" : a; }
     void applyDeco(WebView v, boolean on) {
         if (decoJs == null) decoJs = asset("skin/pupdeco.js");
         if (!on) { v.evaluateJavascript("window.__pupDeco&&window.__pupDeco.off()", null); return; }
         boolean deco = sp.getBoolean("deco", true), words = sp.getBoolean("words", true);
         if (!deco && !words) { v.evaluateJavascript("window.__pupDeco&&window.__pupDeco.off()", null); return; }
-        v.evaluateJavascript("window.__pupCfg={deco:" + deco + ",words:" + words + "};" + decoJs, null);
+        String url = v.getUrl() == null ? "" : v.getUrl();
+        v.evaluateJavascript("window.__pupCfg={deco:" + deco + ",words:" + words + ",dict:" + dictJson() + ",adj:" + adjJson(url) + "};" + decoJs, null);
     }
+    void reapplyAll() { for (Tab t : tabs) if (t.wv != null && !t.url.isEmpty()) applySkin(t.wv, t.url); }
 
     SharedPreferences gp() { return getSharedPreferences("pupguard", MODE_PRIVATE); }
     static final String[] AI_AGENTS = {"gptbot", "chatgpt-user", "oai-searchbot", "claudebot", "claude-web", "claude-searchbot", "claude-user", "anthropic-ai", "google-extended",
@@ -771,6 +780,16 @@ public class BrowserActivity extends Activity {
     }
 
     class TabChrome extends WebChromeClient {
+        @Override public boolean onJsPrompt(WebView v, String url, String msg, String def, android.webkit.JsPromptResult res) {
+            if ("pupdeco:save".equals(msg)) {
+                try {
+                    if (def != null && def.length() < 20000) { new JSONObject(def); sp.edit().putString("adj:" + skinHost(v.getUrl() == null ? url : v.getUrl()), def).apply(); }
+                } catch (Exception ignored) { }
+                res.confirm(""); return true;
+            }
+            if ("pupdeco:done".equals(msg)) { res.confirm(""); toast("Chiots rangés 🐾 réglages enregistrés pour ce site"); return true; }
+            return super.onJsPrompt(v, url, msg, def, res);
+        }
         @Override public void onProgressChanged(WebView v, int p) { Tab t = byWv(v); if (t != null) { t.progress = p; emitState(); } }
         @Override public void onReceivedTitle(WebView v, String title) { Tab t = byWv(v); if (t != null) { t.title = title; emitState(); } }
         @Override public void onReceivedIcon(WebView v, Bitmap icon) {
@@ -1161,6 +1180,20 @@ public class BrowserActivity extends Activity {
                 } catch (Exception e) { toast("Export impossible : " + e.getMessage()); }
             });
         }
+        @JavascriptInterface public void decoEdit() {
+            ui.post(() -> {
+                if (cur == null || cur.wv == null || cur.url.isEmpty()) return;
+                if (!skinOn(cur.url)) { toast("Active d'abord le thème puppy sur ce site 🐾"); return; }
+                if (!sp.getBoolean("deco", true)) { sp.edit().putBoolean("deco", true).apply(); applySkin(cur.wv, cur.url); }
+                cur.wv.evaluateJavascript("window.__pupDeco&&window.__pupDeco.edit()", null);
+            });
+        }
+        @JavascriptInterface public String dictGet() { return dictJson(); }
+        @JavascriptInterface public String dictDefault() { if (dictDefault == null) dictDefault = asset("skin/pupdict.json"); return dictDefault; }
+        @JavascriptInterface public void dictSet(String json) {
+            ui.post(() -> { try { new JSONObject(json); sp.edit().putString("dict", json).apply(); reapplyAll(); } catch (Exception e) { toast("Dictionnaire invalide"); } });
+        }
+        @JavascriptInterface public void dictReset() { ui.post(() -> { sp.edit().remove("dict").apply(); reapplyAll(); toast("Dictionnaire réparé 🐾 retour à l'origine"); }); }
         @JavascriptInterface public void skinReset() { ui.post(() -> { sp.edit().remove("skinOff").remove("skinForce").apply(); for (Tab t : tabs) if (t.wv != null) { setDark(t.wv, t.url); applySkin(t.wv, t.url); } emitState(); }); }
 
         @JavascriptInterface public void clear(String what) {

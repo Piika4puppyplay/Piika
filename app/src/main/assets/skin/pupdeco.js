@@ -148,11 +148,15 @@
     sticker: () => [{ src: ART.stickPaw, at: (r) => { const s = Math.max(12, Math.min(22, r.height * .6)); return [r.right - s * .5, r.top - s * .4, s, s]; } }],
   };
 
+  const catOf = (kit) => (kit === 'peek' || kit === 'hug' || kit === 'ears' || kit === 'sticker') ? 'logo' : kit;
+  const NAMES = { logo: 'Chiot du logo', like: 'Chiot J\'aime', dislike: 'Chiot boudeur', follow: 'Os S\'abonner' };
   function attach(el, kit) {
     if (decos.some((d) => d.el === el)) return;
-    const parts = KITS[kit]().map((p) => ({ p, img: img(p.src) }));
-    decos.push({ el, kit, parts, vis: true });
+    const cat = catOf(kit);
+    const parts = KITS[kit]().map((p, i) => { const x = { p, img: img(p.src), cat, i }; if (editing) editable(x); return x; });
+    decos.push({ el, kit, cat, parts, vis: true });
   }
+  const adjOf = (cat, i) => ((CFG.adj || {})[cat] || [])[i] || null;
 
   function labelOf(el) { return ((el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title') || el.getAttribute('data-testid'))) || '').trim(); }
 
@@ -198,10 +202,16 @@
       const show = d.vis && isVisible(r);
       for (const x of d.parts) {
         if (!show) { x.img.style.opacity = '0'; continue; }
-        const [l, t, w, h] = x.p.at(r);
+        let [l, t, w, h] = x.p.at(r);
+        const a = adjOf(x.cat, x.i);
+        if (a) {
+          const k = Math.max(.3, Math.min(4, a.s || 1)), w0 = w;
+          l += (a.dx || 0) * w0 - (w * k - w) / 2; t += (a.dy || 0) * w0 - (h * k - h) / 2; w *= k; h *= k;
+        }
         x.img.style.width = w + 'px'; x.img.style.height = h + 'px';
         x.img.style.transform = `translate(${l}px,${t}px)${x.p.flip ? ' scaleX(-1)' : ''}`;
-        x.img.style.opacity = '1';
+        x.img.style.opacity = a && a.hide ? (editing ? '.35' : '0') : '1';
+        x.img.style.outline = editing ? (x === selPart ? '2px solid #29e6ff' : '1.5px dashed rgba(255,63,164,.9)') : 'none';
       }
     }
   }
@@ -211,38 +221,45 @@
   addEventListener('resize', onMove, { passive: true });
 
   // ============================================================== VOCABULAIRE PUPPY
-  // Remplacements choisis pour garder le même genre et le même nombre : la phrase reste correcte.
-  const W = {
-    fr: { lit: 'panier', lits: 'paniers', canapé: 'panier', canapés: 'paniers', assiette: 'gamelle', assiettes: 'gamelles', maison: 'niche', maisons: 'niches', chambre: 'niche', chambres: 'niches',
-      promenade: 'balade', promenades: 'balades', récompense: 'friandise', récompenses: 'friandises', cadeau: 'os', cadeaux: 'os', main: 'patte', mains: 'pattes', équipe: 'meute', équipes: 'meutes',
-      nourriture: 'pâtée', humain: 'maître', humains: 'maîtres', visage: 'museau', visages: 'museaux', cheveux: 'poils', vêtement: 'pelage', vêtements: 'pelages', manteau: 'pelage', manteaux: 'pelages',
-      boutique: 'animalerie', boutiques: 'animaleries', sommeil: 'dodo', ami: 'toutou', amis: 'toutous', copain: 'toutou', copains: 'toutous', bisou: 'câlin', bisous: 'câlins' },
-    en: { bed: 'basket', beds: 'baskets', couch: 'basket', couches: 'baskets', plate: 'bowl', plates: 'bowls', house: 'kennel', houses: 'kennels', team: 'pack', teams: 'packs', friend: 'buddy', friends: 'buddies',
-      hand: 'paw', hands: 'paws', gift: 'bone', gifts: 'bones', reward: 'treat', rewards: 'treats', food: 'kibble', face: 'snout', faces: 'snouts', hair: 'fur', human: 'hooman', humans: 'hoomans', people: 'hoomans', nap: 'snooze', kiss: 'lick', kisses: 'licks' },
-    es: { cama: 'cesta', camas: 'cestas', plato: 'cuenco', platos: 'cuencos', casa: 'caseta', casas: 'casetas', mano: 'pata', manos: 'patas', amigo: 'cachorro', amigos: 'cachorros', regalo: 'hueso', regalos: 'huesos', comida: 'croqueta' },
-    de: { Bett: 'Körbchen', Betten: 'Körbchen', Teller: 'Napf', Hand: 'Pfote', Hände: 'Pfoten', Händen: 'Pfoten', Team: 'Rudel', Teams: 'Rudel', Freund: 'Kumpel', Freunde: 'Kumpel', Essen: 'Futter' },
-    it: { casa: 'cuccia', case: 'cucce', mano: 'zampa', mani: 'zampe', amico: 'cucciolo', amici: 'cuccioli', regalo: 'osso', regali: 'ossa' },
-    pt: { cama: 'caminha', camas: 'caminhas', casa: 'casinha', casas: 'casinhas', mão: 'pata', mãos: 'patas', equipe: 'matilha', equipes: 'matilhas', amigo: 'cãozinho', amigos: 'cãezinhos', presente: 'osso', presentes: 'ossos', comida: 'ração' },
-  };
+  // Dictionnaire fourni par PuppyInternet (personnalisable dans les réglages). Entrées : {o: origine, r: devient, g: genre (fr), on}.
   const lang = ((document.documentElement.getAttribute('lang') || navigator.language || 'fr').slice(0, 2)).toLowerCase();
-  const dict = W[lang] || null;
-  let RX = null;
-  if (dict) {
-    const keys = Object.keys(dict).sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    RX = new RegExp('(?<![\\p{L}\\p{N}_])(' + keys.join('|') + ')(?![\\p{L}\\p{N}_])', lang === 'de' ? 'gu' : 'giu');
+  let MAP = null, RX = null, VALRX = null;
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  function buildDict() {
+    const list = ((CFG.dict || {})[lang] || []).filter((e) => e && e.on !== false && e.o && e.r && String(e.o).trim() && String(e.r).trim());
+    if (!list.length) { MAP = RX = VALRX = null; return; }
+    MAP = new Map(list.map((e) => [String(e.o).trim().toLowerCase(), { r: String(e.r).trim(), g: e.g === 'f' ? 'f' : 'm' }]));
+    const keys = Array.from(MAP.keys()).sort((x, y) => y.length - x.length).map(esc);
+    const det = lang === 'fr' ? "((?:[lLdD][’']|(?:[lL][ea]|[mtsMTS](?:on|a)|[cC]e(?:t|tte)?|[dD]e)\\s+))?" : '()';
+    RX = new RegExp('(?<![\\p{L}\\p{N}_])' + det + '(' + keys.join('|') + ')(?![\\p{L}\\p{N}_])', 'giu');
+    VALRX = new RegExp('(?<![\\p{L}])(' + Array.from(new Set(list.map((e) => String(e.r).trim()))).sort((x, y) => y.length - x.length).map(esc).join('|') + ')(?![\\p{L}])', 'giu');
   }
+  buildDict();
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'CODE', 'PRE', 'KBD', 'SAMP', 'SVG', 'MATH', 'TITLE', 'IFRAME', 'CANVAS']);
   const orig = new WeakMap(); // nœud texte → texte d'origine
   const touched = new Set();
-  const isVowel = (c) => /[aeiouyhâàäéèêëîïôöûùüœ]/i.test(c || '');
+  const vowelStart = (w) => /^[aeiouyhâàäéèêëîïôöûùüœæ]/i.test(w || '');
   function matchCase(src, rep) {
-    if (src === src.toUpperCase() && src !== src.toLowerCase()) return rep.toUpperCase();
+    if (src.length > 1 && src === src.toUpperCase() && src !== src.toLowerCase()) return rep.toUpperCase();
     if (src[0] === src[0].toUpperCase() && src[0] !== src[0].toLowerCase()) return rep[0].toUpperCase() + rep.slice(1);
     return rep;
   }
+  /** Accorde le petit mot devant (fr) avec le mot puppy : le/la/l', de/d', mon/ma, ce/cet/cette. */
+  function fixDet(det, rep, g) {
+    if (!det) return '';
+    const d = det.trim().toLowerCase().replace('’', "'"), up = det[0] !== det[0].toLowerCase(), ap = det.includes('’') ? '’' : "'";
+    const v = vowelStart(rep);
+    let out;
+    if (d === "l'" || d === 'le' || d === 'la') out = v ? 'l' + ap : (g === 'f' ? 'la ' : 'le ');
+    else if (d === "d'" || d === 'de') out = v ? 'd' + ap : 'de ';
+    else if (/^[mts](on|a)$/.test(d)) out = d[0] + (v || g === 'm' ? 'on ' : 'a ');
+    else if (d === 'ce' || d === 'cet' || d === 'cette') out = g === 'f' ? 'cette ' : (v ? 'cet ' : 'ce ');
+    else return det;
+    return up ? out[0].toUpperCase() + out.slice(1) : out;
+  }
   function skipNode(n) {
     for (let e = n.parentElement; e; e = e.parentElement) {
-      if (SKIP.has(e.tagName) || e.isContentEditable || e.tagName === 'FORM' || e.id === 'pup-deco' || e.getAttribute('aria-hidden') === 'true' && e.tagName === 'svg') return true;
+      if (SKIP.has(e.tagName) || e.isContentEditable || e.tagName === 'FORM' || e.id === 'pup-deco' || e.id === 'pup-edit') return true;
       if (e === document.body) break;
     }
     return false;
@@ -250,28 +267,19 @@
   function puppify(n) {
     if (!RX || n.nodeType !== 3) return;
     const v = n.nodeValue;
-    if (!v || v.length < 2 || !/\p{L}/u.test(v)) return;
-    const base = orig.has(n) && n.__pupOut === v ? orig.get(n) : v;
-    if (n.__pupOut === v) return; // déjà fait
+    if (!v || v.length < 2 || n.__pupOut === v) return;
     RX.lastIndex = 0;
-    if (!RX.test(base)) return;
+    if (!RX.test(v)) return;
     if (skipNode(n)) return;
     RX.lastIndex = 0;
-    let out = base.replace(RX, (m) => {
-      const key = lang === 'de' ? m : m.toLowerCase();
-      const rep = dict[key] || dict[m];
-      return rep ? matchCase(m, rep) : m;
+    const out = v.replace(RX, (m0, det, w) => {
+      const e = MAP.get(w.toLowerCase());
+      if (!e) return m0;
+      const rep = matchCase(w, e.r);
+      return (lang === 'fr' ? fixDet(det, rep, e.g) : (det || '')) + rep;
     });
-    if (lang === 'fr') {
-      // élisions : « l'assiette » → « la gamelle », « l'humain » → « le maître », « mon équipe » → « ma meute », « cet humain » → « ce maître »
-      out = out.replace(/(^|[\s(«"])([lL])[’'](gamelles?|meutes?)(?![\p{L}])/gu, (m0, a, l, w) => a + (l === 'L' ? 'L' : 'l') + (w.endsWith('s') ? 'es ' : 'a ') + w)
-        .replace(/(^|[\s(«"])([lL])[’'](maîtres?)(?![\p{L}])/gu, (m0, a, l, w) => a + (l === 'L' ? 'L' : 'l') + 'e ' + w)
-        .replace(/(^|[\s(«"])([dD])[’'](gamelles?|meutes?|maîtres?)(?![\p{L}])/gu, (m0, a, d, w) => a + d + 'e ' + w)
-        .replace(/(^|[\s(«"])([mtsMTS])on (gamelles?|meutes?)(?![\p{L}])/gu, (m0, a, c, w) => a + c + 'a ' + w)
-        .replace(/(^|[\s(«"])([cC])et (maîtres?|toutous?)(?![\p{L}])/gu, (m0, a, c, w) => a + c + 'e ' + w);
-    }
-    if (out === base) return;
-    orig.set(n, base);
+    if (out === v) return;
+    orig.set(n, v);
     n.__pupOut = out;
     n.nodeValue = out;
     touched.add(n);
@@ -284,7 +292,6 @@
     paintHighlights();
   }
   // soulignement discret des mots remplacés (API Highlight : aucun élément ajouté dans la page)
-  const VALRX = dict ? new RegExp('(?<![\\p{L}])(' + Array.from(new Set(Object.values(dict))).sort((a, b) => b.length - a.length).map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}])', 'giu') : null;
   function paintHighlights() {
     if (!VALRX || !window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
     const h = new Highlight();
@@ -304,21 +311,20 @@
   }
   // appui sur un mot puppy → bulle avec le mot d'origine (sans bloquer le clic du site)
   addEventListener('pointerup', (e) => {
-    if (!CFG.words || !touched.size || !document.caretRangeFromPoint) return;
+    if (!CFG.words || !touched.size || !document.caretRangeFromPoint || editing) return;
     const r = document.caretRangeFromPoint(e.clientX, e.clientY);
     if (!r || !touched.has(r.startContainer)) return;
     const n = r.startContainer, o = orig.get(n);
-    if (!o) return;
-    const s = n.nodeValue, i = r.startOffset;
-    let a = i, b = i; while (a > 0 && /\p{L}/u.test(s[a - 1])) a--; while (b < s.length && /\p{L}/u.test(s[b])) b++;
-    const word = s.slice(a, b);
-    if (!word || !Object.values(dict).some((x) => x.toLowerCase() === word.toLowerCase())) return;
-    // retrouve le mot d'origine à la même position approximative
-    const words = o.match(RX) || [];
-    const before = (s.slice(0, a).match(new RegExp('(?<![\\p{L}])(' + Object.values(dict).map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\p{L}])', 'giu')) || []).length;
-    const was = words[before] || '';
-    if (!was) return;
-    tip(e.clientX, e.clientY, `🐾 ${word} = « ${was} »`);
+    if (!o || !VALRX) return;
+    const s2 = n.nodeValue, i = r.startOffset;
+    VALRX.lastIndex = 0;
+    let m, idx = -1, k = 0, word = '';
+    while ((m = VALRX.exec(s2))) { if (i >= m.index && i <= m.index + m[0].length) { idx = k; word = m[0]; break; } k++; }
+    if (idx < 0) return;
+    RX.lastIndex = 0;
+    const origs = []; let mm;
+    while ((mm = RX.exec(o))) origs.push(mm[2]);
+    if (origs[idx]) tip(e.clientX, e.clientY, `🐾 ${word} = « ${origs[idx]} »`);
   }, { passive: true, capture: true });
   function tip(x, y, text) {
     const t = document.createElement('div');
@@ -331,13 +337,84 @@
   hlStyle.textContent = '::highlight(pupword){text-decoration:underline dotted #ff3fa4;text-decoration-thickness:1.5px;text-underline-offset:3px}';
   (document.head || document.documentElement).appendChild(hlStyle);
 
+
+  // ============================================================== ÉDITEUR (déplacer / agrandir / cacher les chiots)
+  let editing = false, selPart = null, bar = null, drag = null;
+  function save() { try { prompt('pupdeco:save', JSON.stringify(CFG.adj || {})); } catch (e) { } }
+  function setAdj(x, f) {
+    CFG.adj = CFG.adj || {};
+    const arr = CFG.adj[x.cat] = CFG.adj[x.cat] || [];
+    arr[x.i] = Object.assign({ dx: 0, dy: 0, s: 1, hide: false }, arr[x.i] || {});
+    f(arr[x.i]);
+    place();
+  }
+  function editable(x) {
+    x.img.style.pointerEvents = 'auto';
+    x.img.style.touchAction = 'none';
+    x.img.onpointerdown = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      selPart = x; updateBar();
+      x.img.setPointerCapture(e.pointerId);
+      const r = x.img.getBoundingClientRect(), a = adjOf(x.cat, x.i) || {};
+      drag = { x0: e.clientX, y0: e.clientY, dx: a.dx || 0, dy: a.dy || 0, w: r.width / Math.max(.3, a.s || 1) };
+      place();
+    };
+    x.img.onpointermove = (e) => {
+      if (!drag || selPart !== x) return;
+      e.preventDefault(); e.stopPropagation();
+      setAdj(x, (a) => { a.dx = drag.dx + (e.clientX - drag.x0) / drag.w; a.dy = drag.dy + (e.clientY - drag.y0) / drag.w; });
+    };
+    x.img.onpointerup = x.img.onpointercancel = (e) => { e.stopPropagation(); if (drag) { drag = null; save(); } };
+    x.img.onclick = (e) => { e.preventDefault(); e.stopPropagation(); };
+  }
+  function updateBar() {
+    if (!bar) return;
+    const lbl = bar.querySelector('.lbl');
+    const a = selPart ? adjOf(selPart.cat, selPart.i) : null;
+    lbl.textContent = selPart ? NAMES[selPart.cat] + (a && a.hide ? ' (caché)' : '') : 'Touche un chiot pour le choisir, puis glisse-le';
+    bar.querySelectorAll('[data-e]').forEach((b) => { if (b.dataset.e !== 'done' && b.dataset.e !== 'reset') b.disabled = !selPart; });
+    const hb = bar.querySelector('[data-e="hide"]'); if (hb) hb.textContent = a && a.hide ? '👁 Montrer' : '🙈 Cacher';
+  }
+  function startEdit() {
+    if (editing) return;
+    editing = true;
+    if (!CFG.deco) { CFG.deco = true; }
+    scan();
+    decos.forEach((d) => d.parts.forEach(editable));
+    bar = document.createElement('div'); bar.id = 'pup-edit';
+    bar.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;border-radius:18px;padding:10px;font:600 13px system-ui,sans-serif;color:#fff;background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,.06) 45%,rgba(0,0,0,.15) 47%,rgba(0,0,0,.4)),linear-gradient(120deg,#7a1650,#1b0f2e 70%);border:1px solid #fff;box-shadow:0 0 26px #ff3fa4,0 10px 30px rgba(0,0,0,.7)';
+    const B = (k, t, c) => `<button data-e="${k}" type="button" style="all:unset;box-sizing:border-box;flex:1;min-width:0;text-align:center;padding:10px 4px;border-radius:12px;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.45),rgba(255,255,255,.1) 48%,rgba(0,0,0,.15) 50%),${c};border:1px solid rgba(255,255,255,.75);text-shadow:0 1px 2px #000">${t}</button>`;
+    bar.innerHTML = `<div class="lbl" style="margin:0 4px 8px;text-shadow:0 1px 2px #000">🐾</div><div style="display:flex;gap:6px">${B('minus', '➖', '#4a2a80')}${B('plus', '➕', '#4a2a80')}${B('hide', '🙈 Cacher', '#5a1a3e')}${B('reset', '↺ Ce site', '#3a2a50')}${B('done', '✓ Fini', '#0e7a52')}</div>`;
+    bar.addEventListener('pointerdown', (e) => e.stopPropagation(), true);
+    bar.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const b = e.target.closest('[data-e]'); if (!b || b.disabled) return;
+      const k = b.dataset.e;
+      if (k === 'minus' && selPart) { setAdj(selPart, (a) => { a.s = Math.max(.3, (a.s || 1) / 1.15); }); save(); }
+      if (k === 'plus' && selPart) { setAdj(selPart, (a) => { a.s = Math.min(4, (a.s || 1) * 1.15); }); save(); }
+      if (k === 'hide' && selPart) { setAdj(selPart, (a) => { a.hide = !a.hide; }); save(); }
+      if (k === 'reset') { CFG.adj = {}; save(); place(); }
+      if (k === 'done') stopEdit();
+      updateBar();
+    }, true);
+    document.documentElement.appendChild(bar);
+    updateBar(); place();
+  }
+  function stopEdit() {
+    editing = false; selPart = null; drag = null;
+    if (bar) { bar.remove(); bar = null; }
+    decos.forEach((d) => d.parts.forEach((x) => { x.img.style.pointerEvents = 'none'; x.img.onpointerdown = x.img.onpointermove = x.img.onpointerup = x.img.onclick = null; }));
+    place();
+    try { prompt('pupdeco:done', ''); } catch (e) { }
+  }
+
   // ============================================================== OBSERVATION
   let pending = new Set(), timer = 0, scanTimer = 0;
   const mo = new MutationObserver((ms) => {
     for (const m of ms) {
-      if (m.target && m.target.id === 'pup-deco' || (m.target.parentElement && m.target.parentElement.id === 'pup-deco')) continue;
+      if (m.target && (m.target.id === 'pup-deco' || m.target.id === 'pup-edit') || (m.target.parentElement && (m.target.parentElement.id === 'pup-deco' || m.target.parentElement.closest && m.target.parentElement.closest('#pup-edit')))) continue;
       if (m.type === 'characterData') { if (m.target.nodeValue !== m.target.__pupOut) pending.add(m.target); }
-      else m.addedNodes.forEach((a) => { if (a.id !== 'pup-deco') pending.add(a); });
+      else m.addedNodes.forEach((a) => { if (a.id !== 'pup-deco' && a.id !== 'pup-edit') pending.add(a); });
     }
     if (!timer) timer = setTimeout(flush, 350);
   });
@@ -359,13 +436,17 @@
 
   window.__pupDeco = {
     cfg(c) {
-      const wasW = CFG.words, wasD = CFG.deco;
+      const wasW = CFG.words, wasD = CFG.deco, oldDict = JSON.stringify(CFG.dict || {});
       Object.assign(CFG, c || {});
-      if (wasW && !CFG.words) revertWords();
-      if (!wasW && CFG.words) walk(document.body);
+      const dictChanged = JSON.stringify(CFG.dict || {}) !== oldDict;
+      if (wasW && (!CFG.words || dictChanged)) revertWords();
+      if (dictChanged) buildDict();
+      if (CFG.words && (!wasW || dictChanged)) walk(document.body);
       if (wasD && !CFG.deco) { decos.forEach((d) => d.parts.forEach((x) => x.img.remove())); decos = []; }
       if (!wasD && CFG.deco) scan();
+      place();
     },
-    off() { this.cfg({ deco: false, words: false }); },
+    off() { if (editing) stopEdit(); this.cfg({ deco: false, words: false }); },
+    edit() { startEdit(); },
   };
 })();
