@@ -758,15 +758,36 @@
             <intent-filter><action android:name="fr.piika.puppyphone.AGENDA" /></intent-filter>
         </receiver>
 
+        <!-- PupDown original COMPLET : filet de sécurité pendant la migration (à supprimer quand tous les modules seront validés). -->
         <activity
             android:name=".DownActivity"
-            android:label="PupDown"
+            android:label="PupDown ✦ complet"
             android:icon="@mipmap/ic_pupdown"
             android:roundIcon="@mipmap/ic_pupdown"
             android:exported="true"
             android:hardwareAccelerated="true"
             android:launchMode="singleTask"
             android:taskAffinity="fr.piika.puppyphone.down"
+            android:theme="@style/PupNetTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- PupDown propre (migré) : comptes à rebours + tirelire seuls. -->
+        <activity
+            android:name=".ChronoActivity"
+            android:label="PupDown"
+            android:icon="@mipmap/ic_pupdown"
+            android:roundIcon="@mipmap/ic_pupdown"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.chrono"
             android:theme="@style/PupNetTheme"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
