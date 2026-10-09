@@ -68,7 +68,7 @@
     const n = new Date();
     $('#hh').textContent = String(n.getHours()).padStart(2, '0');
     $('#mm').textContent = String(n.getMinutes()).padStart(2, '0');
-    $('#date').textContent = n.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('#date').textContent = n.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (pr.alarm ? '  ⏰ ' + pr.alarm : '');
   }
   // anti-marquage : la scène se décale doucement toutes les 50 s
   function drift() {

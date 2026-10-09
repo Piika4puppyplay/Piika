@@ -42,7 +42,7 @@ body.dodo #vw{opacity:0}
   }
   function clock() {
     const n = new Date(); $('#hh').textContent = String(n.getHours()).padStart(2, '0'); $('#mm').textContent = String(n.getMinutes()).padStart(2, '0');
-    $('#vdate').textContent = n.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('#vdate').textContent = n.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + (pr.alarm ? '  ⏰ ' + pr.alarm : '');
     const r = bat.remain > 0 ? Math.round(bat.remain / 60000) : 0;
     $('#vsay').textContent = bat.full || bat.pct >= 100 ? 'Gamelle pleine 🐾' : bat.charging ? (r ? `Plein dans ${r >= 60 ? Math.floor(r / 60) + ' h ' + String(r % 60).padStart(2, '0') : r + ' min'}` : 'Le chiot recharge ses croquettes') : bat.pct <= 15 ? 'Gamelle presque vide 🥺' : 'Le chiot veille 🐶';
   }

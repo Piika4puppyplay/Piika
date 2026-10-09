@@ -65,7 +65,7 @@ final class Sieste {
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface public String battery() { return lastBattery; }
             @JavascriptInterface public String prefs() {
-                try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).put("lum", lum(ctx)).put("style", Pelage.sp(ctx).getString("veilleStyle", "verre")).put("vlum", Pelage.sp(ctx).getInt("veilleLum", 0)).toString(); } catch (Exception e) { return "{}"; }
+                try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).put("lum", lum(ctx)).put("style", Pelage.sp(ctx).getString("veilleStyle", "verre")).put("vlum", Pelage.sp(ctx).getInt("veilleLum", 0)).put("alarm", Reveil.nextText(ctx)).toString(); } catch (Exception e) { return "{}"; }
             }
         }, "Sieste");
         web.loadUrl("https://" + HOST + page);
