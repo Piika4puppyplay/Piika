@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupNotes</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="notes.css">
+</head>
+<body class="notes wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+<main id="nm">
+  <header class="cover">
+    <i class="strap"></i>
+    <div class="ctitle"><span class="foil">PUP NOTES</span><small>Le carnet de croquettes 🐾</small></div>
+    <span class="stamp" id="stamp"></span>
+  </header>
+  <label class="search"><span class="loupe"></span><input id="q" placeholder="Renifler une note…" autocomplete="off"></label>
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+</main>
+<div class="fabs"><button class="fab list" id="fabL" type="button">☑︎ Liste</button><button class="fab note" id="fabN" type="button"><span class="pencil"></span>Nouvelle note</button></div>
+<div id="ed" class="hidden"></div>
+<script src="icons.js"></script>
+<script src="notes.js"></script>
+</body>
+</html>

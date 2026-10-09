@@ -27,5 +27,6 @@ public class ReveilReceiver extends BroadcastReceiver {
             try { c.startForegroundService(s); } catch (Exception e) { try { c.startService(s); } catch (Exception ignored) { } }
         }
         Reveil.schedule(c);
+        AgendaRappel.schedule(c);
     }
 }

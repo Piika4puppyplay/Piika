@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupAgenda</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="agenda.css">
+</head>
+<body class="agenda wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+<main id="am">
+  <section class="desk">
+    <div class="rings" id="rings"></div>
+    <div class="cal">
+      <header class="calh"><button class="paw-btn" data-nav="-1" type="button">◀</button><div><div class="neon mt" id="mt"></div><small id="my"></small></div><button class="paw-btn" data-nav="1" type="button">▶</button></header>
+      <div class="dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="days" id="days"></div>
+    </div>
+  </section>
+  <section class="prog">
+    <h3 id="dt"></h3>
+    <div id="list"></div>
+  </section>
+</main>
+<button class="fab" id="fab" type="button">📅 Nouvel événement</button>
+<div id="veil" class="hidden"></div>
+<script src="icons.js"></script>
+<script src="agenda.js"></script>
+</body>
+</html>
