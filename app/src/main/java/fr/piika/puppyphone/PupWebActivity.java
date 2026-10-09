@@ -54,7 +54,6 @@ public abstract class PupWebActivity extends Activity {
         // au-dessus du clavier. C'est le comportement standard fiable (comme l'appli Claude).
         if (Build.VERSION.SDK_INT >= 30) w.setDecorFitsSystemWindows(true);
         w.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-        hideNavBar(); // on cache la barre de navigation Samsung → look puppyphone ; révélable au swipe
         dp = getResources().getDisplayMetrics().density;
         web = new WebView(this);
         web.setBackgroundColor(Pelage.bg(this));
@@ -85,24 +84,6 @@ public abstract class PupWebActivity extends Activity {
         web.loadUrl("https://" + host() + "/" + page());
     }
     @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", ""); }
-    @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if (f) hideNavBar(); }
-
-    /** Cache la barre de navigation Android (look puppyphone), garde la barre d'état. Révélable au swipe. */
-    void hideNavBar() {
-        try {
-            Window w = getWindow();
-            if (Build.VERSION.SDK_INT >= 30) {
-                android.view.WindowInsetsController c = w.getInsetsController();
-                if (c != null) {
-                    c.hide(android.view.WindowInsets.Type.navigationBars());
-                    c.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-                }
-            } else {
-                w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-            }
-        } catch (Exception ignored) { }
-    }
     @Override protected void onDestroy() { if (web != null) web.destroy(); super.onDestroy(); }
     @Override public void onBackPressed() {
         if (web != null) web.evaluateJavascript("window." + uiName() + "&&" + uiName() + ".back&&" + uiName() + ".back()", v -> { if (!"true".equals(v)) finish(); });

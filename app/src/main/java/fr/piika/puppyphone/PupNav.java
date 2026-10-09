@@ -51,7 +51,7 @@ public class PupNav {
     NavView bar;
     EdgeView edge;
     WindowManager.LayoutParams barLp, edgeLp;
-    boolean imeVisible, hiddenForApp;
+    boolean imeVisible, hiddenForApp, floating;
 
     PupNav(Context ctx, int type, Host host) {
         this.ctx = ctx; this.type = type; this.host = host;
@@ -105,13 +105,16 @@ public class PupNav {
     void setImeVisible(boolean v) { if (v == imeVisible) return; imeVisible = v; applyVisibility(); }
     void setHiddenForApp(boolean v) { if (v == hiddenForApp) return; hiddenForApp = v; applyVisibility(); }
     void applyVisibility() {
-        if (bar != null) bar.setVisibility(imeVisible || hiddenForApp ? View.GONE : View.VISIBLE);
+        // La barre ANCRÉE en bas reste TOUJOURS affichée (elle recouvre la barre Samsung, même clavier ouvert) ;
+        // seule la barre flottante se cache quand le clavier monte (sinon elle flotterait par-dessus).
+        if (bar != null) bar.setVisibility((hiddenForApp || (imeVisible && floating)) ? View.GONE : View.VISIBLE);
         if (edge != null) edge.setVisibility(imeVisible ? View.GONE : View.VISIBLE);
     }
 
     void refresh() {
         SharedPreferences p = prefs(ctx);
         String style = p.getString("style", "off");
+        floating = "float".equals(style);
         removeBar(); removeEdge();
         int flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         if (!"off".equals(style)) {
