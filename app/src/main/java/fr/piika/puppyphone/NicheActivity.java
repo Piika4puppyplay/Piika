@@ -151,7 +151,7 @@ public class NicheActivity extends Activity {
                         .put("verrouEtoiles", p.getBoolean("verrouEtoiles", true)).put("verrouCharge", p.getBoolean("verrouCharge", true))
                         .put("verrouForce", p.getInt("verrouForce", 1)).put("veille", p.getBoolean("veille", false)).put("siesteCharge", p.getBoolean("siesteCharge", false)).put("veilleStyle", p.getString("veilleStyle", "verre")).put("veilleQuand", p.getInt("veilleQuand", 0)).put("veilleDuree", p.getInt("veilleDuree", 30)).put("veilleLum", p.getInt("veilleLum", 0)).put("a11y", PupNavA11y.I != null)
                         .put("voletOn", p.getBoolean("voletOn", true)).put("popOn", p.getBoolean("popOn", true)).put("aodNotif", p.getBoolean("aodNotif", true)).put("aodNotifTxt", p.getBoolean("aodNotifTxt", false))
-                        .put("homeNotif", p.getBoolean("homeNotif", true)).put("wallLock", p.getString("wallLock", "")).put("lockOwn", lockOwn()).put("voletZone", p.getInt("voletZone", 0)).put("notifOk", PupNotifs.granted(NicheActivity.this))
+                        .put("homeNotif", p.getBoolean("homeNotif", true)).put("wallLock", p.getString("wallLock", "")).put("lockOwn", lockOwn()).put("samsung", "samsung".equalsIgnoreCase(Build.MANUFACTURER)).put("lockVid", p.getString("lockVid", "")).put("lockVidId", p.getString("lockVidId", "")).put("voletZone", p.getInt("voletZone", 0)).put("notifOk", PupNotifs.granted(NicheActivity.this))
                         .put("writeOk", Settings.System.canWrite(NicheActivity.this)).put("dndOk", getSystemService(android.app.NotificationManager.class).isNotificationPolicyAccessGranted())
                         .put("version", PupUpdate.current(NicheActivity.this)).toString();
             } catch (Exception e) { return "{}"; }
@@ -274,6 +274,41 @@ public class NicheActivity extends Activity {
                         new Intent(Settings.ACTION_DISPLAY_SETTINGS)};
                 for (Intent i : tries) { try { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return; } catch (Exception ignored) { } }
             });
+        }
+        // ------------------------------------------------ verrouillage One UI : vidéo pour la Galerie Samsung
+        volatile boolean filming;
+        @JavascriptInterface public void lockFilm(String id) {
+            if (filming || !id.matches("neon|cosmos|aurore|niche|lune|foret|arcade|chalet")) return;
+            filming = true;
+            new Thread(() -> {
+                try {
+                    Uri u = PupWallVideo.film(NicheActivity.this, id, k -> { try { emit("film", new JSONObject().put("st", "work").put("p", k).toString()); } catch (Exception ignored) { } });
+                    Pelage.sp(NicheActivity.this).edit().putString("lockVid", u.toString()).putString("lockVidId", id).apply();
+                    emit("film", new JSONObject().put("st", "done").put("uri", u.toString()).put("id", id).toString());
+                } catch (Throwable e) {
+                    try { emit("film", new JSONObject().put("st", "error").put("msg", String.valueOf(e.getMessage())).toString()); } catch (Exception ignored) { }
+                } finally { filming = false; }
+            }, "PupWallVideo").start();
+        }
+        /** Ouvre la vidéo dans la Galerie Samsung : ⋮ › Définir comme fond d'écran › Écran de verrouillage. */
+        @JavascriptInterface public void lockGallery(String uri) {
+            ui.post(() -> {
+                Uri u = Uri.parse(uri);
+                Intent v = new Intent(Intent.ACTION_VIEW).setDataAndType(u, "video/mp4").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                try { startActivity(new Intent(v).setPackage("com.sec.android.gallery3d")); }
+                catch (Exception e) { try { startActivity(v); } catch (Exception ignored) { } }
+            });
+        }
+        /** « Définir comme… » d'Android : One UI y propose parfois directement « Fond d'écran ». */
+        @JavascriptInterface public void lockSetAs(String uri) {
+            ui.post(() -> {
+                Intent i = new Intent(Intent.ACTION_ATTACH_DATA).setDataAndType(Uri.parse(uri), "video/mp4").putExtra("mimeType", "video/mp4").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                try { startActivity(Intent.createChooser(i, "Définir comme… 🐾")); } catch (Exception ignored) { }
+            });
+        }
+        @JavascriptInterface public boolean lockStill(String id) {
+            if (!id.matches("neon|cosmos|aurore|niche|lune|foret|arcade|chalet")) return false;
+            return PupWallVideo.still(NicheActivity.this, id);
         }
         @JavascriptInterface public void notifAccess() { ui.post(() -> PupNotifs.openSettings(NicheActivity.this)); }
         @JavascriptInterface public void writeAccess() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { } }); }
