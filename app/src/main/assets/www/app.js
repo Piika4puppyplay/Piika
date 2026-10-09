@@ -38,17 +38,11 @@
   let home = S.get('home', null);
   // Migration : garantir une tuile PupClean sur l'accueil (une fois)
   function ensureCleanTile() {
-    // Auto-réparant : si l'icône native PupClean est listée → on retire la tuile-raccourci (doublon).
-    // Sinon (Samsung ne la liste pas) → on garde/ajoute une tuile PupClean visible sur l'accueil.
+    // PupClean est intégré au lanceur (pas d'appli à part) : on garantit une tuile PupClean unique.
     if (!home || !home.pages) return;
-    const hasNative = apps.some((a) => isSelf(a) && /CleanActivity/.test(a.id));
-    const hasTile = home.pages.some((pg) => pg.some((it) => it && it.t === 'pup' && it.app === 'clean'));
-    let changed = false;
-    if (hasNative && hasTile) {
-      home.pages = home.pages.map((pg) => pg.filter((it) => { if (it && it.t === 'pup' && it.app === 'clean') { changed = true; return false; } return true; }));
-    } else if (!hasNative && !hasTile) {
-      home.pages[0].push({ t: 'pup', app: 'clean' }); changed = true;
-    }
+    let seen = 0, changed = false;
+    home.pages = home.pages.map((pg) => pg.filter((it) => { if (it && it.t === 'pup' && it.app === 'clean') { seen++; if (seen > 1) { changed = true; return false; } } return true; }));
+    if (seen === 0) { home.pages[0].push({ t: 'pup', app: 'clean' }); changed = true; }
     if (changed) saveHome();
   }
   // Migration : garantir le dossier PuppyPlay sur l'accueil (une fois)
@@ -189,7 +183,7 @@
       if (!a && cat) a = appsIn(cat)[0];
       return a ? { t: 'app', id: a.id } : null;
     };
-    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
+    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'clean' }, { t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
   }
 
   function renderGrid(p) {
@@ -546,12 +540,9 @@
   /** Retire les doublons de l'accueil : une même appli / dossier / Pup-app en plusieurs exemplaires → on garde le premier. */
   function dedupHome() {
     if (!home || !home.pages) return 0;
-    const hasNativeClean = apps.some((a) => isSelf(a) && /CleanActivity/.test(a.id));
     const seen = new Set(), keyOf = (it) => !it ? null : it.t === 'app' ? 'a:' + it.id : it.t === 'folder' ? 'f:' + it.cat : it.t === 'pup' ? 'p:' + it.app : it.t === 'sc' ? 's:' + it.pkg + '/' + it.sid : it.t === 'link' ? 'l:' + it.url : null;
     let removed = 0;
     home.pages = home.pages.map((pg) => pg.filter((it) => {
-      // la tuile-raccourci PupClean fait doublon avec l'icône native : on la retire
-      if (hasNativeClean && it && it.t === 'pup' && it.app === 'clean') { removed++; return false; }
       const k = keyOf(it); if (!k) return true;
       if (seen.has(k)) { removed++; return false; }
       seen.add(k); return true;
