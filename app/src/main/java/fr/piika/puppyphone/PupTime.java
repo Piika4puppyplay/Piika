@@ -2,7 +2,6 @@ package fr.piika.puppyphone;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.SystemClock;
 
 import java.net.HttpURLConnection;
@@ -55,11 +54,8 @@ final class PupTime {
         return now(c); // on garde l'ancre précédente si elle existe encore
     }
 
-    /** Récupère l'heure réseau : d'abord l'heure NTP du système (non modifiable à la main), sinon l'en-tête Date d'un serveur. */
+    /** Récupère l'heure réseau via l'en-tête HTTP « Date » de serveurs fiables (notre propre requête → non trafiquable côté téléphone). */
     private static long fetch(Context c) {
-        if (Build.VERSION.SDK_INT >= 29) {
-            try { long t = SystemClock.currentNetworkTimeMillis(); if (t > 0) return t; } catch (Throwable ignored) { }
-        }
         for (String host : new String[]{"https://www.google.com", "https://cloudflare.com", "https://www.bing.com"}) {
             long t = httpDate(host);
             if (t > 0) return t;
