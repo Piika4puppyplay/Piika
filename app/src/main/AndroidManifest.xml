@@ -653,6 +653,22 @@
             android:theme="@style/PupInvisible" />
 
         <activity
+            android:name=".CleanActivity"
+            android:label="PupClean"
+            android:icon="@mipmap/ic_pupclean"
+            android:roundIcon="@mipmap/ic_pupclean"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity="fr.piika.puppyphone"
+            android:theme="@style/PupInvisible">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".ScanActivity"
             android:label="PupScan"
             android:icon="@mipmap/ic_pupscan"

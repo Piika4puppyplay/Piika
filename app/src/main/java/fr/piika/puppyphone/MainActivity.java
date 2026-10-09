@@ -104,8 +104,10 @@ public class MainActivity extends Activity {
 
     // ---------------------------------------------------------------- cycle de vie
     @Override
+    String pendingOpen;
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        if (getIntent() != null) pendingOpen = getIntent().getStringExtra("pup_open");
         Window w = getWindow();
         w.setStatusBarColor(Color.TRANSPARENT);
         w.setNavigationBarColor(Color.TRANSPARENT);
@@ -183,6 +185,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 pageReady = true;
                 pushInsets();
+                if (pendingOpen != null) { emit("open", pendingOpen); pendingOpen = null; }
             }
         });
         web.setWebChromeClient(new WebChromeClient());
@@ -228,7 +231,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (intent != null && Intent.ACTION_MAIN.equals(intent.getAction())) emit("home", "");
+        setIntent(intent);
+        String open = intent == null ? null : intent.getStringExtra("pup_open");
+        if (open != null) { if (pageReady) emit("open", open); else pendingOpen = open; }
+        else if (intent != null && Intent.ACTION_MAIN.equals(intent.getAction())) emit("home", "");
     }
 
     @Override

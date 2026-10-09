@@ -45,7 +45,7 @@
     return r;
   }
   const isNet = (a) => a.pkg === defs.self && /BrowserActivity/.test(a.id);
-  const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : /TasksActivity/.test(a.id) ? 'system' : /UpdateActivity/.test(a.id) ? 'system' : /NicheActivity/.test(a.id) ? 'system' : /ReveilActivity/.test(a.id) ? 'tools' : /NotesActivity/.test(a.id) ? 'tools' : /ScanActivity/.test(a.id) ? 'tools' : /DictaActivity/.test(a.id) ? 'tools' : /AgendaActivity/.test(a.id) ? 'tools' : /KbSettingsActivity/.test(a.id) ? 'tools' : /SmsActivity/.test(a.id) ? 'tel' : /DialerActivity/.test(a.id) ? 'tel' : /MusicActivity/.test(a.id) ? 'music' : /FileActivity/.test(a.id) ? 'tools' : null;
+  const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : /TasksActivity/.test(a.id) ? 'system' : /UpdateActivity/.test(a.id) ? 'system' : /CleanActivity/.test(a.id) ? 'system' : /NicheActivity/.test(a.id) ? 'system' : /ReveilActivity/.test(a.id) ? 'tools' : /NotesActivity/.test(a.id) ? 'tools' : /ScanActivity/.test(a.id) ? 'tools' : /DictaActivity/.test(a.id) ? 'tools' : /AgendaActivity/.test(a.id) ? 'tools' : /KbSettingsActivity/.test(a.id) ? 'tools' : /SmsActivity/.test(a.id) ? 'tel' : /DialerActivity/.test(a.id) ? 'tel' : /MusicActivity/.test(a.id) ? 'music' : /FileActivity/.test(a.id) ? 'tools' : null;
   const catOf = (a) => { const o = overrides[a.id] || selfCat(a); if (o) return o; const r = flairOf(a); return (r.cat === 'sort' && cfg.autoTidy && r.guess) ? r.guess : r.cat; };
   const appsIn = (cat) => apps.filter((a) => catOf(a) === cat);
   const isSelf = (a) => a.pkg === defs.self;
@@ -518,7 +518,100 @@
     e.w.remove(); e.veil.remove();
     if (e.onClose) e.onClose();
   }
-  function closeTop() { const e = winStack[winStack.length - 1]; if (e) { e.close(); return true; } return false; }
+  // ------------------------------------------------------------------ PupClean 🧹 — le grand nettoyage façon Matrix
+  function openClean() {
+    const veil = document.createElement('div'); veil.className = 'veil';
+    const scr = document.createElement('div'); scr.className = 'pupclean';
+    scr.innerHTML = `
+      <canvas class="mrain"></canvas>
+      <div class="pcwrap">
+        <header class="pchead"><div class="pcpaw">🐾</div><div><h1 class="neon">PUP<span>CLEAN</span></h1><small>renifleur de rangement · 100% hors ligne</small></div><button class="pcx" type="button">${XSVG}</button></header>
+        <div class="radar"><svg viewBox="0 0 200 200"><defs><radialGradient id="rg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="var(--acc)" stop-opacity=".35"/><stop offset="1" stop-color="var(--acc)" stop-opacity="0"/></radialGradient></defs>
+          <circle cx="100" cy="100" r="96" fill="#05030a"/><circle cx="100" cy="100" r="96" fill="url(#rg)"/>
+          ${[30,58,86].map((r)=>`<circle cx="100" cy="100" r="${r}" fill="none" stroke="var(--acc2)" stroke-opacity=".25"/>`).join('')}
+          <line x1="100" y1="4" x2="100" y2="196" stroke="var(--acc2)" stroke-opacity=".18"/><line x1="4" y1="100" x2="196" y2="100" stroke="var(--acc2)" stroke-opacity=".18"/>
+          <g class="sweep"><path d="M100 100 L100 6 A94 94 0 0 1 180 60 Z" fill="var(--acc)" opacity=".22"/><line x1="100" y1="100" x2="100" y2="6" stroke="var(--acc)" stroke-width="2"/></g>
+          <g class="blips"></g>
+          <circle cx="100" cy="100" r="7" fill="var(--acc)"/></svg>
+          <div class="rcount"><b id="pcleft">0</b><span>à renifler</span></div>
+        </div>
+        <div class="pcbar"><i class="pcfill" id="pcfill"></i><b class="pcbone" id="pcbone">🦴</b><span class="pcpct" id="pcpct">0%</span></div>
+        <div class="term" id="pcterm"><div class="tline">PuppyOS · PupClean v1 — prêt 🐾</div></div>
+        <div class="pcfoot" id="pcfoot"><button class="ab wide green" id="pcgo" type="button">🐾 Lancer le grand nettoyage</button></div>
+      </div>`;
+    layer.append(veil, scr);
+    const entry = { w: scr, veil, close: () => { stop = true; if (raf) cancelAnimationFrame(raf); scr.remove(); veil.remove(); const i = winStack.indexOf(entry); if (i >= 0) winStack.splice(i, 1); renderAll(); } };
+    winStack.push(entry);
+    const term = $('#pcterm', scr);
+    const log = (t, cls) => { const d = document.createElement('div'); d.className = 'tline' + (cls ? ' ' + cls : ''); d.innerHTML = t; term.appendChild(d); term.scrollTop = term.scrollHeight; while (term.children.length > 220) term.removeChild(term.firstChild); };
+    const pending = () => apps.filter((a) => !overrides[a.id] && !selfCat(a) && flairOf(a).cat === 'sort');
+    $('#pcleft', scr).textContent = pending().length;
+
+    // pluie Matrix
+    const cv = $('.mrain', scr), ctx = cv.getContext('2d'); let cols = [], raf = 0, stop = false;
+    const GLYPH = 'アカサタナハマ01ネビ爪肉骨🐾'.split('');
+    function sizeRain() { cv.width = scr.clientWidth; cv.height = scr.clientHeight; cols = Array(Math.ceil(cv.width / 16)).fill(0).map(() => Math.random() * cv.height); }
+    sizeRain();
+    function rain() {
+      ctx.fillStyle = 'rgba(5,3,10,.18)'; ctx.fillRect(0, 0, cv.width, cv.height);
+      const acc = getComputedStyle(scr).getPropertyValue('--acc').trim() || '#ff3fa4';
+      ctx.font = '14px monospace';
+      for (let i = 0; i < cols.length; i++) {
+        ctx.fillStyle = Math.random() < .5 ? acc : 'rgba(61,255,176,.75)';
+        ctx.fillText(GLYPH[(Math.random() * GLYPH.length) | 0], i * 16, cols[i]);
+        cols[i] = cols[i] > cv.height + Math.random() * 400 ? 0 : cols[i] + 16;
+      }
+      if (!stop) raf = requestAnimationFrame(rain);
+    }
+    raf = requestAnimationFrame(rain);
+
+    // sweep des blips
+    const blips = $('.blips', scr);
+    const addBlip = (ok) => { const a = Math.random() * 6.28, r = 20 + Math.random() * 74; const x = 100 + Math.cos(a) * r, y = 100 + Math.sin(a) * r; const el = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); el.setAttribute('cx', x); el.setAttribute('cy', y); el.setAttribute('r', 3.5); el.setAttribute('fill', ok ? '#3dffb0' : '#ffb627'); el.setAttribute('class', 'blip'); blips.appendChild(el); setTimeout(() => el.remove(), 2200); };
+
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    async function run() {
+      $('#pcgo', scr).remove();
+      const list = pending(); const total = list.length;
+      if (!total) { log('<span class="ok">✓ rien à ranger — accueil déjà nickel 🐶</span>'); done(0, 0); return; }
+      cfg.autoTidy = true; saveCfg();
+      log('<span class="cmd">&gt; flair --scan --tri-auto</span>');
+      log(`renifle ${total} appli(s) dans « À trier »…`); await wait(400);
+      let ranged = 0, kept = 0;
+      for (let i = 0; i < total; i++) {
+        if (stop) return;
+        const a = list[i], g = flairOf(a).guess, conf = Math.round(flairOf(a).conf * 100);
+        const nm = esc(a.label).padEnd ? esc(a.label) : esc(a.label);
+        if (g) {
+          overrides[a.id] = g; ranged++;
+          const c = Flair.cat(g);
+          log(`<span class="dim">renifle</span> ${esc(a.label)} <span class="arrow">→</span> <b style="color:${(PAL[c.c]||PAL.pink)[0]}">${c.g === 'paw' ? '🐾' : ''}${esc(c.n)}</b> <span class="ok">✓</span> <span class="dim">${conf}%</span>`);
+          addBlip(true);
+        } else { kept++; log(`<span class="dim">renifle</span> ${esc(a.label)} <span class="arrow">→</span> <span class="warn">❓ gardé à trier</span>`); addBlip(false); }
+        const pct = Math.round((i + 1) / total * 100);
+        $('#pcfill', scr).style.width = pct + '%'; $('#pcpct', scr).textContent = pct + '%'; $('#pcbone', scr).style.left = pct + '%';
+        $('#pcleft', scr).textContent = total - i - 1;
+        flairCache.clear();
+        await wait(Math.max(45, 150 - total * 2));
+      }
+      S.set('cats', overrides);
+      done(ranged, kept);
+    }
+    function done(ranged, kept) {
+      log(`<span class="cmd">&gt; terminé</span>`);
+      log(`<span class="ok">✓ ${ranged} appli(s) rangée(s)</span>${kept ? ` · <span class="warn">${kept} gardée(s) à trier</span>` : ''}`);
+      renderAll();
+      $('#pcfoot', scr).innerHTML = `<div class="pcdone"><div class="pcstat"><b>${ranged}</b><span>rangées 🐾</span></div><div class="pcstat"><b>${kept}</b><span>à trier</span></div></div><div class="nrow"><button class="ab glass" id="pcclose" type="button">Fermer</button><button class="ab green" id="pchome" type="button">🏠 Voir l'accueil</button></div>`;
+      $('#pcclose', scr).onclick = entry.close;
+      $('#pchome', scr).onclick = () => { entry.close(); goPage(0); };
+    }
+    $('#pcgo', scr).onclick = run;
+    $('.pcx', scr).onclick = entry.close;
+    veil.onclick = entry.close;
+    addEventListener('resize', sizeRain);
+  }
+
+    function closeTop() { const e = winStack[winStack.length - 1]; if (e) { e.close(); return true; } return false; }
   function dragWin(w) {
     const tb = $('.tb', w);
     tb.addEventListener('pointerdown', (e) => {
@@ -911,7 +1004,7 @@
         if (d.fx) { cfg.fx = d.fx; saveCfg(); w.refresh(); }
         if (d.acc) { cfg.accent = d.acc; saveCfg(); renderAll(); w.refresh(); }
         if (d.act === 'opensort') openFolder('sort');
-        if (d.act === 'tidynow') { const n = appsIn('sort').length; cfg.autoTidy = true; saveCfg(); flairCache.clear(); renderAll(); w.refresh(); const left = appsIn('sort').length; toast('Accueil rangé 🐾', left ? `${n - left} appli(s) rangée(s). ${left} sans indice restent à trier.` : 'Tout est rangé dans ses dossiers !'); }
+        if (d.act === 'tidynow') { closeTop(); openClean(); }
         if (d.act === 'forget') { overrides = {}; learn = {}; S.set('cats', overrides); S.set('learn', learn); flairCache.clear(); renderAll(); w.refresh(); toast('Flair remis à zéro', 'Toutes les applis sont re-triées automatiquement.'); }
         if (d.act === 'resethome') { home = defaultHome(); saveHome(); renderAll(); toast('Accueil réorganisé', 'Disposition puppy par défaut.'); }
       };
@@ -962,6 +1055,7 @@
       else if (ev === 'status') updateStatus();
       else if (ev === 'wall') { wall = J(data, wall) || wall; applyWall(); renderPower(); const t = winStack[winStack.length - 1]; if (t && t.refresh) t.refresh(); }
       else if (ev === 'home') { closeMenu(); while (closeTop()); closeDrawer(); goPage(0); }
+      else if (ev === 'open') { if (data === 'clean') { closeMenu(); closeDrawer(); openClean(); } }
     },
     back() {
       if (closeMenu()) return true;
