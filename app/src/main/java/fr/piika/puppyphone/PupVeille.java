@@ -30,11 +30,18 @@ final class PupVeille {
     static WindowManager wm;
     static String page;
     static boolean previewMode;
+    static volatile boolean ringMode;
+    static WindowManager.LayoutParams curLp;
 
     static boolean veilleOn(Context c) { return Pelage.sp(c).getBoolean("veille", false); }
     static boolean siesteOn(Context c) { return Pelage.sp(c).getBoolean("siesteCharge", false); }
 
-    static void onUnlock() { suppressNext = false; }
+    static void onUnlock(Context c) {
+        suppressNext = false;
+        if (ReveilService.ringingId != -1) { // déverrouillé = vraiment réveillé 😈
+            c.startService(new Intent(c, ReveilService.class).setAction(ReveilService.ACT_STOP).putExtra("bravo", true));
+        }
+    }
 
     static void onScreenOff(Context c, boolean charging) {
         if (showing) { hide(); suppressNext = false; return; }   // éteint pendant l'affichage : on laisse dormir
@@ -98,7 +105,11 @@ final class PupVeille {
         lp.screenBrightness = (lum >= 2 || preview) ? WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : lum == 1 ? 0.12f : 0.03f; // aperçu : luminosité normale pour bien voir
         if (Build.VERSION.SDK_INT >= 28) lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         lp.setTitle("PupVeille");
-        v.setOnTouchListener((x, e) -> { if (e.getAction() == MotionEvent.ACTION_UP) hide(); return true; });
+        curLp = lp;
+        boolean ringNow = "/ring.html".equals(pg);
+        ringMode = ringNow;
+        if (ringNow) lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+        else v.setOnTouchListener((x, e) -> { if (e.getAction() == MotionEvent.ACTION_UP && !ringMode) hide(); return false; });
         try { wm.addView(v, lp); view = v; }
         catch (Exception e) {
             s.stop(); s = null;
@@ -109,6 +120,7 @@ final class PupVeille {
         showing = true;
         int sec = sieste ? Sieste.duree(svc) : Pelage.sp(svc).getInt("veilleDuree", 30);
         if (preview) sec = 10;
+        if (ringNow) sec = 0;
         if (sec > 0) {
             h.postDelayed(() -> { if (s != null) s.emit("dodo", ""); }, Math.max(0, sec * 1000L - 2200));
             h.postDelayed(() -> { boolean pv = previewMode; hide(); if (!pv) sleepNow(); }, sec * 1000L);
@@ -119,7 +131,32 @@ final class PupVeille {
         h.removeCallbacksAndMessages(null);
         if (view != null && wm != null) try { wm.removeViewImmediate(view); } catch (Exception ignored) { }
         if (s != null) s.stop();
-        view = null; s = null; showing = false;
+        view = null; s = null; showing = false; ringMode = false;
+    }
+
+    // ------------------------------------------------------------ PupRéveil dans la « fausse vidéo »
+    /** Le réveil sonne : la Sieste / Veille affichée se transforme en sonnerie (même fenêtre), sinon on l'ouvre. */
+    static boolean showRing(Context c) {
+        PupNavA11y svc = PupNavA11y.I;
+        if (svc == null) return false;
+        h.post(() -> {
+            if (showing && s != null && view != null) {
+                h.removeCallbacksAndMessages(null);
+                ringMode = true; page = "/ring.html"; previewMode = false;
+                if (curLp != null) { curLp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE; try { wm.updateViewLayout(view, curLp); } catch (Exception ignored) { } }
+                view.setOnTouchListener(null);
+                s.load("/ring.html");
+            } else { wake(svc); show(svc, "/ring.html", false); }
+        });
+        return true;
+    }
+    static void hideRing() { h.post(() -> { if (ringMode) hide(); }); }
+
+    /** Preuve de réveil : on laisse voir le verrouillage One UI ; la sonnerie continue jusqu'au déverrouillage. */
+    static void proofHide() {
+        ReveilService.awaitUnlock = true;
+        hide();
+        h.postDelayed(() -> { if (ReveilService.ringingId != -1 && ReveilService.awaitUnlock) showRing(PupNavA11y.I); }, 25_000);
     }
 
     /** Rééteint l'écran (verrouillage One UI conservé). */

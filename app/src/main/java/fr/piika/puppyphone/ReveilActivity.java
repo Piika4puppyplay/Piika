@@ -95,7 +95,9 @@ public class ReveilActivity extends Activity {
                 boolean exact = true;
                 if (Build.VERSION.SDK_INT >= 31) exact = getSystemService(AlarmManager.class).canScheduleExactAlarms();
                 return new JSONObject().put("alarms", Reveil.list(ReveilActivity.this)).put("nextAt", Reveil.sp(ReveilActivity.this).getLong("nextAt", 0))
-                        .put("sons", sons).put("exact", exact).toString();
+                        .put("sons", sons).put("exact", exact)
+                        .put("battOk", getSystemService(android.os.PowerManager.class).isIgnoringBatteryOptimizations(getPackageName()))
+                        .put("a11y", PupNavA11y.I != null).toString();
             } catch (Exception e) { return "{}"; }
         }
         /** Ajoute ou remplace un réveil (JSON), renvoie la liste à jour. */
@@ -143,6 +145,14 @@ public class ReveilActivity extends Activity {
         @JavascriptInterface public void exactSettings() {
             ui.post(() -> { try { if (Build.VERSION.SDK_INT >= 31) startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { } });
         }
+        @SuppressWarnings("BatteryLife")
+        @JavascriptInterface public void battery() {
+            ui.post(() -> {
+                try { startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName()))); }
+                catch (Exception e) { try { startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); } catch (Exception ignored) { } }
+            });
+        }
+        @JavascriptInterface public void a11y() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void close() { ui.post(ReveilActivity.this::finish); }
     }
 }

@@ -68,6 +68,15 @@ final class Sieste {
                 try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).put("lum", lum(ctx)).put("style", Pelage.sp(ctx).getString("veilleStyle", "verre")).put("vlum", Pelage.sp(ctx).getInt("veilleLum", 0)).put("alarm", Reveil.nextText(ctx)).toString(); } catch (Exception e) { return "{}"; }
             }
         }, "Sieste");
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public String info() {
+                JSONObject a = Reveil.find(ctx, ReveilService.ringingId);
+                try { return (a == null ? new JSONObject() : new JSONObject(a.toString())).put("ringing", ReveilService.ringingId != -1).toString(); } catch (Exception e) { return "{}"; }
+            }
+            @JavascriptInterface public void stop() { ctx.startService(new Intent(ctx, ReveilService.class).setAction(ReveilService.ACT_STOP)); }
+            @JavascriptInterface public void snooze() { ctx.startService(new Intent(ctx, ReveilService.class).setAction(ReveilService.ACT_SNOOZE)); }
+            @JavascriptInterface public void proof() { ui.post(PupVeille::proofHide); }
+        }, "Ring");
         web.loadUrl("https://" + HOST + page);
         return web;
     }
@@ -99,6 +108,8 @@ final class Sieste {
             emit("battery", lastBattery);
         } catch (Exception ignored) { }
     }
+    void load(String pg) { if (web != null) web.loadUrl("https://" + HOST + pg); }
+
     void emit(String ev, String data) {
         final String d = data == null ? "" : data;
         ui.post(() -> { if (web != null) web.evaluateJavascript("window.SiesteUI&&SiesteUI.on(" + JSONObject.quote(ev) + "," + JSONObject.quote(d) + ")", null); }); }

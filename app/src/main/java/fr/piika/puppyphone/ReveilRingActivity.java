@@ -50,6 +50,7 @@ public class ReveilRingActivity extends Activity {
                 try { return (a == null ? new JSONObject() : new JSONObject(a.toString())).put("ringing", ReveilService.ringingId != -1).toString(); } catch (Exception e) { return "{}"; }
             }
             @JavascriptInterface public void stop() { startService(new Intent(ReveilRingActivity.this, ReveilService.class).setAction(ReveilService.ACT_STOP)); runOnUiThread(ReveilRingActivity.this::finish); }
+            @JavascriptInterface public void proof() { ReveilService.awaitUnlock = true; runOnUiThread(ReveilRingActivity.this::finish); }
             @JavascriptInterface public void snooze() { startService(new Intent(ReveilRingActivity.this, ReveilService.class).setAction(ReveilService.ACT_SNOOZE)); runOnUiThread(ReveilRingActivity.this::finish); }
         }, "Ring");
         setContentView(web);

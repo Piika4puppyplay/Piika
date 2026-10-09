@@ -10,16 +10,19 @@ body.ring{background:#000;overflow:hidden;margin:0;color:#fff}
 .glow{position:fixed;inset:0;background:radial-gradient(60% 40% at 50% 30%,color-mix(in srgb,var(--acc) 35%,transparent),transparent 70%),radial-gradient(50% 30% at 50% 100%,color-mix(in srgb,var(--acc2) 25%,transparent),transparent 70%);animation:pulse 1.2s ease-in-out infinite alternate}
 @keyframes pulse{to{opacity:.55}}
 #w{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 40px) 18px calc(env(safe-area-inset-bottom) + 40px)}
-#clockart{width:min(70vw,300px);animation:shake .18s linear infinite;transform-origin:50% 70%}
+#clockart{width:min(58vw,250px)}
+#clk{animation:shake .16s linear infinite;transform-box:fill-box;transform-origin:50% 60%}
+.z1,.z2{animation:zz 2.4s ease-in infinite}.z2{animation-delay:1.2s}
+@keyframes zz{0%{opacity:0;transform:translate(0,10px)}30%{opacity:1}100%{opacity:0;transform:translate(10px,-20px)}}
 @keyframes shake{0%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}100%{transform:rotate(-3deg)}}
-.time{font-family:var(--f-head);font-size:min(22vw,110px);line-height:1;text-shadow:0 0 6px #fff,0 0 20px var(--acc),0 0 44px var(--acc)}
+.time{font-family:var(--f-head);font-size:min(19vw,96px);line-height:1;text-shadow:0 0 6px #fff,0 0 20px var(--acc),0 0 44px var(--acc)}
 .lab{font-family:var(--f-head);font-size:min(5vw,20px);color:#ffe3f2;text-align:center;text-shadow:0 0 12px var(--acc)}
 .sub{font-family:var(--f-num);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--acc2);text-shadow:0 0 8px var(--acc2);margin-top:6px;text-align:center}
-.snz{width:min(50vw,210px);aspect-ratio:1;border-radius:50%;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#fff;font-family:var(--f-head);font-size:17px;
+.snz{width:min(42vw,180px);aspect-ratio:1;border-radius:50%;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#fff;font-family:var(--f-head);font-size:17px;
   background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.45),transparent 38%),url(leather.png),#5a1a3a;background-size:auto,200px;
   box-shadow:0 0 0 6px #1a0a12,0 0 0 9px #c9c2d8,0 0 0 11px #000,0 14px 26px rgba(0,0,0,.8),0 0 40px -6px var(--acc),inset 0 -12px 24px rgba(0,0,0,.6);text-shadow:0 2px 3px #000}
 .snz small{font-family:var(--f-num);font-size:11px;letter-spacing:.12em;color:#ffd0e6}
-.snz span{font-size:42px}
+.snz span{font-size:34px}
 .snz:active{transform:scale(.95)}
 .slider{position:relative;width:min(92vw,420px);height:78px;border-radius:40px;
   background:url(leather.png),#2a1020;background-size:160px;border:2px dashed rgba(255,255,255,.35);box-shadow:inset 0 4px 12px rgba(0,0,0,.8),0 0 0 4px #0a0508,0 0 0 6px #6b6480}
@@ -58,30 +61,75 @@ body.ring{background:#000;overflow:hidden;margin:0;color:#fff}
   if (a.label) $('#lab').textContent = a.label + ' 🐾';
   $('#sub').textContent = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   $('#sm').textContent = a.snooze || 5;
-  // réveil à deux cloches, cadran-chiot (dessin original)
-  $('#clockart').innerHTML = `<svg viewBox="0 0 300 300"><defs>
+  if (a.preuve) document.querySelector('.slider .hint').textContent = 'Glisse, puis déverrouille 😈';
+  // humeur du chiot selon l'heure
+  const hr = now.getHours();
+  const mood = hr < 6 || hr >= 22 ? 'epuise' : hr < 8 ? 'endormi' : hr < 11 ? 'reveille' : hr < 18 ? 'forme' : 'calme';
+  const MOODTXT = { epuise: 'Mmmh… déjà ? *bâille*', endormi: 'Debout, petit chiot… *s’étire*', reveille: 'Debout ! Grosse journée 🐾', forme: 'Ouaf ! On y va ! 🐶⚡', calme: 'Coucou, c’est l’heure 🐾' };
+  if (!a.label) $('#lab').textContent = MOODTXT[mood];
+  else $('#sub').textContent = MOODTXT[mood] + ' · ' + $('#sub').textContent;
+  // yeux / bouche / accessoires du chiot qui tient le réveil
+  const EY = {
+    epuise: '<path d="M106 82q12 8 24 0M170 82q12 8 24 0" stroke="#2b1206" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M110 92q8 4 16 0M174 92q8 4 16 0" stroke="#7a3f17" stroke-width="2" fill="none" opacity=".6"/>',
+    endormi: '<ellipse cx="118" cy="84" rx="13" ry="9" fill="#1e0e36"/><ellipse cx="182" cy="84" rx="13" ry="9" fill="#1e0e36"/><path d="M103 80q15-10 30 0z" fill="#e9b77a"/><path d="M167 80q15-10 30 0z" fill="#e9b77a"/><path d="M103 80q15-6 30 0M167 80q15-6 30 0" stroke="#7a3f17" stroke-width="3" fill="none"/><circle cx="123" cy="86" r="3" fill="#fff"/><circle cx="187" cy="86" r="3" fill="#fff"/><path d="M106 97q12 6 24 0M170 97q12 6 24 0" stroke="#9a6a9a" stroke-width="2.5" fill="none" opacity=".7"/>',
+    reveille: '<ellipse cx="118" cy="82" rx="14" ry="17" fill="#1e0e36"/><ellipse cx="182" cy="82" rx="14" ry="17" fill="#1e0e36"/><circle cx="123" cy="75" r="5.5" fill="#fff"/><circle cx="187" cy="75" r="5.5" fill="#fff"/><circle cx="113" cy="90" r="2.5" fill="#fff" opacity=".7"/><circle cx="177" cy="90" r="2.5" fill="#fff" opacity=".7"/>',
+    forme: '<path d="M118 66l4 10 11 1-8 7 3 11-10-6-10 6 3-11-8-7 11-1z" fill="#ffd34d" stroke="#8a5a00" stroke-width="1.5"/><path d="M182 66l4 10 11 1-8 7 3 11-10-6-10 6 3-11-8-7 11-1z" fill="#ffd34d" stroke="#8a5a00" stroke-width="1.5"/>',
+    calme: '<path d="M106 86q12-10 24 0M170 86q12-10 24 0" stroke="#2b1206" stroke-width="5" fill="none" stroke-linecap="round"/>' };
+  const MOUTH = {
+    epuise: '<ellipse cx="150" cy="128" rx="14" ry="18" fill="#3a0a1a"/><ellipse cx="150" cy="136" rx="9" ry="7" fill="#ff5e9e"/>',
+    endormi: '<ellipse cx="150" cy="126" rx="9" ry="11" fill="#3a0a1a"/><ellipse cx="150" cy="131" rx="6" ry="4" fill="#ff5e9e"/>',
+    reveille: '<path d="M150 112v6M150 118q-10 12-20 2M150 118q10 12 20 2" stroke="#3a1a08" stroke-width="3.4" fill="none" stroke-linecap="round"/><path d="M143 124q7 22 14 0z" fill="#ff5e9e"/>',
+    forme: '<path d="M126 114q24 30 48 0z" fill="#3a0a1a"/><path d="M138 124q12 22 24 0z" fill="#ff5e9e"/><path d="M128 115q22 6 44 0" stroke="#fff" stroke-width="4" fill="none"/>',
+    calme: '<path d="M150 112v6M150 118q-10 10-18 3M150 118q10 10 18 3" stroke="#3a1a08" stroke-width="3.4" fill="none" stroke-linecap="round"/>' };
+  const EXTRA = {
+    epuise: '<path d="M88 40q60-58 124 0l-6 10q-56-30-112 0z" fill="#4a3a8a"/><path d="M200 44q30-6 44 26" stroke="#4a3a8a" stroke-width="14" stroke-linecap="round" fill="none"/><circle cx="248" cy="74" r="10" fill="#fff"/><path d="M92 46q58-26 116 0" stroke="#fff" stroke-width="5" stroke-dasharray="6 8" fill="none" opacity=".6"/><text x="236" y="30" font-family="Bungee" font-size="22" fill="#fff" class="z1">z</text><text x="256" y="12" font-family="Bungee" font-size="30" fill="#fff" class="z2">Z</text>',
+    endormi: '<text x="232" y="34" font-family="Bungee" font-size="20" fill="#fff" class="z1">z</text>',
+    reveille: '', forme: '<g fill="#ffd34d"><path d="M50 50l4 8 8 2-8 3-4 8-3-8-8-3 8-2z"/><path d="M252 40l3 7 7 2-7 2-3 7-3-7-7-2 7-2z"/></g>', calme: '' };
+  const earRot = mood === 'epuise' || mood === 'endormi' ? 22 : mood === 'forme' ? -8 : 10;
+  $('#clockart').innerHTML = `<svg viewBox="0 0 300 400"><defs>
     <radialGradient id="bd" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ff9ac6"/><stop offset=".5" stop-color="#ff3fa4"/><stop offset="1" stop-color="#7a0f44"/></radialGradient>
     <linearGradient id="ch" x1="0" x2="1"><stop offset="0" stop-color="#6b6480"/><stop offset=".3" stop-color="#fff"/><stop offset=".55" stop-color="#8d86a0"/><stop offset=".8" stop-color="#f4f2fa"/><stop offset="1" stop-color="#4e485e"/></linearGradient>
     <radialGradient id="fc" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#fffaf0"/><stop offset=".8" stop-color="#f3e2c4"/><stop offset="1" stop-color="#cdb594"/></radialGradient>
-    <radialGradient id="pf" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#fff6e8"/><stop offset=".45" stop-color="#f6cf9a"/><stop offset=".8" stop-color="#d9934f"/><stop offset="1" stop-color="#9c5a24"/></radialGradient></defs>
-    <g class="bells"><path d="M58 88a46 46 0 0 1 70-50z" fill="url(#ch)" stroke="#2a2438" stroke-width="3"/><path d="M242 88a46 46 0 0 0-70-50z" fill="url(#ch)" stroke="#2a2438" stroke-width="3"/>
-    <rect x="144" y="22" width="12" height="40" rx="5" fill="url(#ch)"/><circle cx="150" cy="22" r="10" fill="url(#ch)" stroke="#2a2438" stroke-width="2"/></g>
-    <path d="M86 250l-26 36M214 250l26 36" stroke="url(#ch)" stroke-width="12" stroke-linecap="round"/>
-    <circle cx="150" cy="160" r="112" fill="url(#bd)" stroke="#3a0620" stroke-width="4"/>
-    <circle cx="150" cy="160" r="96" fill="url(#ch)"/><circle cx="150" cy="160" r="86" fill="url(#fc)"/>
-    ${Array.from({ length: 12 }, (_, i) => { const a = i / 12 * Math.PI * 2; return `<circle cx="${150 + Math.sin(a) * 74}" cy="${160 - Math.cos(a) * 74}" r="${i % 3 ? 3 : 6}" fill="#7a0f44"/>`; }).join('')}
-    <path d="M104 116c-22-4-30 28-22 46 4 8 14 6 16-2l6-34z" fill="#8a4a1c"/><path d="M196 116c22-4 30 28 22 46-4 8-14 6-16-2l-6-34z" fill="#8a4a1c"/>
-    <ellipse cx="150" cy="150" rx="44" ry="40" fill="url(#pf)"/><ellipse cx="150" cy="168" rx="24" ry="17" fill="#fff6ea"/>
-    <ellipse cx="136" cy="146" rx="8" ry="10" fill="#1e0e36"/><ellipse cx="164" cy="146" rx="8" ry="10" fill="#1e0e36"/><circle cx="139" cy="142" r="3.5" fill="#fff"/><circle cx="167" cy="142" r="3.5" fill="#fff"/>
-    <ellipse cx="150" cy="163" rx="8" ry="6" fill="#1a0b2e"/><path d="M144 176q6 14 12 0z" fill="#ff5e9e"/>
-    <path d="M150 160L150 104" stroke="#2a2438" stroke-width="6" stroke-linecap="round"/><path d="M150 160L196 186" stroke="#2a2438" stroke-width="4" stroke-linecap="round"/><circle cx="150" cy="160" r="7" fill="url(#ch)"/>
-    <ellipse cx="112" cy="110" rx="34" ry="14" fill="#fff" opacity=".35" transform="rotate(-30 112 110)"/></svg>`;
+    <radialGradient id="pf" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#fff6e8"/><stop offset=".45" stop-color="#f6cf9a"/><stop offset=".8" stop-color="#d9934f"/><stop offset="1" stop-color="#9c5a24"/></radialGradient>
+    <linearGradient id="er" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8743c"/><stop offset="1" stop-color="#4a220a"/></linearGradient>
+    <filter id="fur"><feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="2" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 .35  0 0 0 0 .18  0 0 0 0 .05  0 0 0 .55 0"/><feComposite in2="SourceGraphic" operator="in"/><feBlend in="SourceGraphic" mode="multiply"/></filter></defs>
+    <!-- corps du chiot qui tient le réveil -->
+    <ellipse cx="150" cy="316" rx="128" ry="84" fill="url(#pf)" filter="url(#fur)"/>
+    <ellipse cx="150" cy="338" rx="70" ry="50" fill="#fff6ea" opacity=".9"/>
+    <!-- tête -->
+    <g transform="rotate(${-earRot} 92 60)"><path d="M92 50c-34-6-46 40-34 70 6 14 22 12 26-2l10-48z" fill="url(#er)"/></g>
+    <g transform="rotate(${earRot} 208 60)"><path d="M208 50c34-6 46 40 34 70-6 14-22 12-26-2l-10-48z" fill="url(#er)"/></g>
+    <ellipse cx="150" cy="92" rx="68" ry="60" fill="url(#pf)" filter="url(#fur)"/>
+    <ellipse cx="150" cy="114" rx="38" ry="28" fill="#fff6ea"/>
+    ${EY[mood]}
+    <ellipse cx="150" cy="104" rx="12" ry="9" fill="#1a0b2e"/><ellipse cx="146" cy="100" rx="4" ry="2" fill="#fff" opacity=".7"/>
+    ${MOUTH[mood]}
+    <ellipse cx="100" cy="110" rx="12" ry="7" fill="#ff7ab8" opacity=".5"/><ellipse cx="200" cy="110" rx="12" ry="7" fill="#ff7ab8" opacity=".5"/>
+    ${EXTRA[mood]}
+    <!-- le réveil (qui tremble) -->
+    <g transform="translate(0 26)"><g id="clk">
+      <path d="M78 196a40 40 0 0 1 58-44z" fill="url(#ch)" stroke="#2a2438" stroke-width="3"/><path d="M222 196a40 40 0 0 0-58-44z" fill="url(#ch)" stroke="#2a2438" stroke-width="3"/>
+      <rect x="145" y="140" width="10" height="26" rx="4" fill="url(#ch)"/><circle cx="150" cy="140" r="8" fill="url(#ch)" stroke="#2a2438" stroke-width="2"/>
+      <circle cx="150" cy="250" r="84" fill="url(#bd)" stroke="#3a0620" stroke-width="4"/>
+      <circle cx="150" cy="250" r="72" fill="url(#ch)"/><circle cx="150" cy="250" r="63" fill="url(#fc)"/>
+      ${Array.from({ length: 12 }, (_, i) => { const t = i / 12 * Math.PI * 2; return `<circle cx="${150 + Math.sin(t) * 54}" cy="${250 - Math.cos(t) * 54}" r="${i % 3 ? 2.4 : 4.5}" fill="#7a0f44"/>`; }).join('')}
+      <path d="M124 220c-16-3-22 20-16 34 3 6 10 5 12-1l4-25z" fill="#8a4a1c"/><path d="M176 220c16-3 22 20 16 34-3 6-10 5-12-1l-4-25z" fill="#8a4a1c"/>
+      <ellipse cx="150" cy="244" rx="30" ry="27" fill="url(#pf)"/><ellipse cx="150" cy="256" rx="16" ry="11" fill="#fff6ea"/>
+      <ellipse cx="140" cy="240" rx="5.5" ry="7" fill="#1e0e36"/><ellipse cx="160" cy="240" rx="5.5" ry="7" fill="#1e0e36"/><circle cx="142" cy="237" r="2.4" fill="#fff"/><circle cx="162" cy="237" r="2.4" fill="#fff"/>
+      <ellipse cx="150" cy="252" rx="6" ry="4.5" fill="#1a0b2e"/><path d="M146 262q4 10 8 0z" fill="#ff5e9e"/>
+      <path d="M150 250L150 206" stroke="#2a2438" stroke-width="5" stroke-linecap="round"/><path d="M150 250L184 270" stroke="#2a2438" stroke-width="3.5" stroke-linecap="round"/><circle cx="150" cy="250" r="5" fill="url(#ch)"/>
+      <ellipse cx="122" cy="210" rx="26" ry="10" fill="#fff" opacity=".35" transform="rotate(-30 122 210)"/>
+      <path d="M150 166l-10 -14M150 166l10 -14" stroke="#ffd34d" stroke-width="3" class="ding"/>
+    </g></g>
+    <!-- pattes avant qui tiennent le réveil -->
+    ${[[62, 288, -1], [238, 288, 1]].map(([x, y, k]) => `<g transform="translate(${x} ${y}) rotate(${k * 18})"><ellipse rx="34" ry="28" fill="url(#pf)" filter="url(#fur)"/><path d="M${-k * 6} -18v24M${-k * 6 + 12} -16v22M${-k * 6 - 12} -16v22" stroke="#7a3f17" stroke-width="3" stroke-linecap="round" opacity=".7"/></g>`).join('')}
+  </svg>`;
   // glisser l'os dans la gamelle
   const kn = $('#knob'), sl = $('#sl'); let x0 = null, dx = 0;
   const max = () => sl.clientWidth - kn.clientWidth - 70;
   kn.addEventListener('pointerdown', (e) => { x0 = e.clientX - dx; kn.setPointerCapture(e.pointerId); });
   kn.addEventListener('pointermove', (e) => { if (x0 == null) return; dx = Math.max(0, Math.min(max(), e.clientX - x0)); kn.style.left = 6 + dx + 'px'; });
-  kn.addEventListener('pointerup', () => { if (x0 == null) return; x0 = null; if (dx > max() * .85) { kn.style.left = 6 + max() + 'px'; R.stop(); } else { dx = 0; kn.style.transition = 'left .3s'; kn.style.left = '6px'; setTimeout(() => kn.style.transition = '', 320); } });
+  kn.addEventListener('pointerup', () => { if (x0 == null) return; x0 = null; if (dx > max() * .85) { kn.style.left = 6 + max() + 'px'; if (a.preuve && R.proof) R.proof(); else R.stop(); } else { dx = 0; kn.style.transition = 'left .3s'; kn.style.left = '6px'; setTimeout(() => kn.style.transition = '', 320); } });
   $('#snz').addEventListener('click', () => R.snooze());
   setInterval(() => { const n = new Date(); $('#t').textContent = p2(n.getHours()) + ':' + p2(n.getMinutes()); }, 5000);
 })();

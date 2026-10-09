@@ -27,6 +27,7 @@ public class ReveilService extends Service {
     static final String CH = "pupreveil_ring", ACT_STOP = "stop", ACT_SNOOZE = "snooze";
     static final int NID = 4300;
     static volatile int ringingId = -1;
+    static volatile boolean awaitUnlock;
     final Handler h = new Handler(Looper.getMainLooper());
     MediaPlayer mp; Vibrator vib; PowerManager.WakeLock wl;
     float vol = .1f; boolean crescendo;
@@ -35,12 +36,15 @@ public class ReveilService extends Service {
 
     @Override public int onStartCommand(Intent i, int f, int startId) {
         String act = i == null ? null : i.getAction();
-        if (ACT_STOP.equals(act)) { stopAll(); return START_NOT_STICKY; }
+        if (ACT_STOP.equals(act)) {
+            if (i.getBooleanExtra("bravo", false) && ringingId != -1) android.widget.Toast.makeText(this, "🐶 Bravo, tu es bien réveillé ! Bonne journée 🐾", android.widget.Toast.LENGTH_LONG).show();
+            stopAll(); return START_NOT_STICKY;
+        }
         if (ACT_SNOOZE.equals(act)) { Reveil.snooze(this, ringingId); stopAll(); return START_NOT_STICKY; }
         int id = i == null ? -1 : i.getIntExtra("id", -1);
         JSONObject a = Reveil.find(this, id);
         if (a == null) a = new JSONObject();
-        ringingId = id;
+        ringingId = id; awaitUnlock = false;
         startForegroundNow(a);
         ring(a);
         h.postDelayed(this::stopAll, 10 * 60_000L); // au bout de 10 min on laisse le chiot se rendormir
@@ -61,13 +65,20 @@ public class ReveilService extends Service {
                 .setContentTitle("⏰ Debout, petit chiot ! " + String.format(java.util.Locale.FRANCE, "%02d:%02d", a.optInt("h"), a.optInt("m")))
                 .setContentText(label.isEmpty() ? "Le PupRéveil sonne 🐾" : label)
                 .setCategory(Notification.CATEGORY_ALARM).setColor(0xFFFF3FA4).setOngoing(true)
-                .setFullScreenIntent(fullPI, true).setContentIntent(fullPI)
+                .setContentIntent(fullPI)
                 .addAction(new Notification.Action.Builder(null, "😴 Encore " + a.optInt("snooze", 5) + " min", snz).build())
                 .addAction(new Notification.Action.Builder(null, "🐾 Je me lève", stop).build())
                 .build();
+        boolean overlay = PupVeille.showRing(this); // par-dessus le verrouillage via PupNav (ne dépend pas de One UI)
+        if (!overlay) n = new Notification.Builder(this, CH).setSmallIcon(R.drawable.ic_paw)
+                .setContentTitle("⏰ Debout, petit chiot !").setContentText(label.isEmpty() ? "Le PupRéveil sonne 🐾" : label)
+                .setCategory(Notification.CATEGORY_ALARM).setColor(0xFFFF3FA4).setOngoing(true)
+                .setFullScreenIntent(fullPI, true).setContentIntent(fullPI)
+                .addAction(new Notification.Action.Builder(null, "😴 Encore " + a.optInt("snooze", 5) + " min", snz).build())
+                .addAction(new Notification.Action.Builder(null, "🐾 Je me lève", stop).build()).build();
         if (Build.VERSION.SDK_INT >= 29) startForeground(NID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
         else startForeground(NID, n);
-        try { startActivity(full); } catch (Exception ignored) { } // si Android le permet, l'écran s'ouvre tout de suite
+        if (!overlay) try { startActivity(full); } catch (Exception ignored) { }
     }
 
     void ring(JSONObject a) {
@@ -109,6 +120,8 @@ public class ReveilService extends Service {
         try { if (wl != null && wl.isHeld()) wl.release(); } catch (Exception ignored) { }
         ringingId = -1;
         ReveilRingActivity.closeAll();
+        PupVeille.hideRing();
+        awaitUnlock = false;
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
         Reveil.schedule(this);

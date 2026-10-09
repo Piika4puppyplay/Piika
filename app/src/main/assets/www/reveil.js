@@ -47,13 +47,15 @@
 
   function render() {
     const al = (S.alarms || []).slice().sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
-    $('#rbody').innerHTML = `${S.exact === false ? `<div class="warnbox">⚠️ Android doit autoriser PupRéveil à sonner à l'heure exacte.<button class="ab small amber" data-a="exact" type="button">Autoriser</button></div>` : ''}
+    $('#rbody').innerHTML = `${S.battOk === false ? `<div class="warnbox">🔋 Pour que Samsung ne fasse jamais dormir le réveil : autorise PuppyPhone à ignorer l'optimisation de batterie (et mets-le dans « Applis jamais en veille » de One UI).<button class="ab small amber" data-a="batt" type="button">Autoriser</button></div>` : ''}
+      ${S.a11y === false ? `<div class="warnbox">🐾 Active <b>PupNav</b> dans l'accessibilité : le réveil s'affiche alors directement par-dessus le verrouillage, comme la Sieste, et le déverrouillage peut servir de preuve de réveil.<button class="ab small amber" data-a="a11y" type="button">Ouvrir l'accessibilité</button></div>` : ''}
+      ${S.exact === false ? `<div class="warnbox">⚠️ Android doit autoriser PupRéveil à sonner à l'heure exacte.<button class="ab small amber" data-a="exact" type="button">Autoriser</button></div>` : ''}
       ${al.length ? al.map((a) => {
         const on = a.on !== false, t = on ? nextOf(a) : 0;
         return `<section class="acard ${on ? 'on' : 'off'}" data-edit="${a.id}">
           <div class="atop">
             <div class="flip"><span class="flap"><b>${p2(a.h)}</b></span><span class="colon">:</span><span class="flap"><b>${p2(a.m)}</b></span></div>
-            <div class="ainfo"><b>${esc(a.label || 'Réveil puppy')}</b><small>${esc(daysTxt(a.days))} · ${esc((S.sons || SONS0).find((s) => s[0] === a.sound)?.[1] || 'Wouf wouf du matin')}</small>${on && t ? `<div class="in">dans ${inTxt(t)}</div>` : ''}</div>
+            <div class="ainfo"><b>${esc(a.label || 'Réveil puppy')}</b><small>${esc(daysTxt(a.days))}${a.preuve ? ' · 😈' : ''} · ${esc((S.sons || SONS0).find((s) => s[0] === a.sound)?.[1] || 'Wouf wouf du matin')}</small>${on && t ? `<div class="in">dans ${inTxt(t)}</div>` : ''}</div>
             <button class="sw${on ? ' on' : ''}" data-tog="${a.id}" type="button"><i></i></button>
           </div>
           <div class="days">${DAYS.map((d, i) => `<span class="tag${(a.days || [])[i] ? ' on' : ''}"><i class="ring"></i><span>${d}</span></span>`).join('')}</div>
@@ -84,6 +86,7 @@
       <div class="seg" id="esnz"></div>
       <div class="row"><span>Réveil en douceur<small>Le son monte petit à petit pendant 30 s</small></span><button class="sw${E.douceur !== false ? ' on' : ''}" data-esw="douceur" type="button"><i></i></button></div>
       <div class="row"><span>Vibreur<small>Le téléphone vibre en même temps</small></span><button class="sw${E.vib !== false ? ' on' : ''}" data-esw="vib" type="button"><i></i></button></div>
+      <div class="row"><span>Preuve de réveil 😈<small>Pour couper, il faut <b>déverrouiller le téléphone</b> (code ou empreinte). Glisser l'os ne suffit plus !</small></span><button class="sw${E.preuve ? ' on' : ''}" data-esw="preuve" type="button"><i></i></button></div>
       <button class="ab wide green" data-e="save" type="button">${ic('check', 'chrome', 'none')}Enregistrer</button>
       <div class="nrow">${a ? `<button class="ab red" data-e="del" type="button">${ic('trash', 'chrome', 'none')}Supprimer</button>` : ''}<button class="ab c2" data-e="test" type="button">${ic('timer', 'chrome', 'none')}Tester dans 10 s</button><button class="ab glass" data-e="cancel" type="button">Annuler</button></div>
     </div>`;
@@ -106,6 +109,8 @@
     const ed = t.closest('[data-edit]'); if (ed && !E) { openEditor(S.alarms.find((x) => x.id === +ed.dataset.edit)); return; }
     if (t.closest('#fab')) { openEditor(null); return; }
     if (t.closest('[data-a="exact"]')) { rc('exactSettings'); return; }
+    if (t.closest('[data-a="batt"]')) { rc('battery'); return; }
+    if (t.closest('[data-a="a11y"]')) { rc('a11y'); return; }
     if (!E) return;
     if (t === $('#veil')) { closeEditor(); return; }
     const d = t.closest('[data-day]'); if (d) { const i = +d.dataset.day; E.days[i] = !E.days[i]; renderEd(); return; }
@@ -113,7 +118,7 @@
     const pl = t.closest('[data-play]'); if (pl) { e.stopPropagation(); rc('preview', pl.dataset.play); return; }
     const sn = t.closest('[data-son]'); if (sn) { E.sound = sn.dataset.son; renderEd(); return; }
     const sz = t.closest('[data-snz]'); if (sz) { E.snooze = +sz.dataset.snz; renderEd(); return; }
-    const sw = t.closest('[data-esw]'); if (sw) { const k = sw.dataset.esw; E[k] = !(E[k] !== false); sw.classList.toggle('on', E[k]); return; }
+    const sw = t.closest('[data-esw]'); if (sw) { const k = sw.dataset.esw; E[k] = k === 'preuve' ? !E[k] : !(E[k] !== false); sw.classList.toggle('on', E[k]); return; }
     const b = t.closest('[data-e]'); if (!b) return;
     const k = b.dataset.e;
     if (k === 'cancel') closeEditor();
