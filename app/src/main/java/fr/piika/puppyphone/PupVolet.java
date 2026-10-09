@@ -183,9 +183,11 @@ final class PupVolet {
             c.drawRect(0, 0, W, H, p); p.setShader(null);
             p.setShader(new android.graphics.LinearGradient(0, 0, W, 0, new int[]{acc2, acc, acc2}, null, android.graphics.Shader.TileMode.CLAMP));
             c.drawRect(0, H - 2 * dens, W, H, p); p.setShader(null);
-            float cy = H / 2f + 1 * dens, pad = 14 * dens, shift = sp.getInt("barreX", 0) * dens;
-            // deux listes : à gauche (depuis le bord gauche) et à droite (depuis le bord droit)
-            float xl = pad + shift, xr = W - pad + shift;
+            float cy = H / 2f + 1 * dens, pad = 14 * dens;
+            float shiftG = sp.getInt("barreXG", 0) * dens, shiftD = sp.getInt("barreXD", 0) * dens;
+            // deux listes indépendantes : la gauche part du bord gauche, la droite du bord droit (bornées pour rester à l'écran)
+            float xl = Math.max(4 * dens, Math.min(W * .62f, pad + shiftG));
+            float xr = Math.min(W - 4 * dens, Math.max(W * .38f, W - pad + shiftD));
             for (String it : sp.getString("barreGauche", "heure,patte,medailles").split(",")) {
                 it = it.trim(); if (it.isEmpty() || !sp.getBoolean("bar_" + it, true)) continue;
                 xl = seg(c, it, xl, cy, H, acc, acc2, false);
