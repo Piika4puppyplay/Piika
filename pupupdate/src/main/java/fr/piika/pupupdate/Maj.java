@@ -37,7 +37,7 @@ final class Maj {
     static final String API = "https://api.github.com/repos/Piika4puppyplay/Piika/releases?per_page=15";
     static final String PAGE = "https://github.com/Piika4puppyplay/Piika/releases";
     static final String CH = "pupupdate";
-    static final int NID = 4748, JOB = 4749;
+    static final int NID = 4748, JOB = 4749, NID_SELF = 4750;
 
     static SharedPreferences sp(Context c) { return c.getSharedPreferences("maj", Context.MODE_PRIVATE); }
 
@@ -204,6 +204,20 @@ final class Maj {
                 .setContentIntent(PendingIntent.getActivity(c, 0, new Intent(c, MajActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT))
                 .build();
         try { nm.notify(NID, n); } catch (Exception ignored) { }
+    }
+
+    /** PupUpdate a une nouvelle version de lui-même : notif distincte (ouvre PupUpdate, qui se met à jour seul). */
+    static void notifySelf(Context c, long v) {
+        NotificationManager nm = c.getSystemService(NotificationManager.class);
+        nm.createNotificationChannel(new NotificationChannel(CH, "Nouvelles versions de PuppyPhone", NotificationManager.IMPORTANCE_DEFAULT));
+        Notification n = new Notification.Builder(c, CH).setSmallIcon(R.drawable.ic_paw)
+                .setContentTitle("🛠️ PupUpdate a une mise à jour : v1." + v)
+                .setContentText("Le chien de garde se refait une beauté. Touche pour le mettre à jour.")
+                .setStyle(new Notification.BigTextStyle().bigText("Touche pour ouvrir PupUpdate et le mettre à jour tout seul. Il se ferme un instant le temps de s'installer, puis rouvre-le 🐾"))
+                .setColor(0xFF3DFFB0).setAutoCancel(true)
+                .setContentIntent(PendingIntent.getActivity(c, 2, new Intent(c, MajActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT))
+                .build();
+        try { nm.notify(NID_SELF, n); } catch (Exception ignored) { }
     }
 
     static void notifyDone(Context c, String title, String text) {
