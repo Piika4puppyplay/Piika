@@ -45,7 +45,7 @@ public abstract class PupWebActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         Window w = getWindow();
-        w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Pelage.bg(this)));
+        w.setBackgroundDrawable(frameBackground()); // la marge de recadrage garde le thème puppyplay
         w.setStatusBarColor(Color.TRANSPARENT);
         w.setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= 29) { w.setNavigationBarContrastEnforced(false); w.setStatusBarContrastEnforced(false); }
@@ -104,6 +104,21 @@ public abstract class PupWebActivity extends Activity {
     @Override public void onBackPressed() {
         if (web != null) web.evaluateJavascript("window." + uiName() + "&&" + uiName() + ".back&&" + uiName() + ".back()", v -> { if (!"true".equals(v)) finish(); });
         else finish();
+    }
+
+    /** Fond de la marge de recadrage : dégradé violet néon PuppyPlay, teinté par la couleur d'accent choisie. */
+    android.graphics.drawable.Drawable frameBackground() {
+        int high = 0xFF1b0d33;
+        try { high = blend(android.graphics.Color.parseColor(Pelage.cur(this)[2]), 0xFF160a2a, 0.20f); } catch (Exception ignored) { }
+        return new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                new int[]{high, 0xFF120a22, 0xFF0b0614});
+    }
+    static int blend(int a, int b, float t) {
+        int r = Math.round(((a >> 16) & 255) * t + ((b >> 16) & 255) * (1 - t));
+        int g = Math.round(((a >> 8) & 255) * t + ((b >> 8) & 255) * (1 - t));
+        int bl = Math.round((a & 255) * t + (b & 255) * (1 - t));
+        return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 
     // ---------------- caméra / micro pour getUserMedia, sélecteur de fichiers
