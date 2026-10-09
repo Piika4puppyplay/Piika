@@ -38,10 +38,17 @@
   let home = S.get('home', null);
   // Migration : garantir une tuile PupClean sur l'accueil (une fois)
   function ensureCleanTile() {
-    // PupClean a maintenant sa vraie icône (dans PuppyPlay) : on retire l'ancienne tuile-raccourci en double
+    // Auto-réparant : si l'icône native PupClean est listée → on retire la tuile-raccourci (doublon).
+    // Sinon (Samsung ne la liste pas) → on garde/ajoute une tuile PupClean visible sur l'accueil.
     if (!home || !home.pages) return;
+    const hasNative = apps.some((a) => isSelf(a) && /CleanActivity/.test(a.id));
+    const hasTile = home.pages.some((pg) => pg.some((it) => it && it.t === 'pup' && it.app === 'clean'));
     let changed = false;
-    home.pages = home.pages.map((pg) => pg.filter((it) => { if (it && it.t === 'pup' && it.app === 'clean') { changed = true; return false; } return true; }));
+    if (hasNative && hasTile) {
+      home.pages = home.pages.map((pg) => pg.filter((it) => { if (it && it.t === 'pup' && it.app === 'clean') { changed = true; return false; } return true; }));
+    } else if (!hasNative && !hasTile) {
+      home.pages[0].push({ t: 'pup', app: 'clean' }); changed = true;
+    }
     if (changed) saveHome();
   }
   // Migration : garantir le dossier PuppyPlay sur l'accueil (une fois)
