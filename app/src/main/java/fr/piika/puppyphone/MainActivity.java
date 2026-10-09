@@ -330,6 +330,7 @@ public class MainActivity extends Activity {
         if (p.endsWith(".woff2")) return "font/woff2";
         if (p.endsWith(".json")) return "application/json";
         if (p.endsWith(".wav")) return "audio/wav";
+        if (p.endsWith(".mp3")) return "audio/mpeg";
         return "application/octet-stream";
     }
 

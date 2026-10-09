@@ -80,6 +80,14 @@ public class DefisActivity extends PupWebActivity {
     @Override void onReady() {
         super.onReady();
         if (web == null) return;
+        // Correctif d'affichage : la WebView PuppyPhone est plein écran (derrière les barres système) et ne remplit pas
+        // env(safe-area-inset-*). On réutilise les marges système --st/--sb de PuppyPhone pour que la barre d'onglets du bas
+        // de Piika (position:fixed;bottom:0) remonte AU-DESSUS de la barre de navigation Android, et que rien ne soit coupé.
+        String fit = "html{padding-top:calc(env(safe-area-inset-top,0px) + var(--st,0px))!important}"
+                + "nav{padding-bottom:calc(8px + env(safe-area-inset-bottom,0px) + var(--sb,0px))!important}"
+                + "body{padding-bottom:calc(96px + var(--sb,0px))!important}"
+                + "#sosf{bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--sb,0px))!important}";
+        web.evaluateJavascript("(function(){var s=document.getElementById('pupfit');if(!s){s=document.createElement('style');s.id='pupfit';document.head.appendChild(s);}s.textContent=" + JSONObject.quote(fit) + ";})()", null);
         if (skinOn(this)) {
             String css = ":root,:root[data-theme=\"dark\"],:root[data-theme=\"light\"]{"
                     + "--bg:#140a24!important;--card:#241138!important;--txt:#f4e9ff!important;"
