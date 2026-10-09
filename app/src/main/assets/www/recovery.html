@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupRescousse</title>
+<style>
+:root{--acc:#ff3fa4;--acc2:#29e6ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:system-ui,-apple-system,sans-serif;color:#f6eefe;background:radial-gradient(130% 80% at 50% 0%,#3a1030,#1a0a12 60%,#0d0510)}
+body{display:flex;flex-direction:column;overflow-y:auto;padding:max(28px,env(safe-area-inset-top)) 18px calc(26px + env(safe-area-inset-bottom))}
+.head{text-align:center;margin-bottom:10px}
+.pup{width:150px;height:150px;margin:6px auto 2px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.6))}
+h1{margin:4px 0 2px;font-size:26px;font-weight:800;letter-spacing:.02em;text-shadow:0 0 14px var(--acc)}
+.sub{color:#d8b8cc;font-size:13.5px;margin:0 0 2px}
+.err{margin:12px 0 4px;padding:10px 12px;border-radius:12px;font:12px/1.5 ui-monospace,monospace;color:#ffd0d8;background:rgba(255,80,110,.1);border:1px solid rgba(255,90,120,.4);word-break:break-word;white-space:pre-wrap;display:none}
+.opts{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.opt{position:relative;display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:18px;text-align:left;border:0;color:#fff;cursor:pointer;
+  background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 40%,rgba(0,0,0,.25)),#2a1430;box-shadow:0 0 0 1.5px #000,inset 0 1px 0 rgba(255,255,255,.3),0 8px 16px rgba(0,0,0,.5)}
+.opt:active{transform:translateY(1px) scale(.99)}
+.opt .em{font-size:30px;flex:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.opt b{display:block;font-size:16px;margin-bottom:2px}
+.opt small{color:#cbb8dd;font-size:12.5px;line-height:1.4}
+.opt[disabled]{opacity:.4;pointer-events:none}
+.opt.up{--c:var(--acc2)}.opt.roll{--c:#ffb627}.opt.wipe{--c:#ff5a6a}.opt.retry{--c:#3dffb0}
+.opt{box-shadow:0 0 0 1.5px #000,inset 0 1px 0 rgba(255,255,255,.3),0 8px 16px rgba(0,0,0,.5),0 0 20px -8px var(--c,var(--acc))}
+.opt::after{content:"›";margin-left:auto;font-size:24px;color:var(--c,var(--acc));opacity:.8}
+.tag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;font-size:10.5px;font-weight:700;background:var(--c,var(--acc));color:#1a0a12;vertical-align:middle}
+.ver{text-align:center;margin-top:16px;font:11px ui-monospace,monospace;color:#9a7a8c;letter-spacing:.06em}
+.foot{margin-top:4px;text-align:center}
+.foot button{background:none;border:0;color:#b89ac8;font-size:13px;padding:10px;cursor:pointer;text-decoration:underline}
+#busy{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;background:rgba(10,4,10,.9);z-index:5}
+#busy.on{display:flex}
+.bar{width:min(86vw,320px);height:18px;border-radius:9px;background:#2a1420;box-shadow:inset 0 2px 5px #000;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc2),var(--acc));transition:width .2s}
+#bmsg{font-size:14px;color:#f6eefe}#bpct{font:13px ui-monospace,monospace;color:var(--acc2)}
+.spin{width:52px;height:52px;border-radius:50%;border:5px solid rgba(255,255,255,.15);border-top-color:var(--acc);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.xcancel{margin-top:6px;background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:12px;padding:8px 18px;font-size:13px}
+.sheet{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(6,2,8,.8);z-index:6}
+.sheet.on{display:flex}
+.card{width:100%;max-width:360px;padding:20px;border-radius:22px;background:#241130;box-shadow:0 0 0 1.5px #000,0 20px 50px rgba(0,0,0,.8);text-align:center}
+.card h3{margin:0 0 8px;font-size:18px;color:#ff8a98}
+.card p{margin:0 0 16px;font-size:13.5px;color:#d8c8e4;line-height:1.5}
+.card .row{display:flex;gap:10px}.card .row button{flex:1;padding:13px;border-radius:14px;border:0;font-size:14px;font-weight:700;cursor:pointer}
+.bn{background:#3a2a4a;color:#fff}.bd{background:linear-gradient(180deg,#ff6a7a,#c01020);color:#fff;box-shadow:0 0 16px -4px #ff5a6a}
+@keyframes sick{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg) translateY(-3px)}}
+.pup{animation:sick 3.5s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div class="head">
+  <svg class="pup" viewBox="0 0 120 120" aria-hidden="true">
+    <defs>
+      <radialGradient id="f" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#e8c9a0"/><stop offset=".65" stop-color="#b8763c"/><stop offset="1" stop-color="#6e3e18"/></radialGradient>
+      <radialGradient id="e" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#7a4522"/><stop offset="1" stop-color="#3a1c0a"/></radialGradient>
+    </defs>
+    <ellipse cx="60" cy="110" rx="34" ry="7" fill="rgba(0,0,0,.4)"/>
+    <path d="M24 42C8 36 4 62 10 82c3 10 14 10 18 1 4-12 6-30 8-41z" fill="url(#e)"/>
+    <path d="M96 42c16-6 20 20 14 40-3 10-14 10-18 1-4-12-6-30-8-41z" fill="url(#e)"/>
+    <ellipse cx="60" cy="60" rx="42" ry="40" fill="url(#f)"/>
+    <ellipse cx="60" cy="76" rx="25" ry="19" fill="#f3d3a8"/>
+    <!-- joues vertes malade -->
+    <ellipse cx="34" cy="66" rx="8" ry="5" fill="#8fd98f" opacity=".5"/><ellipse cx="86" cy="66" rx="8" ry="5" fill="#8fd98f" opacity=".5"/>
+    <!-- yeux fatigués (x_x doux) -->
+    <path d="M38 48l10 8M48 48l-10 8" stroke="#2a1a0a" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M72 48l10 8M82 48l-10 8" stroke="#2a1a0a" stroke-width="3.2" stroke-linecap="round"/>
+    <ellipse cx="60" cy="66" rx="9" ry="7" fill="#1a1018"/><ellipse cx="57" cy="63.5" rx="3" ry="1.6" fill="#fff" opacity=".5"/>
+    <path d="M52 82q8 5 16 0" stroke="#5a3218" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <!-- thermomètre -->
+    <g transform="rotate(18 78 84)"><rect x="74" y="78" width="26" height="6" rx="3" fill="#fff"/><circle cx="74" cy="81" r="5" fill="#ff5a6a"/><rect x="88" y="79.5" width="10" height="3" fill="#ff5a6a"/></g>
+    <!-- poche de glace -->
+    <path d="M44 20q16-8 32 0-4 10-16 10t-16-10z" fill="#bfe8ff" stroke="#7fb8e0" stroke-width="1.5"/><circle cx="54" cy="22" r="1.5" fill="#7fb8e0"/><circle cx="66" cy="23" r="1.5" fill="#7fb8e0"/>
+  </svg>
+  <h1>PupRescousse</h1>
+  <p class="sub" id="sub">Oh non, le chiot ne se sent pas bien… On le soigne ? 🩹</p>
+  <div class="err" id="err"></div>
+</div>
+
+<div class="opts" id="opts"></div>
+<div class="ver" id="ver"></div>
+<div class="foot"><button id="retry" type="button">↻ Juste réessayer de lancer l'accueil</button></div>
+
+<div id="busy"><div class="spin"></div><div id="bmsg">…</div><div class="bar"><i id="bfill"></i></div><div id="bpct"></div><button class="xcancel" id="xcancel" type="button">Annuler</button></div>
+
+<div class="sheet" id="sheet"><div class="card">
+  <h3>🧹 Repartir sur une base propre ?</h3>
+  <p>Ça efface <b>tous les réglages, dossiers, pelage et données</b> de PuppyPhone, puis l'appli redémarre comme au premier jour. <b>Tes photos, musiques et SMS ne sont pas touchés.</b> Pense à avoir enterré un os (sauvegarde) avant, si tu peux.</p>
+  <div class="row"><button class="bn" id="wno" type="button">Annuler</button><button class="bd" id="wyes" type="button">Tout effacer</button></div>
+</div></div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const R = window.Rescue || { auto: () => true, pelage: () => '{}', current: () => 51, lastError: () => '', check() { setTimeout(() => RescueUI.on('checked', JSON.stringify({ current: 51, latest: 52, url: 'x', size: 1e7, prev: 50, prevUrl: 'y', prevSize: 1e7 })), 700); }, update() {}, rollback() {}, wipe() {}, retry() {}, cancel() {}, close() {} };
+  let info = null;
+  try { const p = JSON.parse(R.pelage()); if (p.acc) { document.documentElement.style.setProperty('--acc', p.acc); document.documentElement.style.setProperty('--acc2', p.acc2); } } catch (e) {}
+  const cur = R.current();
+  $('#ver').textContent = 'PuppyPhone · version actuelle v1.0.' + cur;
+  const err = R.lastError();
+  if (err) { $('#err').style.display = 'block'; $('#err').textContent = '🐾 Dernier incident :\n' + err; }
+  if (!R.auto()) $('#sub').textContent = 'Un souci avec PuppyPhone ? Le chiot vient t’aider. 🩹';
+
+  function opt(cls, em, title, sub, tag, fn, dis) {
+    const b = document.createElement('button'); b.className = 'opt ' + cls; b.type = 'button'; if (dis) b.disabled = true;
+    b.innerHTML = `<span class="em">${em}</span><span><b>${title}${tag ? `<span class="tag">${tag}</span>` : ''}</b><small>${sub}</small></span>`;
+    b.onclick = fn; return b;
+  }
+  function render() {
+    const o = $('#opts'); o.innerHTML = '';
+    const latest = info && info.latest || 0, prev = info && info.prev || 0;
+    if (info) {
+      if (latest > cur) o.appendChild(opt('up', '⬆️', 'Mettre à jour', `Installer la dernière version v1.0.${latest} (souvent la plus stable)`, 'v' + latest, () => R.update(info.url, info.size)));
+      if (prev) o.appendChild(opt('roll', '⏪', 'Revenir à la version précédente', `Réinstaller v1.0.${prev}, la version d'avant`, 'v' + prev, () => R.rollback(info.prevUrl, info.prevSize)));
+      if (latest <= cur && !prev) o.appendChild(opt('up', '✓', 'Déjà à jour', 'Aucune autre version disponible sur GitHub', '', () => {}, true));
+    } else {
+      o.appendChild(opt('up', '🔎', 'Chercher une solution', 'Regarder sur GitHub s’il y a une mise à jour ou une version de secours', '', doCheck));
+    }
+    o.appendChild(opt('wipe', '🧹', 'Effacer et repartir propre', 'Remet PuppyPhone à zéro (réglages & données). En dernier recours.', '', () => $('#sheet').classList.add('on')));
+  }
+  function doCheck() {
+    busy('Le chiot ausculte GitHub… 🔎', true);
+    R.check();
+  }
+  function busy(msg, spin) { $('#busy').classList.add('on'); $('#bmsg').textContent = msg; $('#bpct').textContent = ''; $('#bfill').style.width = spin ? '0' : $('#bfill').style.width; $('.spin').style.display = spin ? '' : 'none'; $('.bar').style.display = spin ? 'none' : ''; $('#xcancel').style.display = spin ? 'none' : ''; }
+  function unbusy() { $('#busy').classList.remove('on'); }
+
+  $('#retry').onclick = () => R.retry();
+  $('#wno').onclick = () => $('#sheet').classList.remove('on');
+  $('#wyes').onclick = () => { $('#sheet').classList.remove('on'); busy('Grand nettoyage… l’appli va redémarrer à zéro 🐾', true); R.wipe(); };
+  $('#xcancel').onclick = () => { R.cancel(); unbusy(); };
+
+  window.RescueUI = {
+    on(ev, data) {
+      if (ev === 'checked') { try { info = JSON.parse(data); } catch (e) { info = null; } unbusy(); if (info && info.err) { $('#err').style.display = 'block'; $('#err').textContent = '🐾 ' + info.err; info = null; } render(); }
+      if (ev === 'work') { busy(data, data.indexOf('Installation') >= 0); }
+      if (ev === 'prog') { const p = +data; if (p >= 0) { $('.spin').style.display = 'none'; $('.bar').style.display = ''; $('#xcancel').style.display = ''; $('#busy').classList.add('on'); $('#bmsg').textContent = 'Téléchargement…'; $('#bfill').style.width = p + '%'; $('#bpct').textContent = p + '%'; } }
+      if (ev === 'err') { unbusy(); $('#err').style.display = 'block'; $('#err').textContent = '😿 ' + data; }
+    },
+  };
+  // auto : on lance tout de suite la recherche de solution
+  if (R.auto()) doCheck(); else render();
+})();
+</script>
+</body>
+</html>

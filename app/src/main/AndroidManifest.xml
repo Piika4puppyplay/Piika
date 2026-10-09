@@ -669,6 +669,25 @@
         </activity>
 
         <activity
+            android:name=".RecoveryActivity"
+            android:label="PupRescousse"
+            android:icon="@mipmap/ic_puprescue"
+            android:roundIcon="@mipmap/ic_puprescue"
+            android:exported="true"
+            android:process=":recovery"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.recovery"
+            android:excludeFromRecents="false"
+            android:theme="@style/PupNetTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".ScanActivity"
             android:label="PupScan"
             android:icon="@mipmap/ic_pupscan"

@@ -8,7 +8,8 @@ public class PupApp extends Application {
         super.onCreate();
         String proc = "";
         try { proc = android.os.Build.VERSION.SDK_INT >= 28 ? Application.getProcessName() : ""; } catch (Throwable ignored) { }
-        if (proc.endsWith(":phoenix")) return; // le phénix déterre l'os lui-même, après avoir fermé les autres processus
+        try { CrashGuard.installHandler(this); } catch (Throwable ignored) { }
+        if (proc.endsWith(":phoenix") || proc.endsWith(":recovery")) return;
         try { NicheBackup.applyPending(this); } catch (Throwable ignored) { }
     }
 }

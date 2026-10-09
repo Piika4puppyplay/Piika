@@ -107,6 +107,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        if (CrashGuard.armAndCheck(this)) { CrashGuard.openRescue(this); finish(); return; }
         if (getIntent() != null) pendingOpen = getIntent().getStringExtra("pup_open");
         Window w = getWindow();
         w.setStatusBarColor(Color.TRANSPARENT);
@@ -185,6 +186,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 pageReady = true;
                 pushInsets();
+                CrashGuard.markHealthyLater(MainActivity.this);
                 if (pendingOpen != null) { emit("open", pendingOpen); pendingOpen = null; }
             }
         });

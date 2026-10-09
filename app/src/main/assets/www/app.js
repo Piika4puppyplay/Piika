@@ -36,6 +36,13 @@
   let apps = [], byId = new Map(), defs = {}, status = {}, wall = {};
   let overrides = S.get('cats', {}), learn = S.get('learn', {}), fresh = S.get('fresh', {});
   let home = S.get('home', null);
+  // Migration : garantir une tuile PupClean sur l'accueil (une fois)
+  function ensureCleanTile() {
+    if (!home || !home.pages || cfg.cleanTile) return;
+    const has = home.pages.some((pg) => pg.some((it) => it && it.t === 'pup' && it.app === 'clean'));
+    if (!has) { const pg = home.pages[1] || home.pages[0]; pg.unshift({ t: 'pup', app: 'clean' }); saveHome(); }
+    cfg.cleanTile = true; S.set('cfg', cfg);
+  }
   const flairCache = new Map();
   const saveHome = () => S.set('home', home);
 
@@ -45,7 +52,7 @@
     return r;
   }
   const isNet = (a) => a.pkg === defs.self && /BrowserActivity/.test(a.id);
-  const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : /TasksActivity/.test(a.id) ? 'system' : /UpdateActivity/.test(a.id) ? 'system' : /CleanActivity/.test(a.id) ? 'system' : /NicheActivity/.test(a.id) ? 'system' : /ReveilActivity/.test(a.id) ? 'tools' : /NotesActivity/.test(a.id) ? 'tools' : /ScanActivity/.test(a.id) ? 'tools' : /DictaActivity/.test(a.id) ? 'tools' : /AgendaActivity/.test(a.id) ? 'tools' : /KbSettingsActivity/.test(a.id) ? 'tools' : /SmsActivity/.test(a.id) ? 'tel' : /DialerActivity/.test(a.id) ? 'tel' : /MusicActivity/.test(a.id) ? 'music' : /FileActivity/.test(a.id) ? 'tools' : null;
+  const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : /TasksActivity/.test(a.id) ? 'system' : /UpdateActivity/.test(a.id) ? 'system' : /CleanActivity/.test(a.id) ? 'system' : /RecoveryActivity/.test(a.id) ? 'system' : /NicheActivity/.test(a.id) ? 'system' : /ReveilActivity/.test(a.id) ? 'tools' : /NotesActivity/.test(a.id) ? 'tools' : /ScanActivity/.test(a.id) ? 'tools' : /DictaActivity/.test(a.id) ? 'tools' : /AgendaActivity/.test(a.id) ? 'tools' : /KbSettingsActivity/.test(a.id) ? 'tools' : /SmsActivity/.test(a.id) ? 'tel' : /DialerActivity/.test(a.id) ? 'tel' : /MusicActivity/.test(a.id) ? 'music' : /FileActivity/.test(a.id) ? 'tools' : null;
   const catOf = (a) => { const o = overrides[a.id] || selfCat(a); if (o) return o; const r = flairOf(a); return (r.cat === 'sort' && cfg.autoTidy && r.guess) ? r.guess : r.cat; };
   const appsIn = (cat) => apps.filter((a) => catOf(a) === cat);
   const isSelf = (a) => a.pkg === defs.self;
@@ -126,6 +133,7 @@
     settings: { label: 'PupRéglages', icon: () => I('gear', 'violet'), open: () => openSettings() },
     drawer: { label: 'Mes applis', icon: () => I('apps', 'cyan'), open: () => openDrawer() },
     niche: { label: 'La Niche', icon: () => I('paw', 'pink', { shape: 'orb' }), open: () => goPage(1) },
+    clean: { label: 'PupClean', icon: () => I('sparkle', 'cyan'), open: () => openClean() },
   };
 
   // ------------------------------------------------------------------ éléments de grille
@@ -166,7 +174,7 @@
       if (!a && cat) a = appsIn(cat)[0];
       return a ? { t: 'app', id: a.id } : null;
     };
-    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
+    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'clean' }, { t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
   }
 
   function renderGrid(p) {
@@ -268,7 +276,7 @@
   function loadDefaults() { defs = J(call('defaults'), {}) || {}; }
   let appsSig = '';
   function refreshApps(reason) {
-    const list = (J(call('apps'), []) || []).filter((a) => !(a.pkg === defs.self && /MainActivity/.test(a.id)));
+    const list = (J(call('apps'), []) || []).filter((a) => !(a.pkg === defs.self && /MainActivity|CleanActivity/.test(a.id)));
     list.sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
     apps = list;
     byId = new Map(apps.map((a) => [a.id, a]));
@@ -391,6 +399,7 @@
     if (kind === 'dock') return { where: 'dock', i: +rest, it: home.dock[+rest] };
     if (kind === 'n') return { where: 'niche', it: { t: 'folder', cat: rest } };
     if (kind === 'd' || kind === 'f' || kind === 'pick') return { where: kind, it: { t: 'app', id: rest } };
+    if (kind === 'pup') return { where: 'pupdrawer', it: { t: 'pup', app: rest } };
     if (kind === 'add') return { where: 'add', p: +rest };
     return {};
   }
@@ -399,7 +408,7 @@
     if (r.where === 'add') return addMenu(r.p);
     if (r.where === 'pick') return;
     if (r.where === 'dock' && !r.it) return pickApp('Choisir une appli pour le dock', (id) => { home.dock[r.i] = { t: 'app', id }; saveHome(); renderAll(); });
-    if (r.where === 'd') closeDrawer();
+    if (r.where === 'd' || r.where === 'pupdrawer') closeDrawer();
     if (r.where === 'f') closeTop();
     openItem(r.it);
   }
@@ -815,7 +824,9 @@
     const cellOf = (a) => itemHTML({ t: 'app', id: a.id }, 'd:' + a.id);
     let html = '';
     if (q) {
-      html = list.length ? `<div class="grid">${list.map(cellOf).join('')}</div>` : '';
+      const pupHits = Object.keys(PUP).filter((k) => norm(PUP[k].label).includes(q) || (k === 'clean' && ('pupclean nettoyage ranger menage'.includes(q))) || (k === 'niche' && 'reglages niche'.includes(q)));
+      let pg = pupHits.length ? `<div class="grid">${pupHits.map((k) => cell('pup:' + k, `<div class="ico svg">${PUP[k].icon()}</div>`, PUP[k].label)).join('')}</div>` : '';
+      html = pg + (list.length ? `<div class="grid">${list.map(cellOf).join('')}</div>` : '');
       html += `<button class="ab c2 wide" id="websearch" type="button" style="margin-top:14px">${I('globe', 'blue', { shape: 'none' })} Chercher « ${esc($('#q').value)} » sur le web</button>`;
     } else if (tab === 'all') {
       let cur = '', grid = [];
@@ -1048,7 +1059,7 @@
   // ------------------------------------------------------------------ pont natif
   window.PupNative = {
     on(ev, data) {
-      if (ev === 'resume') { document.body.classList.remove('paused'); refreshApps('resume'); updateStatus(); takePins(); tick(); homeNotifs(); }
+      if (ev === 'resume') { document.body.classList.remove('paused'); refreshApps('resume'); updateStatus(); takePins(); tick(); homeNotifs(); ensureCleanTile(); }
       else if (ev === 'notifs') homeNotifs();
       else if (ev === 'pause') document.body.classList.add('paused');
       else if (ev === 'apps') refreshApps(data);

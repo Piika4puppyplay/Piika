@@ -62,6 +62,7 @@ public final class PupUpdate {
             r.put("current", cur);
             JSONArray rel = new JSONArray(get(API));
             long latest = 0; String url = ""; long size = 0;
+            long prev = 0; String prevUrl = ""; long prevSize = 0;
             String updUrl = ""; long updSize = 0;
             JSONArray notes = new JSONArray();
             for (int i = 0; i < rel.length(); i++) {
@@ -79,9 +80,10 @@ public final class PupUpdate {
                 }
                 if (apk.isEmpty()) continue;
                 if (v > latest) { latest = v; url = apk; size = sz; }
+                if (v < cur && v > prev) { prev = v; prevUrl = apk; prevSize = sz; }
                 if (v > cur) notes.put(new JSONObject().put("v", v).put("date", o.optString("published_at")).put("body", o.optString("body")));
             }
-            r.put("latest", latest).put("url", url).put("size", size).put("notes", notes).put("page", PAGE).put("updUrl", updUrl).put("updSize", updSize);
+            r.put("latest", latest).put("url", url).put("size", size).put("notes", notes).put("page", PAGE).put("updUrl", updUrl).put("updSize", updSize).put("prev", prev).put("prevUrl", prevUrl).put("prevSize", prevSize);
             sp(c).edit().putString("updUrl", updUrl).putLong("updSize", updSize).putLong("lastCheck", System.currentTimeMillis()).putLong("latest", latest).putString("url", url).putLong("size", size).putString("notes", notes.toString()).apply();
         } catch (Exception e) {
             try { r.put("err", e.getMessage() == null ? e.toString() : e.getMessage()); } catch (Exception ignored) { }
