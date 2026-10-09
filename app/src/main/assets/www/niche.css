@@ -195,3 +195,10 @@ input[type=range]:disabled{opacity:.4}
 .barmv{display:flex;gap:4px}
 .barmv button{width:28px;height:28px;border-radius:8px;font-size:11px;color:#fff;background:radial-gradient(circle at 40% 30%,rgba(255,255,255,.5),transparent 50%),#4a3a60;box-shadow:0 0 0 1px #000}
 .barmv button:disabled{opacity:.3}
+.barcol{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.barcol.dim{opacity:.45;pointer-events:none}
+.barh{font-family:var(--f-head);font-size:11px;letter-spacing:.06em;color:var(--acc2);text-shadow:0 0 8px var(--acc2);margin:6px 2px 0}
+.barlist[data-list]{min-height:14px;display:flex;flex-direction:column;gap:6px;padding:4px;border-radius:12px;border:1.5px dashed rgba(255,255,255,.18)}
+.barempty{padding:6px 10px;font-size:11px;color:var(--muted);text-align:center}
+.baritem.drag{opacity:.4}
+.barmv button[data-bside]{font-size:13px}

@@ -184,26 +184,15 @@ final class PupVolet {
             p.setShader(new android.graphics.LinearGradient(0, 0, W, 0, new int[]{acc2, acc, acc2}, null, android.graphics.Shader.TileMode.CLAMP));
             c.drawRect(0, H - 2 * dens, W, H, p); p.setShader(null);
             float cy = H / 2f + 1 * dens, pad = 14 * dens, shift = sp.getInt("barreX", 0) * dens;
-            // éléments visibles dans l'ordre choisi (heure, pattes, médailles, réseau, batterie)
-            String order = sp.getString("barreOrdre", "heure,patte,medailles,reseau,batterie");
-            // on mesure chacun pour répartir : gauche = jusqu'à "medailles" inclus, droite = le reste
-            java.util.ArrayList<String> items = new java.util.ArrayList<>();
-            for (String it : order.split(",")) { it = it.trim(); if (!it.isEmpty() && sp.getBoolean("bar_" + it, true)) items.add(it); }
+            // deux listes : à gauche (depuis le bord gauche) et à droite (depuis le bord droit)
             float xl = pad + shift, xr = W - pad + shift;
-            boolean rightSide = false;
-            for (String it : items) if (it.equals("reseau") || it.equals("batterie")) rightSide = true;
-            // dessine de gauche à droite jusqu'au premier élément "droite", puis les droites collées à droite
-            boolean passedRight = false;
-            // d'abord calculer largeur des éléments de droite pour les poser
-            float rx = xr;
-            for (int i = items.size() - 1; i >= 0; i--) {
-                String it = items.get(i);
-                if (!it.equals("reseau") && !it.equals("batterie")) break;
-                rx = seg(c, it, rx, cy, H, acc, acc2, true);
-            }
-            for (String it : items) {
-                if (it.equals("reseau") || it.equals("batterie")) break;
+            for (String it : sp.getString("barreGauche", "heure,patte,medailles").split(",")) {
+                it = it.trim(); if (it.isEmpty() || !sp.getBoolean("bar_" + it, true)) continue;
                 xl = seg(c, it, xl, cy, H, acc, acc2, false);
+            }
+            for (String it : sp.getString("barreDroite", "reseau,batterie").split(",")) {
+                it = it.trim(); if (it.isEmpty() || !sp.getBoolean("bar_" + it, true)) continue;
+                xr = seg(c, it, xr, cy, H, acc, acc2, true);
             }
             p.setTypeface(null);
         }
@@ -457,28 +446,45 @@ final class PupVolet {
         if (svc == null || !voletOn(svc) || !sp(svc).getBoolean("voletForce", true)) return;
         boolean shade = false;
         try {
-            int sh = svc.getResources().getDisplayMetrics().heightPixels;
+            int sh = svc.getResources().getDisplayMetrics().heightPixels, sw = svc.getResources().getDisplayMetrics().widthPixels;
             for (android.view.accessibility.AccessibilityWindowInfo w : svc.getWindows()) {
                 if (w.getType() != android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM) continue;
-                CharSequence t = Build.VERSION.SDK_INT >= 24 ? w.getTitle() : null;
-                String ti = t == null ? "" : t.toString().toLowerCase(java.util.Locale.ROOT);
                 android.graphics.Rect r = new android.graphics.Rect(); w.getBoundsInScreen(r);
-                if (r.height() > sh * .55f && !ti.isEmpty() && !seenTitles.contains(ti)) { seenTitles.add(ti); diag("fenêtre système vue : « " + t + " »"); }
-                boolean named = ti.contains("notificationshade") || ti.contains("notification shade") || ti.contains("quickpanel") || ti.contains("notificationpanel") || ti.contains("volet");
-                // déplié = la fenêtre du volet a pris la main (focus) ; repliée, elle reste là mais sans focus
-                if (named && r.height() > sh * .55f && (w.isFocused() || w.isActive())) { shade = true; break; }
+                CharSequence t = Build.VERSION.SDK_INT >= 24 ? w.getTitle() : null;
+                String ti = t == null ? "" : t.toString();
+                if (r.height() > sh * .5f && !ti.isEmpty() && !seenTitles.contains(ti)) { seenTitles.add(ti); diag("fenêtre système : « " + ti + " » " + r.width() + "×" + r.height()); }
+                // repérage par la FORME (le nom change selon Samsung/Android) : grande fenêtre système qui part du haut et prend toute la largeur = le volet déroulé
+                boolean full = r.top <= sh * .12f && r.height() > sh * .5f && r.width() > sw * .7f;
+                if (full) { shade = true; break; }
             }
         } catch (Exception ignored) { }
         long now = android.os.SystemClock.uptimeMillis();
-        if (shade && !androidShade) diag("volet Android détecté" + (locked() ? " (verrouillé : on laisse)" : ""));
+        if (shade && !androidShade) diag("volet Android repéré (forme)" + (locked() ? " — verrouillé, on laisse" : ""));
         androidShade = shade;
         if (!shade) { if (now - androidOk > 1500) androidOk = 0; return; }
-        if (locked() || androidOk != 0 || now - lastHijack < 700) return;
+        if (locked() || androidOk != 0 || now - lastHijack < 650) return;
         lastHijack = now;
-        diag("→ volet Android refermé, volet PuppyPhone ouvert 🐾");
+        diag("→ je referme le volet Android et j'ouvre le tien 🐾");
+        slamShade(0);
+        h.postDelayed(() -> { if (!open) { showShade(); h.postDelayed(PupVolet::animOpen, 60); } }, 170);
+    }
+    /** Ferme le volet système, et réessaie si Samsung le laisse ouvert. */
+    static void slamShade(int tryN) {
+        if (svc == null || tryN > 3) return;
         if (Build.VERSION.SDK_INT >= 31) svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE);
         else svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
-        h.postDelayed(() -> { if (!open) { showShade(); h.postDelayed(PupVolet::animOpen, 60); } }, 160);
+        h.postDelayed(() -> {
+            boolean still = false;
+            try {
+                int sh = svc.getResources().getDisplayMetrics().heightPixels, sw = svc.getResources().getDisplayMetrics().widthPixels;
+                for (android.view.accessibility.AccessibilityWindowInfo w : svc.getWindows()) {
+                    if (w.getType() != android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM) continue;
+                    android.graphics.Rect r = new android.graphics.Rect(); w.getBoundsInScreen(r);
+                    if (r.top <= sh * .12f && r.height() > sh * .5f && r.width() > sw * .7f) { still = true; break; }
+                }
+            } catch (Exception ignored) { }
+            if (still) { diag("…têtu, nouvelle tentative"); slamShade(tryN + 1); }
+        }, 220);
     }
 
     /** Pousse le pop-up d'Android vers le haut (geste d'accessibilité) pour ne laisser que la carte puppyplay. */
