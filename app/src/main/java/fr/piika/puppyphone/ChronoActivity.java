@@ -6,4 +6,9 @@ public class ChronoActivity extends PupWebActivity {
     @Override String host() { return "pupchrono.local"; }
     @Override String page() { return "pd/chrono/index.html"; }
     @Override String uiName() { return "DownUI"; }
+
+    @Override void onReady() {
+        super.onReady();
+        PupDownFit.centerSheets(web);
+    }
 }

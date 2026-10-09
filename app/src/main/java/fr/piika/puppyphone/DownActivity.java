@@ -6,4 +6,9 @@ public class DownActivity extends PupWebActivity {
     @Override String host() { return "pupdown.local"; }
     @Override String page() { return "pupdown/index.html"; }
     @Override String uiName() { return "DownUI"; }
+
+    @Override void onReady() {
+        super.onReady();
+        PupDownFit.centerSheets(web);
+    }
 }

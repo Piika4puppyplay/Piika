@@ -49,10 +49,10 @@ public abstract class PupWebActivity extends Activity {
         w.setStatusBarColor(Color.TRANSPARENT);
         w.setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= 29) { w.setNavigationBarContrastEnforced(false); w.setStatusBarContrastEnforced(false); }
-        // Edge-to-edge moderne : le système nous envoie TOUTES les marges, y compris celle du clavier (IME),
-        // qu'on applique nous-mêmes en padding. Fiable quel que soit le téléphone (contrairement aux vieux flags).
-        if (Build.VERSION.SDK_INT >= 30) w.setDecorFitsSystemWindows(false);
-        else w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        // Le système recadre lui-même le contenu dans la zone utile (barres transparentes → on voit le dégradé thémé
+        // derrière), ET redimensionne la fenêtre quand le clavier s'ouvre → le contenu et la barre du bas remontent
+        // au-dessus du clavier. C'est le comportement standard fiable (comme l'appli Claude).
+        if (Build.VERSION.SDK_INT >= 30) w.setDecorFitsSystemWindows(true);
         w.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         dp = getResources().getDisplayMetrics().density;
         web = new WebView(this);
@@ -79,28 +79,8 @@ public abstract class PupWebActivity extends Activity {
         });
         web.addJavascriptInterface(bridge(), "Pup");
         setContentView(web);
-        framed = frameToSafeArea();
-        web.setOnApplyWindowInsetsListener((v, ins) -> {
-            int top, bottom, left, right;
-            if (Build.VERSION.SDK_INT >= 30) {
-                android.graphics.Insets bars = ins.getInsets(android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.displayCutout());
-                android.graphics.Insets ime = ins.getInsets(android.view.WindowInsets.Type.ime());
-                top = bars.top; left = bars.left; right = bars.right; bottom = Math.max(bars.bottom, ime.bottom);
-            } else {
-                top = ins.getSystemWindowInsetTop(); bottom = ins.getSystemWindowInsetBottom();
-                left = ins.getSystemWindowInsetLeft(); right = ins.getSystemWindowInsetRight();
-            }
-            if (framed) {
-                // Le lanceur recadre physiquement la WebView dans la zone utile : aucune app ne peut déborder,
-                // et le clavier (IME) pousse le contenu vers le haut. Les marges côté CSS deviennent donc nulles.
-                v.setPadding(left, top, right, bottom);
-                insT = 0; insB = 0;
-            } else {
-                insT = top; insB = bottom;
-            }
-            pushInsets();
-            return ins;
-        });
+        // Le contenu est déjà recadré par le système (decorFitsSystemWindows) → marges CSS nulles, pas de double marge.
+        insT = 0; insB = 0; pushInsets();
         web.loadUrl("https://" + host() + "/" + page());
     }
     @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", ""); }
@@ -152,10 +132,8 @@ public abstract class PupWebActivity extends Activity {
 
     void emit(String ev, String data) { ui.post(() -> { if (web != null) web.evaluateJavascript("window." + uiName() + "&&" + uiName() + ".on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data == null ? "" : data) + ")", null); }); }
     void pushInsets() {
-        // Recadré physiquement → marges CSS nulles (pas de double marge). Sinon on fournit --st/--sb comme avant.
-        final float t = framed ? 0 : insT / dp, bt = framed ? 0 : insB / dp;
-        final String stv = framed ? "0px" : "Math.max(" + t + ",20)+'px'";
-        ui.post(() -> { if (web != null) web.evaluateJavascript("(function(){var r=document.documentElement.style;r.setProperty('--st'," + stv + ");r.setProperty('--sb'," + bt + "+'px')})()", null); });
+        // Le système recadre déjà la WebView dans la zone utile → marges CSS nulles (pas de double marge).
+        ui.post(() -> { if (web != null) web.evaluateJavascript("(function(){var r=document.documentElement.style;r.setProperty('--st','0px');r.setProperty('--sb','0px')})()", null); });
     }
 
     WebResourceResponse serve(Uri u) {
