@@ -27,7 +27,7 @@ public class MajReceiver extends BroadcastReceiver {
                 Maj.notifyDone(c, "✅ PuppyPhone est à jour !", "v1.0." + Maj.version(c, Maj.PUPPY) + " · touche pour revenir sur l'accueil 🐾");
                 if (Maj.sp(c).getBoolean("retour", true)) {
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                        if (Maj.openPuppy(c)) MajActivity.finishAll();
+                        if (Maj.landSafely(c)) MajActivity.finishAll();
                     }, 900);
                 }
             } else MajActivity.status("selfdone", "");

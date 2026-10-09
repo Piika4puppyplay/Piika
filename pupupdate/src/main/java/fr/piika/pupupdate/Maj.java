@@ -174,10 +174,62 @@ final class Maj {
 
     /** Ramène sur l'accueil PuppyPhone. */
     static boolean openPuppy(Context c) {
+        if (version(c, PUPPY) == 0) return false; // pas installé : inutile d'essayer
         Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                 .setComponent(new ComponentName(PUPPY, PUPPY + ".MainActivity"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         try { c.startActivity(i); return true; } catch (Exception e) { return false; }
+    }
+
+    // ------------------------------------------------------------ atterrissage sans plante
+    /** Gestionnaires de root connus (on ne fait que les OUVRIR, jamais invoquer su). */
+    static final String[] ROOT_MGRS = {
+            "com.topjohnwu.magisk", "io.github.vvb2060.magisk", "io.github.huskydg.magisk",
+            "me.weishu.kernelsu", "com.rifsxd.ksunext", "me.bmax.apatch",
+            "eu.chainfire.supersu", "com.koushikdutta.superuser", "me.phh.superuser",
+            "com.kingroot.kinguser", "com.kingouser.com"
+    };
+
+    /**
+     * Après une mise à jour, PupUpdate doit atterrir quelque part — jamais sur un écran mort.
+     * Cascade : PuppyPhone → Réglages du téléphone → écran de verrouillage → gestionnaire root → (rien, mais pas de plante).
+     * Pensée surtout pour un téléphone rooté sans lanceur, en pleine config de PuppyPhone.
+     */
+    static boolean landSafely(Context c) {
+        if (openPuppy(c)) return true;                                        // 1. PuppyPhone si installé
+        if (tryStart(c, new Intent(android.provider.Settings.ACTION_SETTINGS))) return true; // 2. Réglages
+        if (lockScreen(c)) return true;                                       // 3. Écran de verrouillage
+        if (openRootManager(c)) return true;                                  // 4. Gestionnaire root
+        return false;                                                         // 5. Dernier recours : on ne plante pas
+    }
+
+    static boolean tryStart(Context c, Intent i) {
+        try { c.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return true; } catch (Exception e) { return false; }
+    }
+
+    /** Montre l'écran de verrouillage. Sans privilège Android ne le permet pas → on tente proprement via root, sans rien modifier. */
+    static boolean lockScreen(Context c) {
+        try {
+            android.app.admin.DevicePolicyManager dpm = (android.app.admin.DevicePolicyManager) c.getSystemService(Context.DEVICE_POLICY_SERVICE);
+            if (dpm != null) { dpm.lockNow(); return true; } // uniquement si PupUpdate est admin ; sinon SecurityException, on passe
+        } catch (Exception ignored) { }
+        try {
+            Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", "input keyevent 26"}); // POWER : éteint l'écran → le verrouillage apparaît au réveil
+            p.waitFor();
+            return p.exitValue() == 0;
+        } catch (Exception ignored) { }
+        return false;
+    }
+
+    /** Ouvre le gestionnaire de root s'il y en a un (Magisk, KernelSU, APatch, SuperSU…), sans invoquer su. */
+    static boolean openRootManager(Context c) {
+        for (String pkg : ROOT_MGRS) {
+            try {
+                Intent i = c.getPackageManager().getLaunchIntentForPackage(pkg);
+                if (i != null) { i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); c.startActivity(i); return true; }
+            } catch (Exception ignored) { }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------ vérification automatique

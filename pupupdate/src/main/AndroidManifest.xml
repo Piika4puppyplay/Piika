@@ -8,8 +8,12 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Pour l'atterrissage de secours : retrouver PuppyPhone, les Réglages et un éventuel gestionnaire de root. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
     <queries>
         <package android:name="fr.piika.puppyphone" />
+        <intent><action android:name="android.settings.SETTINGS" /></intent>
     </queries>
 
     <application
