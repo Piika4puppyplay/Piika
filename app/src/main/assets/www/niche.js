@@ -252,7 +252,7 @@
     if (a === 'a11y') nc('openA11y');
     if (a === 'aodsave') { const n = nc('aodSave', S.veilleStyle || 'verre'); toast(n ? `🦴 ${n} rangé dans Galerie › PupAOD` : "Oups, je n'ai pas pu l'enregistrer 🥺"); }
     if (a === 'aodopen') nc('openAod');
-    if (a === 'veilleprev') nc('veillePreview');
+    if (a === 'veilleprev') { toast('Aperçu de la Veille puppy… touche pour quitter 🐾'); setTimeout(() => nc('veillePreview'), 250); }
     if (a === 'decoprev') { if (nc('decoPreview') === false) veil(`<h3>PupNav n'est pas activé 🐶</h3><p>La déco du verrou passe par le service d'accessibilité <b>PupNav</b>, comme la barre. Active-le puis reviens ici.</p><div class="nrow"><button class="ab glass" data-a="ok" type="button">Plus tard</button><button class="ab amber" data-a="a11y" type="button">Ouvrir</button></div>`); else toast('Regarde bien, la déco s\'affiche 7 secondes 🐾'); }
     if (b.dataset.sw && !b.disabled) { const on = !b.classList.contains('on'); S[b.dataset.sw] = on; nc('set', b.dataset.sw, on); if (b.dataset.sw === 'sons' && window.PupSons) PupSons.set(on); if (b.dataset.sw === 'sons' && on) PupSons.preview('jappe', (S.sonsVol || 60) / 100); render(); }
   });

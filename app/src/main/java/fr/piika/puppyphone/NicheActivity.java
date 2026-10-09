@@ -200,7 +200,7 @@ public class NicheActivity extends Activity {
             try { WallpaperManager.getInstance(NicheActivity.this).clear(WallpaperManager.FLAG_LOCK); return true; }
             catch (Exception e) { return false; }
         }
-        @JavascriptInterface public void siestePreview() { ui.post(() -> PupVeille.show(NicheActivity.this, "/sieste.html", true)); }
+        @JavascriptInterface public void siestePreview() { ui.post(() -> startActivity(new Intent(NicheActivity.this, SiesteActivity.class).putExtra("preview", true))); }
         @JavascriptInterface public void dreamSettings() {
             ui.post(() -> {
                 try { startActivity(new Intent(Settings.ACTION_DREAM_SETTINGS)); }
@@ -230,7 +230,7 @@ public class NicheActivity extends Activity {
             return true;
         }
         @JavascriptInterface public void setStr(String k, String v) { if ("veilleStyle".equals(k) && v.matches("verre|os")) Pelage.sp(NicheActivity.this).edit().putString(k, v).commit(); }
-        @JavascriptInterface public void veillePreview() { ui.post(() -> PupVeille.show(NicheActivity.this, "/veille.html", true)); }
+        @JavascriptInterface public void veillePreview() { ui.post(() -> startActivity(new Intent(NicheActivity.this, VeilleActivity.class).putExtra("preview", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))); }
         /** Range le GIF de batterie puppy dans la Galerie (Images › PupAOD) pour l'Always On Display de Samsung. */
         @JavascriptInterface public String aodSave(String style) {
             if (!style.matches("verre|os")) return "";

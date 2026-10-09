@@ -25,7 +25,7 @@ public class VeilleActivity extends Activity {
         View v = s.create();
         v.setBackgroundColor(0xFF000000);
         setContentView(v);
-        Sieste.dim(getWindow(), Pelage.sp(this).getInt("veilleLum", 0));
+        Sieste.dim(getWindow(), preview ? 2 : Pelage.sp(this).getInt("veilleLum", 0));
         v.setOnTouchListener((x, e) -> { if (e.getAction() == android.view.MotionEvent.ACTION_UP) { ended = true; PupVeille.showing = false; finish(); } return true; });
         int sec = Pelage.sp(this).getInt("veilleDuree", 30);
         if (preview) sec = 10;
@@ -37,7 +37,7 @@ public class VeilleActivity extends Activity {
         if (!preview) PupVeille.sleepNow();
         finish();
     }
-    @Override protected void onResume() { super.onResume(); PupVeille.showing = !preview; s.start(); h.postDelayed(() -> Sieste.dim(getWindow(), Pelage.sp(this).getInt("veilleLum", 0)), 400); }
+    @Override protected void onResume() { super.onResume(); PupVeille.showing = !preview; s.start(); h.postDelayed(() -> Sieste.dim(getWindow(), preview ? 2 : Pelage.sp(this).getInt("veilleLum", 0)), 400); }
     @Override protected void onPause() {
         h.removeCallbacksAndMessages(null);
         if (s != null) s.stop();
