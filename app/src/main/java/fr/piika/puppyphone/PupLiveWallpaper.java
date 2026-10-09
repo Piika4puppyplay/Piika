@@ -19,7 +19,11 @@ import java.util.Random;
  * Moteur des fonds d'écran animés PuppyPhone. Chaque fond est une « scène » dessinée sur le GPU
  * (lockHardwareCanvas), en pleine résolution de l'écran, en pause dès qu'il n'est plus visible,
  * ralentie à 15 images/s en mode économie d'énergie.
- * Cette classe = « Boulevard néon » ; PupWallCosmos, PupWallAurore et PupWallNiche en sont les variantes.
+ * Cette classe = « Boulevard néon » ; PupWallCosmos, PupWallAurore, PupWallNiche… en sont les variantes.
+ *
+ * Fond différent sur le verrouillage : Android n'accepte qu'UN fond animé à la fois. L'astuce : le même moteur
+ * s'affiche derrière le verrouillage One UI (image du verrou retirée) et change lui-même de scène quand le téléphone
+ * est verrouillé (réglage « wallLock »), avec un fondu au déverrouillage. Le verrouillage lui-même n'est pas touché.
  */
 public class PupLiveWallpaper extends WallpaperService {
 
@@ -34,7 +38,32 @@ public class PupLiveWallpaper extends WallpaperService {
 
     class PupEngine extends Engine {
         final Handler h = new Handler(Looper.getMainLooper());
-        Scene sc;
+        Scene sc, lockSc;
+        String lockId = "";
+        boolean locked;
+        long fadeStart;            // fondu verrou → accueil au déverrouillage
+        static final long FADE = 550;
+        final android.content.BroadcastReceiver rx = new android.content.BroadcastReceiver() {
+            @Override public void onReceive(Context c, android.content.Intent i) {
+                boolean was = locked; checkLocked();
+                if (was && !locked) fadeStart = SystemClock.uptimeMillis();
+                if (visible) draw();
+            }
+        };
+        void checkLocked() {
+            try { locked = !isPreview() && getSystemService(android.app.KeyguardManager.class).isKeyguardLocked(); } catch (Exception e) { locked = false; }
+        }
+        /** Scène du verrouillage si elle est différente de celle de l'accueil. */
+        void ensureLock() {
+            String want = Pelage.sp(PupLiveWallpaper.this).getString("wallLock", "");
+            String home = sc instanceof LayeredScene ? ((LayeredScene) sc).id : "";
+            if (want.equals(home)) want = "";
+            if (!want.equals(lockId) || (lockSc == null && !want.isEmpty())) {
+                lockId = want;
+                lockSc = want.isEmpty() ? null : new LayeredScene(PupLiveWallpaper.this, want);
+                if (lockSc != null && W > 0) lockSc.size(W, H);
+            }
+        }
         boolean visible;
         int W, H;
         float xOff = .5f;
@@ -42,16 +71,37 @@ public class PupLiveWallpaper extends WallpaperService {
         long pelVer = -1;
         final Runnable frame = this::draw;
 
-        @Override public void onCreate(SurfaceHolder sh) { super.onCreate(sh); setOffsetNotificationsEnabled(true); }
+        @Override public void onCreate(SurfaceHolder sh) {
+            super.onCreate(sh); setOffsetNotificationsEnabled(true);
+            android.content.IntentFilter f = new android.content.IntentFilter();
+            f.addAction(android.content.Intent.ACTION_SCREEN_ON); f.addAction(android.content.Intent.ACTION_SCREEN_OFF); f.addAction(android.content.Intent.ACTION_USER_PRESENT);
+            try { registerReceiver(rx, f); } catch (Exception ignored) { }
+            checkLocked();
+        }
         void ensureScene() {
             long v = Pelage.sp(PupLiveWallpaper.this).getLong("ver", 0);
-            if (sc == null || v != pelVer) { pelVer = v; sc = scene(PupLiveWallpaper.this); if (W > 0) sc.size(W, H); }
+            if (sc == null || v != pelVer) { pelVer = v; sc = scene(PupLiveWallpaper.this); if (W > 0) sc.size(W, H); lockSc = null; lockId = ""; }
+            ensureLock();
         }
-        @Override public void onVisibilityChanged(boolean v) { visible = v; h.removeCallbacks(frame); if (v) { ensureScene(); last = 0; draw(); } }
-        @Override public void onSurfaceChanged(SurfaceHolder sh, int f, int w, int hh) { super.onSurfaceChanged(sh, f, w, hh); W = w; H = hh; ensureScene(); sc.size(w, hh); draw(); }
+        @Override public void onVisibilityChanged(boolean v) { visible = v; h.removeCallbacks(frame); if (v) { checkLocked(); ensureScene(); last = 0; draw(); } }
+        @Override public void onSurfaceChanged(SurfaceHolder sh, int f, int w, int hh) { super.onSurfaceChanged(sh, f, w, hh); W = w; H = hh; ensureScene(); sc.size(w, hh); if (lockSc != null) lockSc.size(w, hh); draw(); }
         @Override public void onSurfaceDestroyed(SurfaceHolder sh) { visible = false; h.removeCallbacks(frame); super.onSurfaceDestroyed(sh); }
-        @Override public void onDestroy() { h.removeCallbacks(frame); super.onDestroy(); }
+        @Override public void onDestroy() { h.removeCallbacks(frame); try { unregisterReceiver(rx); } catch (Exception ignored) { } super.onDestroy(); }
         @Override public void onOffsetsChanged(float xo, float yo, float xs, float ys, int xp, int yp) { xOff = xo; }
+
+        /** Accueil, verrouillage, ou le fondu entre les deux juste après le déverrouillage. */
+        void paint(Canvas c, float t, float dt, long now) {
+            if (lockSc == null) { sc.draw(c, t, dt, xOff); return; }
+            if (locked) { lockSc.draw(c, t, dt, .5f); return; }
+            long k = now - fadeStart;
+            sc.draw(c, t, dt, xOff);
+            if (k >= 0 && k < FADE) {
+                int a = (int) (255 * (1 - k / (float) FADE));
+                int sv = c.saveLayerAlpha(0, 0, W, H, a);
+                lockSc.draw(c, t, dt, .5f);
+                c.restoreToCount(sv);
+            }
+        }
 
         void draw() {
             if (!visible || sc == null || W == 0) return;
@@ -62,9 +112,9 @@ public class PupLiveWallpaper extends WallpaperService {
             Canvas c = null;
             try {
                 c = sh.lockHardwareCanvas();
-                if (c != null) sc.draw(c, (now - t0) / 1000f, dt, xOff);
+                if (c != null) paint(c, (now - t0) / 1000f, dt, now);
             } catch (Exception e) {
-                try { if (c == null) { c = sh.lockCanvas(); if (c != null) sc.draw(c, (now - t0) / 1000f, dt, xOff); } } catch (Exception ignored) { }
+                try { if (c == null) { c = sh.lockCanvas(); if (c != null) paint(c, (now - t0) / 1000f, dt, now); } } catch (Exception ignored) { }
             } finally { if (c != null) try { sh.unlockCanvasAndPost(c); } catch (Exception ignored) { } }
             h.removeCallbacks(frame);
             boolean eco = false;

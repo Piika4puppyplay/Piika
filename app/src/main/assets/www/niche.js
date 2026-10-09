@@ -9,7 +9,7 @@
   const PEL = [['auto', 'Chacun son pelage', '#ff3fa4', '#29e6ff', '#0b0614'], ['rose', 'Néon Rose', '#ff3fa4', '#29e6ff', '#0b0614'], ['cyan', 'Laser Turquoise', '#29e6ff', '#ff3fa4', '#030b12'], ['violet', 'Violet Velours', '#9b5cff', '#29e6ff', '#0b0418'], ['cuir', 'Cuir & Rivets', '#ff3fa4', '#29e6ff', '#120a10'], ['or', 'Or Royal', '#ffb627', '#ff3fa4', '#0e0802'], ['vert', 'Vert Fluo', '#3dffb0', '#9b5cff', '#020e0a']]
     .map(([id, nom, acc, acc2, bg]) => ({ id, nom, acc, acc2, bg }));
   const N = window.Niche || {
-    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, siesteCharge: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0, voletOn: true, popOn: true, aodNotif: true, aodNotifTxt: false, homeNotif: true, voletZone: 0, notifOk: false, writeOk: false, dndOk: false }),
+    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, siesteCharge: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0, voletOn: true, popOn: true, aodNotif: true, aodNotifTxt: false, homeNotif: true, voletZone: 0, notifOk: false, writeOk: false, dndOk: false, wallLock: 'chalet', lockOwn: true }),
     pelage() {}, backup() { const st = ['Réglages des Pup-apps…', 'Fichiers de la niche…', 'Mémoire des pages (playlists, favoris…)…', 'Rangement dans Téléchargements…']; st.forEach((m, i) => setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'step', msg: m })), 500 * (i + 1))); setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'done', name: 'niche_2026-10-09_02h10.puppy' })), 2600); },
     pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, setStr() {}, veillePreview() {}, aodSave: (st) => 'pup_aod_' + st + '.gif', openAod() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, notifAccess() {}, writeAccess() {}, dndAccess() {}, voletTest: () => true, popTest() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
   };
@@ -126,20 +126,29 @@
     { id: 'niche', cat: 'cocon', nom: 'La niche douillette', tag: 'PEINT · COSY', txt: "Mur de briques, parquet ciré, fenêtre sur la ville avec la <b>pluie qui glisse sur la vitre</b>, guirlande lumineuse qui scintille, néon PUPPY, étagère de livres. Un chiot <b>dort en respirant</b> dans son panier en cuir capitonné, avec ses « z » qui s'envolent." },
     { id: 'chalet', cat: 'cocon', nom: 'Chalet sous la neige', tag: 'PEINT · COSY', txt: "Chalet en rondins, grande fenêtre sur les montagnes où <b>la neige tombe</b>, rideaux tricotés, néon cozy. Cheminée en pierre au <b>feu qui crépite</b>, chaussettes suspendues, chocolats chauds, guirlande et bougies. Le chiot <b>dort en respirant</b> sous sa couverture à pattes, sur le tapis tricoté." },
   ];
-  let wsel = 'cosmos', wcat = 'espace';
+  let wsel = 'cosmos', wcat = 'espace', wmode = 'home';
   function renderWall() {
-    const W = WALLS.find((w) => w.id === wsel) || WALLS[0], posed = S.liveId || '';
+    const W = WALLS.find((w) => w.id === wsel) || WALLS[0], posed = S.liveId || '', lk = S.wallLock && S.wallLock !== posed ? S.wallLock : '';
+    const nom = (id) => esc((WALLS.find((w) => w.id === id) || {}).nom || '');
+    const lockMode = wmode === 'lock';
     $('#s-wall').innerHTML = `<section class="ncard">
-      <h2>${ic('moon', 'violet')}Fonds d'écran animés<em>${posed ? 'Posé : ' + esc((WALLS.find((w) => w.id === posed) || {}).nom || '') : 'Aucun posé'}</em></h2>
+      <h2>${ic('moon', 'violet')}Fonds d'écran animés<em>${posed ? 'Accueil : ' + nom(posed) + (lk ? ' · Verrou : ' + nom(lk) : '') : 'Aucun posé'}</em></h2>
+      <div class="seg wmode">${[['home', '🏠 Accueil'], ['lock', '🔒 Verrouillage']].map(([k, l]) => `<button type="button" data-wmode="${k}" class="${k === wmode ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="seg wcats">${CATS.map(([k, l]) => `<button type="button" data-wcat="${k}" class="${k === wcat ? 'on' : ''}">${l}</button>`).join('')}</div>
-      <div class="wbig"><img src="walls/${W.id}.jpg" alt=""><span class="phone">${esc(W.nom.toUpperCase())}</span></div>
-      <div class="wgal">${WALLS.filter((w) => w.cat === wcat).map((w) => `<button class="wcard${w.id === wsel ? ' on' : ''}" data-wall="${w.id}" type="button"><span class="wscreen"><img src="walls/${w.id}.jpg" alt=""><i class="wnotch"></i>${w.id === posed ? '<i class="wposed">POSÉ ✓</i>' : ''}</span><b>${esc(w.nom)}</b><small>${w.tag}</small></button>`).join('')}</div>
+      <div class="wbig${lockMode ? ' lockp' : ''}"><img src="walls/${W.id}.jpg" alt="">${lockMode ? '<span class="lkclock"><b>13:37</b><small>🔒 vendredi 9 octobre</small></span>' : ''}<span class="phone">${esc(W.nom.toUpperCase())}</span></div>
+      <div class="wgal">${WALLS.filter((w) => w.cat === wcat).map((w) => `<button class="wcard${w.id === wsel ? ' on' : ''}" data-wall="${w.id}" type="button"><span class="wscreen"><img src="walls/${w.id}.jpg" alt=""><i class="wnotch"></i>${w.id === posed ? '<i class="wposed">🏠 ✓</i>' : ''}${w.id === lk ? '<i class="wposed wlk">🔒 ✓</i>' : ''}</span><b>${esc(w.nom)}</b><small>${esc(w.tag)}</small></button>`).join('')}</div>
       <p class="hint">${W.txt}</p>
-      <p class="hint">Peint en haute définition, calque par calque (fond, décor, héros), avec des <b>halos aux couleurs de ton pelage</b>, avec de la profondeur quand tu glisses entre les pages (sur One UI et sur l'accueil PuppyPhone). Il se met en pause écran éteint et ralentit en mode économie d'énergie.</p>
+      ${lockMode ? `
+        <p class="hint">🔒 <b>Un fond différent sur le verrouillage.</b> Android n'accepte qu'un seul fond animé à la fois, alors j'ai appris une ruse au chiot : le fond animé de l'accueil s'affiche aussi derrière le verrouillage One UI et <b>change tout seul de scène</b> quand le téléphone est verrouillé, avec un fondu au déverrouillage. Code, empreinte et horloge de One UI ne bougent pas.</p>
+        ${!posed ? `<div class="warnbox"><span>🏠 Pose d'abord un fond animé PuppyPhone sur l'<b>accueil</b> (onglet Accueil) : c'est lui qui fera le changement de scène.</span><button class="ab small amber" data-wmode="home" type="button">Aller à l'accueil</button></div>` : ''}
+        <button class="ab wide violet" data-a="lockwall" type="button" ${!posed ? 'disabled' : ''}>${ic('lock', 'chrome', 'none')}${W.id === lk ? 'Déjà sur le verrouillage ✓' : W.id === posed ? '« ' + esc(W.nom) + ' » partout (le même)' : 'Poser « ' + esc(W.nom) + ' » sur le verrouillage'}</button>
+        ${lk ? `<button class="ab wide glass" data-a="lockwallsame" type="button">🏠 Le même qu'à l'accueil</button>` : ''}`
+      : `<p class="hint">Peint en haute définition, calque par calque (fond, décor, héros), avec des <b>halos aux couleurs de ton pelage</b>, avec de la profondeur quand tu glisses entre les pages (sur One UI et sur l'accueil PuppyPhone). Il se met en pause écran éteint et ralentit en mode économie d'énergie.</p>
       <button class="ab wide violet" data-a="wall" type="button">${ic('sparkle', 'chrome', 'none')}${W.id === posed ? 'Reposer « ' + esc(W.nom) + ' »' : 'Poser « ' + esc(W.nom) + ' »'}</button>
-      <button class="ab wide glass" data-a="lock" type="button">${ic('lock', 'chrome', 'none')}Aussi sur l'écran de verrouillage</button>
+      <button class="ab wide glass" data-a="lock" type="button">${ic('lock', 'chrome', 'none')}Aussi sur l'écran de verrouillage</button>`}
     </section>`;
   }
+
 
 
   const seg = (key, opts, cur, dis) => `<div class="seg${dis ? ' dim' : ''}">${opts.map(([v, l]) => `<button type="button" data-seg="${key}" data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}"${dis ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
@@ -263,6 +272,7 @@
     if (db) { S.siesteDuree = +db.dataset.dur; nc('setInt', 'siesteDuree', S.siesteDuree); render(); return; }
     const fb = e.target.closest('[data-force]');
     if (fb && !fb.disabled) { S.verrouForce = +fb.dataset.force; nc('setInt', 'verrouForce', S.verrouForce); render(); return; }
+    const wm = e.target.closest('[data-wmode]'); if (wm) { wmode = wm.dataset.wmode; if (wmode === 'lock' && S.wallLock) { const f = WALLS.find((w) => w.id === S.wallLock); if (f) { wsel = f.id; wcat = f.cat; } } renderWall(); return; }
     const wk = e.target.closest('[data-wcat]'); if (wk) { wcat = wk.dataset.wcat; const f = WALLS.find((w) => w.cat === wcat); if (f) wsel = f.id; renderWall(); return; }
     const wc0 = e.target.closest('[data-wall]'); if (wc0) { wsel = wc0.dataset.wall; renderWall(); return; }
     const b = e.target.closest('[data-a],[data-sw]'); if (!b) return;
@@ -271,6 +281,13 @@
     if (a === 'restore') nc('pickRestore');
     if (a === 'wall') nc('wallpaper', wsel);
     if (a === 'lock') veil(`<h3>Aussi sur l'écran de verrouillage ? 🔒</h3><p>La meilleure façon : quand Android te montre l'aperçu du fond, choisis <b>« Écrans d'accueil et de verrouillage »</b> s'il te le propose.</p><p>Sinon, je peux retirer l'image propre à ton écran de verrouillage : Android y affichera alors le fond animé de l'accueil. Le verrouillage One UI (code, empreinte, horloge) ne change pas. Pour remettre une image, choisis-la comme d'habitude dans les réglages Fond d'écran.</p><div class="nrow"><button class="ab glass" data-a="ok" type="button">Annuler</button><button class="ab violet" data-a="lockgo" type="button">Retirer l'image</button></div>`);
+    if (a === 'lockwall' || a === 'lockwallsame') {
+      const id = a === 'lockwallsame' ? '' : (wsel === S.liveId ? '' : wsel);
+      S.wallLock = id; nc('setStr', 'wallLock', id); renderWall();
+      if (id && S.lockOwn) veil(`<h3>Encore une étape 🔒</h3><p>Ton écran de verrouillage a sa <b>propre image</b> qui cache le fond animé. Je la retire : le fond PuppyPhone s'y affichera avec la scène « ${esc((WALLS.find((w) => w.id === id) || {}).nom || '')} ».</p><p>Le verrouillage One UI (code, empreinte, horloge) ne change pas. Pour remettre une image plus tard, choisis-la comme d'habitude dans les réglages Fond d'écran.</p><div class="nrow"><button class="ab glass" data-a="ok" type="button">Plus tard</button><button class="ab violet" data-a="lockgo" type="button">Retirer l'image</button></div>`);
+      else toast(id ? 'Verrouille ton téléphone pour voir 🐾' : 'Le verrouillage reprend le fond de l\'accueil 🏠');
+      return;
+    }
     if (a === 'lockgo') { const ok = nc('lockToo'); veil(); toast(ok === false ? "One UI n'a pas voulu 🥺 utilise le choix « accueil et verrouillage » de l'aperçu" : 'Verrouille ton téléphone pour voir 🐾'); }
     const wc = e.target.closest('[data-wall]'); if (wc) { wsel = wc.dataset.wall; renderWall(); return; }
     if (a === 'sieste') nc('siestePreview');
