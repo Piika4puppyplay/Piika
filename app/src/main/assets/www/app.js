@@ -38,11 +38,10 @@
   let home = S.get('home', null);
   // Migration : garantir une tuile PupClean sur l'accueil (une fois)
   function ensureCleanTile() {
-    // PupClean est intégré au lanceur (pas d'appli à part) : on garantit une tuile PupClean unique.
+    // PupClean vit dans le dossier PuppyPlay : on retire les anciennes tuiles-raccourcis en vrac
     if (!home || !home.pages) return;
-    let seen = 0, changed = false;
-    home.pages = home.pages.map((pg) => pg.filter((it) => { if (it && it.t === 'pup' && it.app === 'clean') { seen++; if (seen > 1) { changed = true; return false; } } return true; }));
-    if (seen === 0) { home.pages[0].push({ t: 'pup', app: 'clean' }); changed = true; }
+    let changed = false;
+    home.pages = home.pages.map((pg) => pg.filter((it) => { if (it && it.t === 'pup' && it.app === 'clean') { changed = true; return false; } return true; }));
     if (changed) saveHome();
   }
   // Migration : garantir le dossier PuppyPlay sur l'accueil (une fois)
@@ -183,7 +182,7 @@
       if (!a && cat) a = appsIn(cat)[0];
       return a ? { t: 'app', id: a.id } : null;
     };
-    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'clean' }, { t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
+    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
   }
 
   function renderGrid(p) {
@@ -409,6 +408,7 @@
     if (kind === 'n') return { where: 'niche', it: { t: 'folder', cat: rest } };
     if (kind === 'd' || kind === 'f' || kind === 'pick') return { where: kind, it: { t: 'app', id: rest } };
     if (kind === 'pup') return { where: 'pupdrawer', it: { t: 'pup', app: rest } };
+    if (kind === 'fp') return { where: 'folderpup', it: { t: 'pup', app: rest } };
     if (kind === 'add') return { where: 'add', p: +rest };
     return {};
   }
@@ -418,6 +418,7 @@
     if (r.where === 'pick') return;
     if (r.where === 'dock' && !r.it) return pickApp('Choisir une appli pour le dock', (id) => { home.dock[r.i] = { t: 'app', id }; saveHome(); renderAll(); });
     if (r.where === 'd' || r.where === 'pupdrawer') closeDrawer();
+    if (r.where === 'folderpup') closeTop();
     if (r.where === 'f') closeTop();
     openItem(r.it);
   }
@@ -540,11 +541,17 @@
   /** Retire les doublons de l'accueil : une même appli / dossier / Pup-app en plusieurs exemplaires → on garde le premier. */
   function dedupHome() {
     if (!home || !home.pages) return 0;
+    // catégories dont le DOSSIER est déjà posé sur l'accueil → une appli en double hors du dossier est inutile
+    const folderCats = new Set();
+    home.pages.forEach((pg) => pg.forEach((it) => { if (it && it.t === 'folder') folderCats.add(it.cat); }));
     const seen = new Set(), keyOf = (it) => !it ? null : it.t === 'app' ? 'a:' + it.id : it.t === 'folder' ? 'f:' + it.cat : it.t === 'pup' ? 'p:' + it.app : it.t === 'sc' ? 's:' + it.pkg + '/' + it.sid : it.t === 'link' ? 'l:' + it.url : null;
+    const appById = (id) => byId.get(id);
     let removed = 0;
     home.pages = home.pages.map((pg) => pg.filter((it) => {
       const k = keyOf(it); if (!k) return true;
-      if (seen.has(k)) { removed++; return false; }
+      if (seen.has(k)) { removed++; return false; }       // copie exacte
+      // appli posée en vrac alors que son dossier est déjà là
+      if (it.t === 'app') { const a = appById(it.id); if (a && folderCats.has(catOf(a))) { removed++; return false; } }
       seen.add(k); return true;
     }));
     return removed;
@@ -716,8 +723,10 @@
       const note = cat === 'sort'
         ? 'Flair 🐾 hésite sur ces applis. Appui long → « Ranger dans… » : il retiendra ton choix.'
         : 'Rangé automatiquement par Flair 🐾 · appui long pour déplacer une appli';
-      w.set(list.length
-        ? `<div class="grid">${list.map((a) => itemHTML({ t: 'app', id: a.id }, 'f:' + a.id)).join('')}</div><div class="wnote">${note}</div>`
+      const extra = cat === 'puppy' ? ['clean'] : [];
+      const extraHTML = extra.map((k) => cell('fp:' + k, `<div class="ico svg">${PUP[k].icon()}</div>`, PUP[k].label)).join('');
+      w.set((list.length || extra.length)
+        ? `<div class="grid">${list.map((a) => itemHTML({ t: 'app', id: a.id }, 'f:' + a.id)).join('')}${extraHTML}</div><div class="wnote">${note}</div>`
         : `<div class="empty">${I(c.g, c.c)}Dossier vide pour l'instant.</div>`);
       w.foot(onHome({ t: 'folder', cat }) ? '' : `<button class="ab small glass" data-act="pin" type="button">${I('home', 'pink', { shape: 'none' })} Mettre sur l'accueil</button>`);
       const pb = $('[data-act=pin]', w.w);
