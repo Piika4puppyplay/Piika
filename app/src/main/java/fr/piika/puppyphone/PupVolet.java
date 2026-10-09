@@ -117,12 +117,30 @@ final class PupVolet {
         int zone = sp(svc).getInt("voletZone", 0);
         int w = zone == 0 ? WindowManager.LayoutParams.MATCH_PARENT : svc.getResources().getDisplayMetrics().widthPixels / 2;
         int g = Gravity.TOP | (zone == 2 ? Gravity.START : Gravity.END);
-        if (trigger != null && (tLp.width != w || tLp.gravity != g)) { tLp.width = w; tLp.gravity = g; try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { } }
+        int th = zoneH();
+        if (trigger != null && (tLp.width != w || tLp.gravity != g || tLp.height != th)) { tLp.width = w; tLp.gravity = g; tLp.height = th; try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { } }
+    }
+
+    /** Hauteur de la zone qui attrape le geste : barre d'état + marge (fine / large / très large). */
+    static int zoneH() { int t = sp(svc).getInt("voletTaille", 1); return sbH + Math.round((t == 0 ? 10 : t == 2 ? 96 : 44) * dens); }
+
+    /** Un simple appui dans la zone n'est pas pour nous : on le rejoue sur l'appli en dessous. */
+    static void forwardTap(float x, float y) {
+        if (svc == null || trigger == null || Build.VERSION.SDK_INT < 24) return;
+        tLp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { }
+        h.postDelayed(() -> {
+            android.graphics.Path p = new android.graphics.Path(); p.moveTo(x, y);
+            try {
+                svc.dispatchGesture(new android.accessibilityservice.GestureDescription.Builder().addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(p, 0, 40)).build(), null, null);
+            } catch (Exception ignored) { }
+            h.postDelayed(() -> { if (trigger != null && tTouchable) { tLp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { } } }, 140);
+        }, 30);
     }
 
     static void addTrigger() {
         View v = new View(svc);
-        tLp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, sbH + Math.round(6 * dens), WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        tLp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, zoneH(), WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT);
         tLp.gravity = Gravity.TOP | Gravity.END; tLp.setTitle("PupVoletBande");
@@ -138,20 +156,21 @@ final class PupVolet {
             }
             return ins;
         });
-        final float[] y0 = {0}; final boolean[] drag = {false}; final VelocityTracker[] vt = {null};
+        final float[] y0 = {0}, x0 = {0}; final long[] t0 = {0}; final boolean[] drag = {false}; final VelocityTracker[] vt = {null};
         v.setOnTouchListener((x, e) -> {
             switch (e.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN: y0[0] = e.getRawY(); drag[0] = false; vt[0] = VelocityTracker.obtain(); vt[0].addMovement(e); return true;
+                case MotionEvent.ACTION_DOWN: y0[0] = e.getRawY(); x0[0] = e.getRawX(); t0[0] = e.getEventTime(); drag[0] = false; vt[0] = VelocityTracker.obtain(); vt[0].addMovement(e); return true;
                 case MotionEvent.ACTION_MOVE: {
                     if (vt[0] != null) vt[0].addMovement(e);
                     float dy = e.getRawY() - y0[0];
-                    if (!drag[0] && dy > 10 * dens) { drag[0] = true; diag("bande : glissé vers le bas ✓"); showShade(); }
+                    if (!drag[0] && dy > 6 * dens) { drag[0] = true; diag("bande : glissé vers le bas ✓"); showShade(); }
                     if (drag[0]) setProgress(dy);
                     return true;
                 }
                 case MotionEvent.ACTION_UP: case MotionEvent.ACTION_CANCEL: {
                     float vy = 0; if (vt[0] != null) { vt[0].addMovement(e); vt[0].computeCurrentVelocity(1000); vy = vt[0].getYVelocity(); vt[0].recycle(); vt[0] = null; }
-                    if (drag[0]) { float dy = e.getRawY() - y0[0]; if (vy > 900 || (vy > -300 && dy > panelH() * .3f)) animOpen(); else animClose(); }
+                    if (drag[0]) { float dy = e.getRawY() - y0[0]; if (vy > 700 || (vy > -300 && dy > panelH() * .22f)) animOpen(); else animClose(); }
+                    else if (e.getActionMasked() == MotionEvent.ACTION_UP && Math.hypot(e.getRawX() - x0[0], e.getRawY() - y0[0]) < 12 * dens && e.getEventTime() - t0[0] < 450) forwardTap(e.getRawX(), e.getRawY());
                     drag[0] = false; return true;
                 }
             }
