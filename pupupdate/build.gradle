@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
 // Version de l'appli PupUpdate elle-même : à augmenter uniquement quand PupUpdate change
-def UPD_VERSION = 4
+def UPD_VERSION = 5
 
 android {
     namespace 'fr.piika.pupupdate'

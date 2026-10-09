@@ -6,7 +6,7 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const J = (s, d) => { try { return s == null || s === '' ? d : JSON.parse(s); } catch (e) { return d; } };
   const mockR = { pp: { cur: 25, latest: 26, url: 'x', size: 3100000, installed: true, silent: false, prev: 24, prevUrl: 'x24', prevSize: 3050000 }, self: { cur: 1, latest: 1 }, notes: [{ v: 26, date: '2026-10-09T01:00:00Z', body: 'Fonds animés OLED : Pup dans l\'espace et Aurore des pattes\n- Sieste vraiment tamisée' }], versions: [{ v: 26, url: 'x', size: 3100000, date: '2026-10-09T01:00:00Z' }, { v: 25, url: 'x25', size: 3080000, date: '2026-10-08T01:00:00Z' }, { v: 24, url: 'x24', size: 3050000, date: '2026-10-07T01:00:00Z' }, { v: 23, url: 'x23', size: 3020000, date: '2026-10-06T01:00:00Z' }] };
-  const U = window.Upd || { info: () => JSON.stringify({ last: mockR, lastCheck: Date.now() - 6e5, auto: true, notify: true, retour: true, ppCur: 25, selfCur: 1, android12: true }), check() { setTimeout(() => UpdUI.on('checked', JSON.stringify(mockR)), 600); }, set() {}, update() { let d = 0; const t = setInterval(() => { d += 400000; UpdUI.on('progress', JSON.stringify({ d: Math.min(d, 3100000), t: 3100000 })); if (d >= 3100000) { clearInterval(t); UpdUI.on('status', '{"st":"done"}'); } }, 120); }, recover(url, size, v, down) { let d = 0; const tot = size || 3050000; const t = setInterval(() => { d += 500000; UpdUI.on('progress', JSON.stringify({ d: Math.min(d, tot), t: tot })); if (d >= tot) { clearInterval(t); UpdUI.on('status', down ? '{"st":"rolluninstall","msg":"v1.0.' + v + '"}' : '{"st":"rollinstall","msg":"v1.0.' + v + '"}'); } }, 120); }, cancel() {}, openPuppy() {}, openPage() {}, close() {} };
+  const U = window.Upd || { info: () => JSON.stringify({ last: mockR, lastCheck: Date.now() - 6e5, auto: true, notify: true, retour: true, ppCur: 25, selfCur: 1, android12: true, launcher: { puppy: true, others: 1, any: true } }), check() { setTimeout(() => UpdUI.on('checked', JSON.stringify(mockR)), 600); }, set() {}, update() { let d = 0; const t = setInterval(() => { d += 400000; UpdUI.on('progress', JSON.stringify({ d: Math.min(d, 3100000), t: 3100000 })); if (d >= 3100000) { clearInterval(t); UpdUI.on('status', '{"st":"done"}'); } }, 120); }, recover(url, size, v, down) { let d = 0; const tot = size || 3050000; const t = setInterval(() => { d += 500000; UpdUI.on('progress', JSON.stringify({ d: Math.min(d, tot), t: tot })); if (d >= tot) { clearInterval(t); UpdUI.on('status', down ? '{"st":"rolluninstall","msg":"v1.0.' + v + '"}' : '{"st":"rollinstall","msg":"v1.0.' + v + '"}'); } }, 120); }, cancel() {}, openPuppy() {}, openPage() {}, close() {} };
   const uc = (fn, ...a) => { try { return U[fn] ? U[fn](...a) : undefined; } catch (e) { console.warn(fn, e); } };
   const fmtSize = (b) => (b / 1048576).toFixed(1).replace('.', ',') + ' Mo';
   const fmtD = (t) => t ? new Date(t).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'jamais';
@@ -58,6 +58,28 @@
     return `<section class="ucard rec open">${head}${body}</section>`;
   }
 
+  function doSelfUpdate(self) { closeWarn(); which = 'self'; state = 'downloading'; err = ''; prog = { d: 0, t: self.size || 0 }; render(); uc('update', 'self', self.url, self.size || 0); }
+  function closeWarn() { const o = document.getElementById('umodal'); if (o) o.remove(); }
+
+  /** ⚠️ Aucun lanceur détecté : prévenir avant de mettre à jour PupUpdate (qui se ferme le temps de s'installer). */
+  function showLauncherWarn(self) {
+    snd('couine'); closeWarn();
+    const pp = R.pp || {}, canPp = (pp.url || '') !== '' && (pp.latest || 0) > 0;
+    const o = document.createElement('div'); o.id = 'umodal'; o.className = 'umodal';
+    o.innerHTML = `<div class="ubox">
+      <div class="uwhead">${pup('sad')}<div><b>Aucun lanceur détecté 🚨</b><span>Ni PuppyPhone, ni un autre écran d'accueil n'est installé.</span></div></div>
+      <p class="uwp">Veux-tu installer <b>PuppyPhone (le lanceur)</b> avant de mettre à jour PupUpdate ? PupUpdate se ferme le temps de s'installer : sans lanceur, le téléphone pourrait n'avoir <b>aucun écran d'accueil</b> en se rouvrant.</p>
+      <div class="uwrisk"><b>⚠️ Si tu refuses et continues sans lanceur</b>, une fois fini PupUpdate cherchera, dans l'ordre :
+        <ol><li>un lanceur (alternatif ou d'origine)</li><li>les Réglages du téléphone</li><li>l'écran de verrouillage</li><li>un gestionnaire de root (sans rien toucher)</li></ol>
+        Si rien de tout ça n'existe, l'écran restera <b>noir</b> jusqu'à ce que tu rouvres PupUpdate à la main (ou via ADB / root).</div>
+      ${canPp ? `<button class="ab wide green" data-a="warn-install-pp" type="button">${ic('download', 'chrome', 'none')}Installer PuppyPhone (lanceur) d'abord</button>`
+        : `<div class="uwrisk">PuppyPhone n'est pas dispo au téléchargement pour l'instant — touche « Vérifier » / GitHub d'abord.</div>`}
+      <button class="ab wide amber" data-a="warn-continue" type="button"><span class="rgly">⚠️</span>Continuer sans lanceur quand même</button>
+      <button class="ab wide glass" data-a="warn-cancel" type="button">Annuler</button>
+    </div>`;
+    document.body.appendChild(o);
+  }
+
   function render() {
     const pp = R.pp || { cur: S.ppCur || 0, installed: (S.ppCur || 0) > 0 }, self = R.self || { cur: S.selfCur || 1 };
     const cur = pp.cur || S.ppCur || 0, latest = pp.latest || 0, hasNew = latest > cur, selfNew = (self.latest || 0) > (self.cur || S.selfCur || 0);
@@ -106,7 +128,10 @@
     const a = b.dataset.a, pp = R.pp || {}, self = R.self || {};
     if (a === 'check') { checking = true; render(); uc('check'); }
     if (a === 'update') { which = 'pp'; state = 'downloading'; err = ''; prog = { d: 0, t: pp.size || 0 }; render(); uc('update', 'pp', pp.url, pp.size || 0); }
-    if (a === 'self') { which = 'self'; state = 'downloading'; err = ''; prog = { d: 0, t: self.size || 0 }; render(); uc('update', 'self', self.url, self.size || 0); }
+    if (a === 'self') { const L = S.launcher || {}; if (!L.any) { showLauncherWarn(self); return; } doSelfUpdate(self); }
+    if (a === 'warn-cancel') { closeWarn(); }
+    if (a === 'warn-install-pp') { closeWarn(); which = 'pp'; state = 'downloading'; err = ''; prog = { d: 0, t: pp.size || 0 }; render(); uc('update', 'pp', pp.url, pp.size || 0); }
+    if (a === 'warn-continue') { doSelfUpdate(self); }
     if (a === 'cancel') { uc('cancel'); state = 'idle'; render(); }
     if (a === 'rectoggle') { recOpen = !recOpen; if (!recOpen) pickOpen = false; snd('clic'); render(); }
     if (a === 'picktoggle') { pickOpen = !pickOpen; render(); }

@@ -197,11 +197,41 @@ final class Maj {
      */
     static boolean landSafely(Context c) {
         if (openPuppy(c)) return true;                                        // 1. PuppyPhone si installé
-        if (tryStart(c, new Intent(android.provider.Settings.ACTION_SETTINGS))) return true; // 2. Réglages
-        if (lockScreen(c)) return true;                                       // 3. Écran de verrouillage
-        if (openRootManager(c)) return true;                                  // 4. Gestionnaire root
-        return false;                                                         // 5. Dernier recours : on ne plante pas
+        if (openAnyLauncher(c)) return true;                                  // 2. Lanceur alternatif ou d'origine
+        if (tryStart(c, new Intent(android.provider.Settings.ACTION_SETTINGS))) return true; // 3. Réglages
+        if (lockScreen(c)) return true;                                       // 4. Écran de verrouillage
+        if (openRootManager(c)) return true;                                  // 5. Gestionnaire root
+        return false;                                                         // 6. Dernier recours : on ne plante pas
     }
+
+    /** Ouvre n'importe quel lanceur présent (alternatif ou d'origine), hors PuppyPhone et hors résolveur système. */
+    static boolean openAnyLauncher(Context c) {
+        Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        for (android.content.pm.ResolveInfo ri : c.getPackageManager().queryIntentActivities(home, 0)) {
+            String pkg = ri.activityInfo.packageName;
+            if (PUPPY.equals(pkg) || "android".equals(pkg)) continue; // on a déjà tenté PuppyPhone ; "android" = stub/résolveur
+            try {
+                c.startActivity(new Intent(home).setClassName(pkg, ri.activityInfo.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return true;
+            } catch (Exception ignored) { }
+        }
+        return false;
+    }
+
+    /** Combien de lanceurs « réels » (hors PuppyPhone et hors stub système) sont installés. */
+    static int otherLaunchers(Context c) {
+        Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        int n = 0;
+        for (android.content.pm.ResolveInfo ri : c.getPackageManager().queryIntentActivities(home, 0)) {
+            String pkg = ri.activityInfo.packageName;
+            if (PUPPY.equals(pkg) || "android".equals(pkg)) continue;
+            n++;
+        }
+        return n;
+    }
+
+    /** Y a-t-il un écran d'accueil utilisable ? (PuppyPhone lanceur, ou un autre lanceur) */
+    static boolean hasLauncher(Context c) { return version(c, PUPPY) > 0 || otherLaunchers(c) > 0; }
 
     static boolean tryStart(Context c, Intent i) {
         try { c.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return true; } catch (Exception e) { return false; }

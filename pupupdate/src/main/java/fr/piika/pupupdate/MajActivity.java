@@ -55,6 +55,10 @@ public class MajActivity extends Activity {
         super.onCreate(b);
         I = this;
         takeColors(getIntent());
+        // S'afficher par-dessus l'écran de verrouillage et rallumer l'écran : permet de continuer une install/rollback
+        // même si le téléphone s'est verrouillé entre-temps (sans déverrouiller, on reste au-dessus du verrouillage).
+        if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
+        else getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         Window w = getWindow();
         w.setStatusBarColor(Color.TRANSPARENT);
         w.setNavigationBarColor(Color.TRANSPARENT);
@@ -164,7 +168,11 @@ public class MajActivity extends Activity {
                 return new JSONObject().put("last", new JSONObject(p.getString("last", "{}"))).put("lastCheck", p.getLong("lastCheck", 0))
                         .put("auto", p.getBoolean("auto", true)).put("notify", p.getBoolean("notify", true)).put("retour", p.getBoolean("retour", true))
                         .put("ppCur", Maj.version(MajActivity.this, Maj.PUPPY)).put("selfCur", Maj.version(MajActivity.this, getPackageName()))
-                        .put("android12", Build.VERSION.SDK_INT >= 31).put("busy", busy).toString();
+                        .put("android12", Build.VERSION.SDK_INT >= 31).put("busy", busy)
+                        .put("launcher", new JSONObject()
+                                .put("puppy", Maj.version(MajActivity.this, Maj.PUPPY) > 0)
+                                .put("others", Maj.otherLaunchers(MajActivity.this))
+                                .put("any", Maj.hasLauncher(MajActivity.this))).toString();
             } catch (Exception e) { return "{}"; }
         }
         @JavascriptInterface public void check() { new Thread(() -> emit("checked", Maj.check(MajActivity.this).toString())).start(); }
