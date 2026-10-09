@@ -37,10 +37,15 @@ public abstract class PupWebActivity extends Activity {
     Object bridge() { return new Common(); }
     /** Appelé quand la page est prête (après onPageFinished) : les sous-classes peuvent injecter du CSS/JS. */
     void onReady() { }
+    /** Le lanceur recadre l'app dans la zone utile de l'écran (marges barres système + encoche + clavier).
+     *  Les apps vraiment plein écran (caméra, veille…) pourront renvoyer false. */
+    boolean frameToSafeArea() { return true; }
+    boolean framed;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         Window w = getWindow();
+        w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Pelage.bg(this)));
         w.setStatusBarColor(Color.TRANSPARENT);
         w.setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= 29) { w.setNavigationBarContrastEnforced(false); w.setStatusBarContrastEnforced(false); }
@@ -70,7 +75,28 @@ public abstract class PupWebActivity extends Activity {
         });
         web.addJavascriptInterface(bridge(), "Pup");
         setContentView(web);
-        web.setOnApplyWindowInsetsListener((v, ins) -> { insT = ins.getSystemWindowInsetTop(); insB = ins.getSystemWindowInsetBottom(); pushInsets(); return ins; });
+        framed = frameToSafeArea();
+        web.setOnApplyWindowInsetsListener((v, ins) -> {
+            int top, bottom, left, right;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = ins.getInsets(android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.displayCutout());
+                android.graphics.Insets ime = ins.getInsets(android.view.WindowInsets.Type.ime());
+                top = bars.top; left = bars.left; right = bars.right; bottom = Math.max(bars.bottom, ime.bottom);
+            } else {
+                top = ins.getSystemWindowInsetTop(); bottom = ins.getSystemWindowInsetBottom();
+                left = ins.getSystemWindowInsetLeft(); right = ins.getSystemWindowInsetRight();
+            }
+            if (framed) {
+                // Le lanceur recadre physiquement la WebView dans la zone utile : aucune app ne peut déborder,
+                // et le clavier (IME) pousse le contenu vers le haut. Les marges côté CSS deviennent donc nulles.
+                v.setPadding(left, top, right, bottom);
+                insT = 0; insB = 0;
+            } else {
+                insT = top; insB = bottom;
+            }
+            pushInsets();
+            return ins;
+        });
         web.loadUrl("https://" + host() + "/" + page());
     }
     @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", ""); }
@@ -106,7 +132,12 @@ public abstract class PupWebActivity extends Activity {
     }
 
     void emit(String ev, String data) { ui.post(() -> { if (web != null) web.evaluateJavascript("window." + uiName() + "&&" + uiName() + ".on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data == null ? "" : data) + ")", null); }); }
-    void pushInsets() { final float t = insT / dp, bt = insB / dp; ui.post(() -> { if (web != null) web.evaluateJavascript("(function(){var r=document.documentElement.style;r.setProperty('--st',Math.max(" + t + ",20)+'px');r.setProperty('--sb'," + bt + "+'px')})()", null); }); }
+    void pushInsets() {
+        // Recadré physiquement → marges CSS nulles (pas de double marge). Sinon on fournit --st/--sb comme avant.
+        final float t = framed ? 0 : insT / dp, bt = framed ? 0 : insB / dp;
+        final String stv = framed ? "0px" : "Math.max(" + t + ",20)+'px'";
+        ui.post(() -> { if (web != null) web.evaluateJavascript("(function(){var r=document.documentElement.style;r.setProperty('--st'," + stv + ");r.setProperty('--sb'," + bt + "+'px')})()", null); });
+    }
 
     WebResourceResponse serve(Uri u) {
         if (u == null || !host().equals(u.getHost())) return null;
