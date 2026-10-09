@@ -48,7 +48,16 @@ final class PupVeille {
         final String p = pg;
         h.postDelayed(() -> {
             try { if (c.getSystemService(PowerManager.class).isInteractive()) return; } catch (Exception ignored) { } // tu as déjà rallumé : on ne gêne pas
-            show(c, p, false);
+            // Sécurité : si One UI attend encore avant de verrouiller (délai « après X secondes »), on verrouille tout de suite,
+            // pour que le téléphone soit bien verrouillé derrière la sieste / la veille.
+            boolean locked = true;
+            try { locked = c.getSystemService(android.app.KeyguardManager.class).isKeyguardLocked(); } catch (Exception ignored) { }
+            PupNavA11y a = PupNavA11y.I;
+            if (!locked && a != null && Build.VERSION.SDK_INT >= 28) {
+                lastShow = SystemClock.uptimeMillis();
+                a.performGlobalAction(AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN);
+                h.postDelayed(() -> show(c, p, false), 450);
+            } else show(c, p, false);
         }, 700); // on laisse le verrouillage se mettre en place, puis on passe devant
     }
 
