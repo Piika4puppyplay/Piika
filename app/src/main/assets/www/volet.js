@@ -126,6 +126,17 @@
     el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
   }
   dragger($('#grip')); dragger($('#hdr'));
+  // Glissé vers le haut sur la liste des notifications : referme le volet (le défilement normal reste possible)
+  (function () {
+    const L = $('#nlist'); if (!L) return;
+    let sy = 0, st0 = 0, active = false;
+    L.addEventListener('pointerdown', (e) => { if (e.target.closest('button,input,.rep')) { active = false; return; } sy = e.clientY; st0 = performance.now(); active = true; });
+    L.addEventListener('pointerup', (e) => {
+      if (!active) return; active = false;
+      const dy = e.clientY - sy, vy = dy / Math.max(1, performance.now() - st0) * 1000;
+      if (dy < -90 && vy < -350 && $('#panel').scrollTop < 6) V.close();
+    });
+  })();
   $('#out').addEventListener('click', () => V.close());
   document.addEventListener('click', (e) => { const g = e.target.closest('[data-g]'); if (g) { V.haptic(); V.glob(g.dataset.g); } });
 

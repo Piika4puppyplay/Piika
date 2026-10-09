@@ -176,56 +176,98 @@ final class PupVolet {
             int acc = 0xFFFF3FA4, acc2 = 0xFF29E6FF;
             try { acc = android.graphics.Color.parseColor(Pelage.cur(svc)[2]); acc2 = android.graphics.Color.parseColor(Pelage.cur(svc)[3]); } catch (Exception ignored) { }
             if (face == null) try { face = android.graphics.Typeface.createFromAsset(svc.getAssets(), "www/fonts/Bungee-Regular.ttf"); } catch (Exception e) { face = android.graphics.Typeface.DEFAULT_BOLD; }
-            p.setShader(new android.graphics.LinearGradient(0, 0, 0, H, 0xFF22113A, 0xFF0D0617, android.graphics.Shader.TileMode.CLAMP));
+            SharedPreferences sp = sp(svc);
+            int opa = Math.max(20, Math.min(100, sp.getInt("barreOpa", 100)));
+            int bgA = (int) (0xFF * opa / 100f);
+            p.setShader(new android.graphics.LinearGradient(0, 0, 0, H, (bgA << 24) | 0x22113A, (bgA << 24) | 0x0D0617, android.graphics.Shader.TileMode.CLAMP));
             c.drawRect(0, 0, W, H, p); p.setShader(null);
-            // filet néon en bas
             p.setShader(new android.graphics.LinearGradient(0, 0, W, 0, new int[]{acc2, acc, acc2}, null, android.graphics.Shader.TileMode.CLAMP));
             c.drawRect(0, H - 2 * dens, W, H, p); p.setShader(null);
-            float cy = H / 2f + 1 * dens, pad = 14 * dens;
-            // heure
-            java.util.Calendar k = java.util.Calendar.getInstance();
-            String t = String.format(java.util.Locale.FRANCE, "%02d:%02d", k.get(java.util.Calendar.HOUR_OF_DAY), k.get(java.util.Calendar.MINUTE));
-            p.setTypeface(face); p.setTextSize(H * .48f); p.setColor(0xFFFFFFFF); p.setShadowLayer(6 * dens, 0, 0, acc);
-            c.drawText(t, pad, cy + p.getTextSize() * .36f, p); p.clearShadowLayer();
-            float x = pad + p.measureText(t) + 8 * dens;
-            PupDraw.paw(c, p, x + 6 * dens, cy, 6 * dens, -12, acc, 255);
-            x += 18 * dens;
-            // médailles des applis qui ont écrit
-            try {
-                org.json.JSONArray a = new org.json.JSONArray(PupNotifs.summary(svc, false));
-                float r = H * .3f;
-                for (int i = 0; i < Math.min(5, a.length()); i++) {
-                    android.graphics.Bitmap b = icon(a.getJSONObject(i).getString("pkg"));
-                    if (x + 2 * r > W * .42f) break;
-                    p.setColor(0xFFD6D0E2); c.drawCircle(x + r, cy, r + 1.5f * dens, p);
-                    if (b != null) { android.graphics.Path cl = new android.graphics.Path(); cl.addCircle(x + r, cy, r, android.graphics.Path.Direction.CW); c.save(); c.clipPath(cl); c.drawBitmap(b, null, new android.graphics.RectF(x, cy - r, x + 2 * r, cy + r), p); c.restore(); }
-                    x += 2 * r + 5 * dens;
-                }
-            } catch (Exception ignored) { }
-            // batterie à droite
-            android.content.Intent bi = svc.registerReceiver(null, new IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
-            int lv = bi == null ? 50 : bi.getIntExtra(BatteryManager.EXTRA_LEVEL, 50) * 100 / Math.max(1, bi.getIntExtra(BatteryManager.EXTRA_SCALE, 100));
-            boolean chg = bi != null && bi.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
-            p.setTextSize(H * .42f); String pc = lv + "%";
-            float bw = 24 * dens, bh = H * .42f, bx = W - pad - bw, by = cy - bh / 2;
-            p.setStyle(android.graphics.Paint.Style.STROKE); p.setStrokeWidth(1.6f * dens); p.setColor(0xFFD6D0E2);
-            c.drawRoundRect(new android.graphics.RectF(bx, by, bx + bw, by + bh), 3 * dens, 3 * dens, p);
-            p.setStyle(android.graphics.Paint.Style.FILL); c.drawRect(bx + bw, cy - bh * .22f, bx + bw + 2.2f * dens, cy + bh * .22f, p);
-            p.setColor(lv <= 15 && !chg ? 0xFFFF4D5E : chg ? 0xFF3DFFB0 : acc2);
-            c.drawRoundRect(new android.graphics.RectF(bx + 2.2f * dens, by + 2.2f * dens, bx + 2.2f * dens + (bw - 4.4f * dens) * lv / 100f, by + bh - 2.2f * dens), 1.5f * dens, 1.5f * dens, p);
-            p.setColor(0xFFFFFFFF); c.drawText(pc, bx - 6 * dens - p.measureText(pc), cy + p.getTextSize() * .36f, p);
-            float wx = bx - 12 * dens - p.measureText(pc) - 16 * dens;
-            // wi-fi (éventails)
-            try {
-                android.net.ConnectivityManager cm = svc.getSystemService(android.net.ConnectivityManager.class);
-                android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
-                boolean wifi = nc != null && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI), cell = nc != null && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR);
-                p.setStyle(android.graphics.Paint.Style.STROKE); p.setStrokeWidth(1.8f * dens); p.setColor(0xFFFFFFFF); p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
-                if (wifi) for (int i = 1; i <= 3; i++) { float rr = i * 3.6f * dens; c.drawArc(new android.graphics.RectF(wx - rr, cy + 4 * dens - rr, wx + rr, cy + 4 * dens + rr), 225, 90, false, p); }
-                else if (cell) { p.setStyle(android.graphics.Paint.Style.FILL); for (int i = 0; i < 4; i++) c.drawRect(wx - 8 * dens + i * 4.2f * dens, cy + 5 * dens - (i + 1) * 2.6f * dens, wx - 5.4f * dens + i * 4.2f * dens, cy + 5 * dens, p); }
-                p.setStyle(android.graphics.Paint.Style.FILL);
-            } catch (Exception ignored) { }
+            float cy = H / 2f + 1 * dens, pad = 14 * dens, shift = sp.getInt("barreX", 0) * dens;
+            // éléments visibles dans l'ordre choisi (heure, pattes, médailles, réseau, batterie)
+            String order = sp.getString("barreOrdre", "heure,patte,medailles,reseau,batterie");
+            // on mesure chacun pour répartir : gauche = jusqu'à "medailles" inclus, droite = le reste
+            java.util.ArrayList<String> items = new java.util.ArrayList<>();
+            for (String it : order.split(",")) { it = it.trim(); if (!it.isEmpty() && sp.getBoolean("bar_" + it, true)) items.add(it); }
+            float xl = pad + shift, xr = W - pad + shift;
+            boolean rightSide = false;
+            for (String it : items) if (it.equals("reseau") || it.equals("batterie")) rightSide = true;
+            // dessine de gauche à droite jusqu'au premier élément "droite", puis les droites collées à droite
+            boolean passedRight = false;
+            // d'abord calculer largeur des éléments de droite pour les poser
+            float rx = xr;
+            for (int i = items.size() - 1; i >= 0; i--) {
+                String it = items.get(i);
+                if (!it.equals("reseau") && !it.equals("batterie")) break;
+                rx = seg(c, it, rx, cy, H, acc, acc2, true);
+            }
+            for (String it : items) {
+                if (it.equals("reseau") || it.equals("batterie")) break;
+                xl = seg(c, it, xl, cy, H, acc, acc2, false);
+            }
             p.setTypeface(null);
+        }
+        /** Dessine un élément de la barre. rightAligned : x est le bord droit (on dessine vers la gauche). Renvoie le nouveau x. */
+        float seg(android.graphics.Canvas c, String it, float x, float cy, float H, int acc, int acc2, boolean rightAligned) {
+            switch (it) {
+                case "heure": {
+                    java.util.Calendar k = java.util.Calendar.getInstance();
+                    String t = String.format(java.util.Locale.FRANCE, "%02d:%02d", k.get(java.util.Calendar.HOUR_OF_DAY), k.get(java.util.Calendar.MINUTE));
+                    p.setTypeface(face); p.setTextSize(H * .48f); p.setColor(0xFFFFFFFF); p.setShadowLayer(6 * dens, 0, 0, acc);
+                    float w = p.measureText(t);
+                    float dx = rightAligned ? x - w : x;
+                    c.drawText(t, dx, cy + p.getTextSize() * .36f, p); p.clearShadowLayer();
+                    return rightAligned ? dx - 10 * dens : x + w + 10 * dens;
+                }
+                case "patte":
+                    PupDraw.paw(c, p, (rightAligned ? x - 7 * dens : x + 7 * dens), cy, 6 * dens, -12, acc, 255);
+                    return rightAligned ? x - 20 * dens : x + 20 * dens;
+                case "medailles": {
+                    float r = H * .3f, step = 2 * r + 5 * dens; int W = getWidth();
+                    try {
+                        org.json.JSONArray a = new org.json.JSONArray(PupNotifs.summary(svc, false));
+                        int n = Math.min(5, a.length());
+                        for (int i = 0; i < n; i++) {
+                            float cxl = rightAligned ? x - r - i * step : x + r + i * step;
+                            if (!rightAligned && cxl + r > W * .5f) break;
+                            android.graphics.Bitmap b = icon(a.getJSONObject(i).getString("pkg"));
+                            p.setColor(0xFFD6D0E2); c.drawCircle(cxl, cy, r + 1.5f * dens, p);
+                            if (b != null) { android.graphics.Path cl = new android.graphics.Path(); cl.addCircle(cxl, cy, r, android.graphics.Path.Direction.CW); c.save(); c.clipPath(cl); c.drawBitmap(b, null, new android.graphics.RectF(cxl - r, cy - r, cxl + r, cy + r), p); c.restore(); }
+                        }
+                        float used = n * step;
+                        return rightAligned ? x - used : x + used;
+                    } catch (Exception e) { return x; }
+                }
+                case "batterie": {
+                    android.content.Intent bi = svc.registerReceiver(null, new IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+                    int lv = bi == null ? 50 : bi.getIntExtra(BatteryManager.EXTRA_LEVEL, 50) * 100 / Math.max(1, bi.getIntExtra(BatteryManager.EXTRA_SCALE, 100));
+                    boolean chg = bi != null && bi.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
+                    p.setTypeface(face); p.setTextSize(H * .42f); String pc = lv + "%";
+                    float bw = 24 * dens, bh = H * .42f, pcw = p.measureText(pc);
+                    float bx = x - bw, by = cy - bh / 2;
+                    p.setStyle(android.graphics.Paint.Style.STROKE); p.setStrokeWidth(1.6f * dens); p.setColor(0xFFD6D0E2);
+                    c.drawRoundRect(new android.graphics.RectF(bx, by, bx + bw, by + bh), 3 * dens, 3 * dens, p);
+                    p.setStyle(android.graphics.Paint.Style.FILL); c.drawRect(bx + bw, cy - bh * .22f, bx + bw + 2.2f * dens, cy + bh * .22f, p);
+                    p.setColor(lv <= 15 && !chg ? 0xFFFF4D5E : chg ? 0xFF3DFFB0 : acc2);
+                    c.drawRoundRect(new android.graphics.RectF(bx + 2.2f * dens, by + 2.2f * dens, bx + 2.2f * dens + (bw - 4.4f * dens) * lv / 100f, by + bh - 2.2f * dens), 1.5f * dens, 1.5f * dens, p);
+                    p.setColor(0xFFFFFFFF); c.drawText(pc, bx - 6 * dens - pcw, cy + p.getTextSize() * .36f, p);
+                    return bx - 6 * dens - pcw - 12 * dens;
+                }
+                case "reseau": {
+                    float wx = x - 8 * dens;
+                    try {
+                        android.net.ConnectivityManager cm = svc.getSystemService(android.net.ConnectivityManager.class);
+                        android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                        boolean wifi = nc != null && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI), cell = nc != null && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR);
+                        p.setStyle(android.graphics.Paint.Style.STROKE); p.setStrokeWidth(1.8f * dens); p.setColor(0xFFFFFFFF); p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                        if (wifi) for (int i = 1; i <= 3; i++) { float rr = i * 3.6f * dens; c.drawArc(new android.graphics.RectF(wx - rr, cy + 4 * dens - rr, wx + rr, cy + 4 * dens + rr), 225, 90, false, p); }
+                        else if (cell) { p.setStyle(android.graphics.Paint.Style.FILL); for (int i = 0; i < 4; i++) c.drawRect(wx - 8 * dens + i * 4.2f * dens, cy + 5 * dens - (i + 1) * 2.6f * dens, wx - 5.4f * dens + i * 4.2f * dens, cy + 5 * dens, p); }
+                        p.setStyle(android.graphics.Paint.Style.FILL);
+                    } catch (Exception ignored) { }
+                    return x - 22 * dens;
+                }
+                default: return x;
+            }
         }
     }
 
@@ -280,7 +322,11 @@ final class PupVolet {
                 case MotionEvent.ACTION_UP: case MotionEvent.ACTION_CANCEL: {
                     float vy = 0; if (vt[0] != null) { vt[0].addMovement(e); vt[0].computeCurrentVelocity(1000); vy = vt[0].getYVelocity(); vt[0].recycle(); vt[0] = null; }
                     if (drag[0]) { float dy = e.getRawY() - y0[0]; if (vy > 700 || (vy > -300 && dy > panelH() * .22f)) animOpen(); else animClose(); }
-                    else if (e.getActionMasked() == MotionEvent.ACTION_UP && Math.hypot(e.getRawX() - x0[0], e.getRawY() - y0[0]) < 12 * dens && e.getEventTime() - t0[0] < 450) forwardTap(e.getRawX(), e.getRawY());
+                    else if (e.getActionMasked() == MotionEvent.ACTION_UP && Math.hypot(e.getRawX() - x0[0], e.getRawY() - y0[0]) < 12 * dens && e.getEventTime() - t0[0] < 450) {
+                        // Barre puppy bloquante : on avale le toucher (Android ne voit rien), sinon on le rejoue à l'appli
+                        boolean inBar = barreOn() && tLp != null && tLp.y == 0 && e.getRawY() <= sbH + 2 * dens;
+                        if (!(inBar && sp(svc).getBoolean("barreBloque", true))) forwardTap(e.getRawX(), e.getRawY());
+                    }
                     drag[0] = false; return true;
                 }
             }

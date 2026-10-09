@@ -151,7 +151,7 @@ public class NicheActivity extends Activity {
                         .put("verrouEtoiles", p.getBoolean("verrouEtoiles", true)).put("verrouCharge", p.getBoolean("verrouCharge", true))
                         .put("verrouForce", p.getInt("verrouForce", 1)).put("veille", p.getBoolean("veille", false)).put("siesteCharge", p.getBoolean("siesteCharge", false)).put("veilleStyle", p.getString("veilleStyle", "verre")).put("veilleQuand", p.getInt("veilleQuand", 0)).put("veilleDuree", p.getInt("veilleDuree", 30)).put("veilleLum", p.getInt("veilleLum", 0)).put("a11y", PupNavA11y.I != null)
                         .put("voletOn", p.getBoolean("voletOn", true)).put("popOn", p.getBoolean("popOn", true)).put("aodNotif", p.getBoolean("aodNotif", true)).put("aodNotifTxt", p.getBoolean("aodNotifTxt", false))
-                        .put("homeNotif", p.getBoolean("homeNotif", true)).put("voletForce", p.getBoolean("voletForce", true)).put("popForce", p.getBoolean("popForce", true)).put("wallLock", p.getString("wallLock", "")).put("lockOwn", lockOwn()).put("samsung", "samsung".equalsIgnoreCase(Build.MANUFACTURER)).put("lockVid", p.getString("lockVid", "")).put("lockVidId", p.getString("lockVidId", "")).put("voletZone", p.getInt("voletZone", 0)).put("voletTaille", p.getInt("voletTaille", 1)).put("voletPerso", p.getBoolean("voletPerso", false)).put("barrePuppy", p.getBoolean("barrePuppy", false))
+                        .put("homeNotif", p.getBoolean("homeNotif", true)).put("voletForce", p.getBoolean("voletForce", true)).put("popForce", p.getBoolean("popForce", true)).put("wallLock", p.getString("wallLock", "")).put("lockOwn", lockOwn()).put("samsung", "samsung".equalsIgnoreCase(Build.MANUFACTURER)).put("lockVid", p.getString("lockVid", "")).put("lockVidId", p.getString("lockVidId", "")).put("voletZone", p.getInt("voletZone", 0)).put("voletTaille", p.getInt("voletTaille", 1)).put("voletPerso", p.getBoolean("voletPerso", false)).put("barrePuppy", p.getBoolean("barrePuppy", false)).put("barreBloque", p.getBoolean("barreBloque", true)).put("barreOpa", p.getInt("barreOpa", 100)).put("barreX", p.getInt("barreX", 0)).put("barreOrdre", p.getString("barreOrdre", "heure,patte,medailles,reseau,batterie")).put("barHeure", p.getBoolean("bar_heure", true)).put("barPatte", p.getBoolean("bar_patte", true)).put("barMedailles", p.getBoolean("bar_medailles", true)).put("barReseau", p.getBoolean("bar_reseau", true)).put("barBatterie", p.getBoolean("bar_batterie", true))
                         .put("voletZH", p.getInt("voletZH", 64)).put("voletZY", p.getInt("voletZY", 0)).put("voletZW", p.getInt("voletZW", 100)).put("voletZX", p.getInt("voletZX", 50)).put("notifOk", PupNotifs.granted(NicheActivity.this))
                         .put("writeOk", Settings.System.canWrite(NicheActivity.this)).put("dndOk", getSystemService(android.app.NotificationManager.class).isNotificationPolicyAccessGranted())
                         .put("version", PupUpdate.current(NicheActivity.this)).toString();
@@ -216,22 +216,23 @@ public class NicheActivity extends Activity {
             });
         }
         @JavascriptInterface public void set(String k, boolean v) {
-            if (!k.matches("veille|siesteCharge|siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge|voletOn|popOn|aodNotif|aodNotifTxt|homeNotif|voletForce|popForce|voletPerso|barrePuppy")) return;
+            if (!k.matches("veille|siesteCharge|siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge|voletOn|popOn|aodNotif|aodNotifTxt|homeNotif|voletForce|popForce|voletPerso|barrePuppy|barreBloque|bar_heure|bar_patte|bar_medailles|bar_reseau|bar_batterie")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putBoolean(k, v);
             if ("sons".equals(k)) e.putLong("ver", System.currentTimeMillis()); // les Pup-apps rechargent leurs sons
             e.commit();
             if (k.startsWith("verrou")) decoRefresh();
-            if (k.equals("voletOn") || k.equals("barrePuppy")) ui.post(PupVolet::update);
+            if (k.equals("voletOn") || k.startsWith("barre") || k.startsWith("bar_")) ui.post(PupVolet::update);
             if (k.equals("voletPerso")) PupVolet.previewZone(6000);
         }
         @JavascriptInterface public void setInt(String k, int v) {
-            if (!k.matches("sonsVol|verrouForce|siesteLum|siesteDuree|veilleQuand|veilleDuree|veilleLum|voletZone|voletTaille|voletZH|voletZY|voletZW|voletZX")) return;
+            if (!k.matches("sonsVol|verrouForce|siesteLum|siesteDuree|veilleQuand|veilleDuree|veilleLum|voletZone|voletTaille|voletZH|voletZY|voletZW|voletZX|barreOpa|barreX")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putInt(k, v);
             if ("sonsVol".equals(k)) e.putLong("ver", System.currentTimeMillis());
             e.commit();
             if (k.startsWith("verrou")) decoRefresh();
             if (k.equals("voletZone") || k.equals("voletTaille")) ui.post(PupVolet::update);
             if (k.startsWith("voletZ") && !k.equals("voletZone")) PupVolet.previewZone(5000);
+            if (k.startsWith("barre")) ui.post(PupVolet::update);
         }
         void decoRefresh() { ui.post(() -> { PupNavA11y a = PupNavA11y.I; if (a != null && a.deco != null) a.deco.refresh(); }); }
         /** Montre la déco par-dessus l'écran actuel pendant quelques secondes. */
@@ -244,6 +245,7 @@ public class NicheActivity extends Activity {
         @JavascriptInterface public void setStr(String k, String v) {
             if ("veilleStyle".equals(k) && v.matches("verre|os")) Pelage.sp(NicheActivity.this).edit().putString(k, v).commit();
             if ("wallLock".equals(k) && v.matches("|neon|cosmos|aurore|niche|lune|foret|arcade|chalet")) Pelage.sp(NicheActivity.this).edit().putString(k, v).commit();
+            if ("barreOrdre".equals(k) && v.matches("[a-z,]+")) { Pelage.sp(NicheActivity.this).edit().putString(k, v).commit(); ui.post(PupVolet::update); }
         }
         @JavascriptInterface public void veillePreview() { ui.post(() -> startActivity(new Intent(NicheActivity.this, VeilleActivity.class).putExtra("preview", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))); }
         /** Range le GIF de batterie puppy dans la Galerie (Images › PupAOD) pour l'Always On Display de Samsung. */

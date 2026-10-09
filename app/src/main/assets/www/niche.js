@@ -9,7 +9,7 @@
   const PEL = [['auto', 'Chacun son pelage', '#ff3fa4', '#29e6ff', '#0b0614'], ['rose', 'Néon Rose', '#ff3fa4', '#29e6ff', '#0b0614'], ['cyan', 'Laser Turquoise', '#29e6ff', '#ff3fa4', '#030b12'], ['violet', 'Violet Velours', '#9b5cff', '#29e6ff', '#0b0418'], ['cuir', 'Cuir & Rivets', '#ff3fa4', '#29e6ff', '#120a10'], ['or', 'Or Royal', '#ffb627', '#ff3fa4', '#0e0802'], ['vert', 'Vert Fluo', '#3dffb0', '#9b5cff', '#020e0a']]
     .map(([id, nom, acc, acc2, bg]) => ({ id, nom, acc, acc2, bg }));
   const N = window.Niche || {
-    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, siesteCharge: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0, voletOn: true, popOn: true, aodNotif: true, aodNotifTxt: false, homeNotif: true, voletZone: 0, voletTaille: 1, voletPerso: false, barrePuppy: false, voletZH: 64, voletZY: 0, voletZW: 100, voletZX: 50, voletForce: true, popForce: true, notifOk: false, writeOk: false, dndOk: false, wallLock: 'chalet', lockOwn: true, samsung: true, lockVid: '', lockVidId: '' }),
+    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, siesteCharge: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0, voletOn: true, popOn: true, aodNotif: true, aodNotifTxt: false, homeNotif: true, voletZone: 0, voletTaille: 1, voletPerso: false, barrePuppy: false, barreBloque: true, barreOpa: 100, barreX: 0, barreOrdre: 'heure,patte,medailles,reseau,batterie', barHeure: true, barPatte: true, barMedailles: true, barReseau: true, barBatterie: true, voletZH: 64, voletZY: 0, voletZW: 100, voletZX: 50, voletForce: true, popForce: true, notifOk: false, writeOk: false, dndOk: false, wallLock: 'chalet', lockOwn: true, samsung: true, lockVid: '', lockVidId: '' }),
     pelage() {}, backup() { const st = ['Réglages des Pup-apps…', 'Fichiers de la niche…', 'Mémoire des pages (playlists, favoris…)…', 'Rangement dans Téléchargements…']; st.forEach((m, i) => setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'step', msg: m })), 500 * (i + 1))); setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'done', name: 'niche_2026-10-09_02h10.puppy' })), 2600); },
     pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, setStr() {}, veillePreview() {}, aodSave: (st) => 'pup_aod_' + st + '.gif', openAod() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, lockFilm(id) { let p = 0; const t = setInterval(() => { p += .08; if (p >= 1) { clearInterval(t); NicheUI.on('film', JSON.stringify({ st: 'done', uri: 'content://demo', id })); } else NicheUI.on('film', JSON.stringify({ st: 'work', p })); }, 200); }, lockGallery: () => 'app', lockCrop: () => false, lockSetAs() {}, lockStill: () => true, notifAccess() {}, writeAccess() {}, dndAccess() {}, voletTest: () => true, zonePreview: () => true, voletDiag: () => '15:07:12  bande : glissé vers le bas ✓\n15:07:10  fenêtre système vue : « NotificationShade »', popTest() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
   };
@@ -204,6 +204,19 @@
             <div class="row${off ? ' dim' : ''}"><span>Hauteur de la zone<small>Plus elle est haute, plus le chiot attrape ton doigt avant Android. Un simple appui dans la zone est renvoyé à l'appli en dessous</small></span></div>
             ${seg('voletTaille', [[0, 'Fine'], [1, 'Large'], [2, 'Très large']], S.voletTaille == null ? 1 : S.voletTaille, off)}`; })()}
       ${row('barrePuppy', '🎞️ Barre puppy', 'Une fausse barre d\'état puppyplay (heure, médailles des applis, Wi-Fi, batterie) posée par-dessus celle d\'Android, comme une vidéo : tout ce qui la touche est pour le chiot. Elle se cache en plein écran et sur le verrouillage', off)}
+      ${(() => {
+        const boff = off || !S.barrePuppy, bd = boff ? ' dim' : '';
+        if (!S.barrePuppy) return '';
+        const ITEMS = [['heure','🕐 Heure','barHeure'],['patte','🐾 Patte','barPatte'],['medailles','📬 Médailles','barMedailles'],['reseau','📶 Réseau','barReseau'],['batterie','🔋 Batterie','barBatterie']];
+        const ord = (S.barreOrdre || 'heure,patte,medailles,reseau,batterie').split(',');
+        const sorted = ord.map((k) => ITEMS.find((x) => x[0] === k)).filter(Boolean).concat(ITEMS.filter((x) => !ord.includes(x[0])));
+        const rows = sorted.map((it, i) => `<div class="baritem" data-bi="${it[0]}" draggable="true"><span class="grip2">⠿</span><b>${it[1]}</b><span class="barmv"><button data-bmv="up" data-k="${it[0]}" type="button" ${i === 0 ? 'disabled' : ''}>▲</button><button data-bmv="down" data-k="${it[0]}" type="button" ${i === sorted.length - 1 ? 'disabled' : ''}>▼</button></span>${sw(it[2], S[it[2]], boff)}</div>`).join('');
+        return `${row('barreBloque', '🚫 Bloquer la barre d\'Android', 'Un appui sur la barre ne fait plus rien pour Android (ni ouverture, ni geste) : seul le glissé vers le bas ouvre ton volet', boff)}
+          <div class="row${bd}"><span>Opacité du fond<small id="lb-barreOpa">${S.barreOpa} %</small></span></div><input type="range" min="20" max="100" step="5" value="${S.barreOpa}" data-rng="barreOpa" data-unit="%" style="--v:${(S.barreOpa - 20) / 80 * 100}%" ${boff ? 'disabled' : ''}>
+          <div class="row${bd}"><span>Décalage des icônes<small id="lb-barreX">${S.barreX} dp</small></span></div><input type="range" min="-120" max="120" step="2" value="${S.barreX}" data-rng="barreX" data-unit="dp" style="--v:${(S.barreX + 120) / 240 * 100}%" ${boff ? 'disabled' : ''}>
+          <div class="row${bd}"><span>Les icônes<small>Glisse pour réordonner, ou ▲▼. L'interrupteur affiche ou cache</small></span></div>
+          <div class="barlist${bd}" id="barlist">${rows}</div>`;
+      })()}
       ${row('voletForce', '💪 Mode costaud', 'Si le volet Android arrive quand même (geste, double glissement…), PuppyPhone le referme aussitôt et ouvre le sien. Le bouton 🤖 du volet garde l\'accès à celui d\'Android', off)}
       <div class="nrow"><button class="ab c2" data-a="volettest" type="button">${ic('eye', 'chrome', 'none')}Ouvrir le volet</button><button class="ab glass" data-a="diag" type="button">🔎 Flair du chiot</button></div>
       ${!S.writeOk || !S.dndOk ? `<p class="hint">Pour que les boutons du volet agissent directement :</p><div class="nrow">${!S.writeOk ? `<button class="ab glass" data-a="writeacc" type="button">☀️ Luminosité & rotation</button>` : ''}${!S.dndOk ? `<button class="ab glass" data-a="dndacc" type="button">🌙 Ne pas déranger</button>` : ''}</div>` : ''}
@@ -387,6 +400,33 @@
     }
     raf = requestAnimationFrame(frame);
   }
+
+  // Barre puppy : réordonner les icônes (flèches + glisser-déposer)
+  function barMove(k, dir) {
+    const ord = (S.barreOrdre || 'heure,patte,medailles,reseau,batterie').split(',');
+    const full = ['heure','patte','medailles','reseau','batterie'];
+    let cur = ord.filter((x) => full.includes(x)); full.forEach((x) => { if (!cur.includes(x)) cur.push(x); });
+    const i = cur.indexOf(k); if (i < 0) return;
+    const j = dir === 'up' ? i - 1 : i + 1; if (j < 0 || j >= cur.length) return;
+    [cur[i], cur[j]] = [cur[j], cur[i]];
+    S.barreOrdre = cur.join(','); nc('setStr', 'barreOrdre', S.barreOrdre); render();
+  }
+  function barReorder(k, before) {
+    const full = ['heure','patte','medailles','reseau','batterie'];
+    let cur = (S.barreOrdre || full.join(',')).split(',').filter((x) => full.includes(x));
+    full.forEach((x) => { if (!cur.includes(x)) cur.push(x); });
+    cur = cur.filter((x) => x !== k);
+    const at = before ? cur.indexOf(before) : cur.length;
+    cur.splice(at < 0 ? cur.length : at, 0, k);
+    S.barreOrdre = cur.join(','); nc('setStr', 'barreOrdre', S.barreOrdre); render();
+  }
+  document.addEventListener('click', (e) => {
+    const mv = e.target.closest('[data-bmv]'); if (mv && !mv.disabled) { barMove(mv.dataset.k, mv.dataset.bmv); }
+  });
+  let dragK = null;
+  document.addEventListener('dragstart', (e) => { const it = e.target.closest('.baritem'); if (it) { dragK = it.dataset.bi; e.dataTransfer.effectAllowed = 'move'; } });
+  document.addEventListener('dragover', (e) => { if (dragK && e.target.closest('#barlist')) e.preventDefault(); });
+  document.addEventListener('drop', (e) => { const over = e.target.closest('.baritem'); if (dragK && over) { e.preventDefault(); barReorder(dragK, over.dataset.bi === dragK ? null : over.dataset.bi); } dragK = null; });
 
   window.NicheUI = {
     on(ev, data) {
