@@ -17,7 +17,7 @@
   const XSVG = '<svg viewBox="0 0 20 20"><path d="M4 4L16 16M16 4L4 16" stroke="#fff" stroke-width="3.4" stroke-linecap="round" style="filter:drop-shadow(0 1px 1px #0008)"/></svg>';
 
   // ------------------------------------------------------------------ réglages
-  const DEF = { accent: 'pink', iconStyle: 'framed', iconShape: 'tile', pack: true, size: 58, cols: 4, labels: true, showClock: true, showPower: true, showSearch: true, welcomed: false, fx: 'auto' };
+  const DEF = { accent: 'pink', iconStyle: 'framed', iconShape: 'tile', pack: true, size: 58, cols: 4, labels: true, showClock: true, showPower: true, showSearch: true, welcomed: false, fx: 'auto', autoTidy: true };
   const ACCENTS = { pink: ['#ff3fa4', '#29e6ff'], cyan: ['#29e6ff', '#ff3fa4'], violet: ['#9b5cff', '#29e6ff'], amber: ['#ffb627', '#ff3fa4'], green: ['#3dffb0', '#9b5cff'], red: ['#ff4d5e', '#ffb627'] };
   let cfg = Object.assign({}, DEF, S.get('cfg', {}));
   const saveCfg = () => { S.set('cfg', cfg); applyCfg(); };
@@ -46,7 +46,7 @@
   }
   const isNet = (a) => a.pkg === defs.self && /BrowserActivity/.test(a.id);
   const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : /TasksActivity/.test(a.id) ? 'system' : /UpdateActivity/.test(a.id) ? 'system' : /NicheActivity/.test(a.id) ? 'system' : /ReveilActivity/.test(a.id) ? 'tools' : /NotesActivity/.test(a.id) ? 'tools' : /ScanActivity/.test(a.id) ? 'tools' : /DictaActivity/.test(a.id) ? 'tools' : /AgendaActivity/.test(a.id) ? 'tools' : /KbSettingsActivity/.test(a.id) ? 'tools' : /SmsActivity/.test(a.id) ? 'tel' : /DialerActivity/.test(a.id) ? 'tel' : /MusicActivity/.test(a.id) ? 'music' : /FileActivity/.test(a.id) ? 'tools' : null;
-  const catOf = (a) => overrides[a.id] || selfCat(a) || flairOf(a).cat;
+  const catOf = (a) => { const o = overrides[a.id] || selfCat(a); if (o) return o; const r = flairOf(a); return (r.cat === 'sort' && cfg.autoTidy && r.guess) ? r.guess : r.cat; };
   const appsIn = (cat) => apps.filter((a) => catOf(a) === cat);
   const isSelf = (a) => a.pkg === defs.self;
   const isSon = (a) => isSelf(a) && /PupSon/.test(a.id);
@@ -873,6 +873,8 @@
       <div class="cp">
         <div class="cp-h">${I('box', 'orange')}<div><b>Flair · tri intelligent hors ligne</b><small>Chaque appli installée est rangée toute seule dans le bon dossier flottant, sans internet ni jetons. En cas de doute → « À trier ». Quand tu corriges, Flair apprend.</small></div></div>
         <div class="row"><span>Dans « À trier »<small>${sorted} appli${sorted > 1 ? 's' : ''}</small></span><button class="ab small amber" data-act="opensort" type="button">Voir</button></div>
+        <div class="row"><span>Ranger même en cas de doute<small>Le chiot range chaque appli dans son meilleur dossier au lieu de « À trier ». Tu peux toujours corriger.</small></span><button class="sw${cfg.autoTidy ? ' on' : ''}" data-sw="autoTidy" type="button"><i></i></button></div>
+        <button class="ab small wide green" data-act="tidynow" type="button" style="margin-top:4px">✨ Ranger l'accueil maintenant</button>
         <div class="row"><span>Mes corrections<small>${Object.keys(overrides).length} appli(s) rangée(s) à la main</small></span><button class="ab small red" data-act="forget" type="button">Oublier</button></div>
       </div>
 
@@ -909,6 +911,7 @@
         if (d.fx) { cfg.fx = d.fx; saveCfg(); w.refresh(); }
         if (d.acc) { cfg.accent = d.acc; saveCfg(); renderAll(); w.refresh(); }
         if (d.act === 'opensort') openFolder('sort');
+        if (d.act === 'tidynow') { const n = appsIn('sort').length; cfg.autoTidy = true; saveCfg(); flairCache.clear(); renderAll(); w.refresh(); const left = appsIn('sort').length; toast('Accueil rangé 🐾', left ? `${n - left} appli(s) rangée(s). ${left} sans indice restent à trier.` : 'Tout est rangé dans ses dossiers !'); }
         if (d.act === 'forget') { overrides = {}; learn = {}; S.set('cats', overrides); S.set('learn', learn); flairCache.clear(); renderAll(); w.refresh(); toast('Flair remis à zéro', 'Toutes les applis sont re-triées automatiquement.'); }
         if (d.act === 'resethome') { home = defaultHome(); saveHome(); renderAll(); toast('Accueil réorganisé', 'Disposition puppy par défaut.'); }
       };

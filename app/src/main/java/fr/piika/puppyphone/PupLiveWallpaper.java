@@ -89,6 +89,32 @@ public class PupLiveWallpaper extends WallpaperService {
         @Override public void onDestroy() { h.removeCallbacks(frame); try { unregisterReceiver(rx); } catch (Exception ignored) { } super.onDestroy(); }
         @Override public void onOffsetsChanged(float xo, float yo, float xs, float ys, int xp, int yp) { xOff = xo; }
 
+        long battAt; boolean battChg; int battLv = 100;
+        /** Cadence adaptative : 30/20/15 i/s selon le réglage, ralentie si batterie faible ou mode éco système. */
+        long frameDelay(long now) {
+            if (now - battAt > 8000) {
+                battAt = now;
+                try {
+                    android.content.Intent bi = registerReceiver(null, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+                    if (bi != null) {
+                        int st = bi.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+                        battChg = st == android.os.BatteryManager.BATTERY_STATUS_CHARGING || st == android.os.BatteryManager.BATTERY_STATUS_FULL;
+                        battLv = bi.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 50) * 100 / Math.max(1, bi.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100));
+                    }
+                    battEco = getSystemService(PowerManager.class).isPowerSaveMode();
+                } catch (Exception ignored) { }
+            }
+            // en charge : toujours fluide. Sinon, on suit le réglage, et on ralentit si batterie basse ou mode éco.
+            int fps = Pelage.sp(PupLiveWallpaper.this).getInt("wallFps", 24);
+            if (!battChg) {
+                if (battEco || battLv <= 15) fps = Math.min(fps, 12);
+                else if (battLv <= 30) fps = Math.min(fps, 18);
+            }
+            fps = Math.max(10, Math.min(30, fps));
+            return 1000L / fps;
+        }
+        boolean battEco;
+
         /** Accueil, verrouillage, ou le fondu entre les deux juste après le déverrouillage. */
         void paint(Canvas c, float t, float dt, long now) {
             if (lockSc == null) { sc.draw(c, t, dt, xOff); return; }
@@ -117,9 +143,7 @@ public class PupLiveWallpaper extends WallpaperService {
                 try { if (c == null) { c = sh.lockCanvas(); if (c != null) paint(c, (now - t0) / 1000f, dt, now); } } catch (Exception ignored) { }
             } finally { if (c != null) try { sh.unlockCanvasAndPost(c); } catch (Exception ignored) { } }
             h.removeCallbacks(frame);
-            boolean eco = false;
-            try { eco = getSystemService(PowerManager.class).isPowerSaveMode(); } catch (Exception ignored) { }
-            if (visible) h.postDelayed(frame, eco ? 66 : 33);
+            if (visible) h.postDelayed(frame, frameDelay(now));
         }
     }
 
