@@ -43,6 +43,7 @@ public class MajActivity extends Activity {
     final AtomicBoolean cancel = new AtomicBoolean(false);
     volatile boolean busy;
     File pendingApk; String pendingPkg;
+    File rollbackApk; boolean awaitingUninstall; long rollbackV;
 
     static void status(String st, String msg) {
         MajActivity a = I;
@@ -90,6 +91,18 @@ public class MajActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume();
+        // Rétrograde : on attendait la fin de la désinstallation de PuppyPhone pour poser l'ancienne version.
+        if (awaitingUninstall && rollbackApk != null) {
+            if (Maj.version(this, Maj.PUPPY) == 0) {
+                awaitingUninstall = false; File f = rollbackApk; rollbackApk = null; long v = rollbackV;
+                emit("status", "{\"st\":\"rollinstall\",\"msg\":" + JSONObject.quote("v1.0." + v) + "}");
+                doInstall(f, Maj.PUPPY);
+            } else {
+                // PuppyPhone est toujours là : l'utilisateur a annulé la désinstallation.
+                awaitingUninstall = false; busy = false;
+                emit("status", "{\"st\":\"rollcancel\",\"msg\":\"\"}");
+            }
+        }
         if (pendingApk != null && getPackageManager().canRequestPackageInstalls()) { File f = pendingApk; pendingApk = null; doInstall(f, pendingPkg); }
         emit("resume", "");
     }
@@ -179,7 +192,32 @@ public class MajActivity extends Activity {
                 } catch (Exception e) { busy = false; emit("status", "{\"st\":\"error\",\"msg\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"); }
             }).start();
         }
-        @JavascriptInterface public void cancel() { cancel.set(true); }
+        @JavascriptInterface public void cancel() { cancel.set(true); awaitingUninstall = false; }
+        /**
+         * Dépannage : réinstalle / rétrograde PuppyPhone vers la version visée.
+         * needUninstall = la version visée est PLUS BASSE que l'installée → Android exige une désinstallation d'abord.
+         * PupUpdate étant une appli à part, il survit à la désinstallation et pose ensuite l'ancien APK depuis son cache.
+         */
+        @JavascriptInterface public void recover(String url, long size, long targetV, boolean needUninstall) {
+            if (busy) return;
+            busy = true; cancel.set(false);
+            new Thread(() -> {
+                try {
+                    final long[] last = {0};
+                    File f = Maj.download(MajActivity.this, url, size, "PuppyPhone-v" + targetV + ".apk", (d, t) -> {
+                        long now = System.currentTimeMillis();
+                        if (now - last[0] > 120 || d == t) { last[0] = now; emit("progress", "{\"d\":" + d + ",\"t\":" + t + "}"); }
+                    }, cancel);
+                    if (needUninstall && Maj.version(MajActivity.this, Maj.PUPPY) > 0) {
+                        rollbackApk = f; rollbackV = targetV; awaitingUninstall = true;
+                        emit("status", "{\"st\":\"rolluninstall\",\"msg\":" + JSONObject.quote("v1.0." + targetV) + "}");
+                        ui.post(() -> Maj.uninstall(MajActivity.this, Maj.PUPPY));
+                    } else {
+                        ui.post(() -> doInstall(f, Maj.PUPPY));
+                    }
+                } catch (Exception e) { busy = false; emit("status", "{\"st\":\"error\",\"msg\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"); }
+            }).start();
+        }
         @JavascriptInterface public void openPuppy() { ui.post(() -> { if (Maj.openPuppy(MajActivity.this)) finish(); }); }
         @JavascriptInterface public void openPage() { ui.post(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Maj.PAGE))); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void close() { ui.post(MajActivity.this::finish); }

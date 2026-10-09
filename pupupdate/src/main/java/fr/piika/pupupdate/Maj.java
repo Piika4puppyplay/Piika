@@ -78,7 +78,9 @@ final class Maj {
             long ppCur = version(c, PUPPY), selfCur = version(c, c.getPackageName());
             JSONArray rel = new JSONArray(get(API));
             long latest = 0, selfLatest = 0; String url = "", selfUrl = ""; long size = 0, selfSize = 0;
+            long prev = 0; String prevUrl = ""; long prevSize = 0; // la version la plus haute SOUS la version installée
             JSONArray notes = new JSONArray();
+            JSONArray versions = new JSONArray(); // toutes les versions dispo, pour le dépannage (réinstaller / rétrograder)
             for (int i = 0; i < rel.length(); i++) {
                 JSONObject o = rel.getJSONObject(i);
                 String tag = o.optString("tag_name");
@@ -98,13 +100,17 @@ final class Maj {
                     }
                 }
                 if (apk.isEmpty()) continue;
+                versions.put(new JSONObject().put("v", v).put("url", apk).put("size", sz).put("date", o.optString("published_at")));
                 if (v > latest) { latest = v; url = apk; size = sz; }
+                if (ppCur > 0 && v < ppCur && v > prev) { prev = v; prevUrl = apk; prevSize = sz; } // candidat rétrograde
                 if (v > ppCur) notes.put(new JSONObject().put("v", v).put("date", o.optString("published_at")).put("body", o.optString("body")));
             }
             boolean silent = Build.VERSION.SDK_INT >= 31 && c.getPackageName().equals(installer(c, PUPPY));
-            r.put("pp", new JSONObject().put("cur", ppCur).put("latest", latest).put("url", url).put("size", size).put("installed", ppCur > 0).put("silent", silent));
+            r.put("pp", new JSONObject().put("cur", ppCur).put("latest", latest).put("url", url).put("size", size).put("installed", ppCur > 0).put("silent", silent)
+                    .put("prev", prev).put("prevUrl", prevUrl).put("prevSize", prevSize));
             r.put("self", new JSONObject().put("cur", selfCur).put("latest", selfLatest).put("url", selfUrl).put("size", selfSize));
             r.put("notes", notes);
+            r.put("versions", versions);
             sp(c).edit().putLong("lastCheck", System.currentTimeMillis()).putString("last", r.toString()).apply();
         } catch (Exception e) {
             try {
@@ -159,6 +165,11 @@ final class Maj {
             int flags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
             s.commit(PendingIntent.getBroadcast(c, id, i, flags).getIntentSender());
         }
+    }
+
+    /** Demande à Android de désinstaller PuppyPhone (nécessaire pour rétrograder : Android refuse une version plus basse par-dessus une plus haute). */
+    static void uninstall(Context c, String pkg) {
+        try { c.startActivity(new Intent(Intent.ACTION_DELETE, android.net.Uri.parse("package:" + pkg)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
     }
 
     /** Ramène sur l'accueil PuppyPhone. */

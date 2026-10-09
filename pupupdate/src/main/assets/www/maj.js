@@ -5,8 +5,8 @@
   const ic = (g, c, sh) => PupIcons.icon(g, c, sh ? { shape: sh } : undefined);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const J = (s, d) => { try { return s == null || s === '' ? d : JSON.parse(s); } catch (e) { return d; } };
-  const mockR = { pp: { cur: 25, latest: 26, url: 'x', size: 3100000, installed: true, silent: false }, self: { cur: 1, latest: 1 }, notes: [{ v: 26, date: '2026-10-09T01:00:00Z', body: 'Fonds animés OLED : Pup dans l\'espace et Aurore des pattes\n- Sieste vraiment tamisée' }] };
-  const U = window.Upd || { info: () => JSON.stringify({ last: mockR, lastCheck: Date.now() - 6e5, auto: true, notify: true, retour: true, ppCur: 25, selfCur: 1, android12: true }), check() { setTimeout(() => UpdUI.on('checked', JSON.stringify(mockR)), 600); }, set() {}, update() { let d = 0; const t = setInterval(() => { d += 400000; UpdUI.on('progress', JSON.stringify({ d: Math.min(d, 3100000), t: 3100000 })); if (d >= 3100000) { clearInterval(t); UpdUI.on('status', '{"st":"done"}'); } }, 120); }, cancel() {}, openPuppy() {}, openPage() {}, close() {} };
+  const mockR = { pp: { cur: 25, latest: 26, url: 'x', size: 3100000, installed: true, silent: false, prev: 24, prevUrl: 'x24', prevSize: 3050000 }, self: { cur: 1, latest: 1 }, notes: [{ v: 26, date: '2026-10-09T01:00:00Z', body: 'Fonds animés OLED : Pup dans l\'espace et Aurore des pattes\n- Sieste vraiment tamisée' }], versions: [{ v: 26, url: 'x', size: 3100000, date: '2026-10-09T01:00:00Z' }, { v: 25, url: 'x25', size: 3080000, date: '2026-10-08T01:00:00Z' }, { v: 24, url: 'x24', size: 3050000, date: '2026-10-07T01:00:00Z' }, { v: 23, url: 'x23', size: 3020000, date: '2026-10-06T01:00:00Z' }] };
+  const U = window.Upd || { info: () => JSON.stringify({ last: mockR, lastCheck: Date.now() - 6e5, auto: true, notify: true, retour: true, ppCur: 25, selfCur: 1, android12: true }), check() { setTimeout(() => UpdUI.on('checked', JSON.stringify(mockR)), 600); }, set() {}, update() { let d = 0; const t = setInterval(() => { d += 400000; UpdUI.on('progress', JSON.stringify({ d: Math.min(d, 3100000), t: 3100000 })); if (d >= 3100000) { clearInterval(t); UpdUI.on('status', '{"st":"done"}'); } }, 120); }, recover(url, size, v, down) { let d = 0; const tot = size || 3050000; const t = setInterval(() => { d += 500000; UpdUI.on('progress', JSON.stringify({ d: Math.min(d, tot), t: tot })); if (d >= tot) { clearInterval(t); UpdUI.on('status', down ? '{"st":"rolluninstall","msg":"v1.0.' + v + '"}' : '{"st":"rollinstall","msg":"v1.0.' + v + '"}'); } }, 120); }, cancel() {}, openPuppy() {}, openPage() {}, close() {} };
   const uc = (fn, ...a) => { try { return U[fn] ? U[fn](...a) : undefined; } catch (e) { console.warn(fn, e); } };
   const fmtSize = (b) => (b / 1048576).toFixed(1).replace('.', ',') + ' Mo';
   const fmtD = (t) => t ? new Date(t).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'jamais';
@@ -26,18 +26,51 @@
   }
 
   let S = J(uc('info'), {}) || {}, R = S.last || {}, state = S.busy ? 'downloading' : 'idle', which = 'pp', prog = { d: 0, t: 0 }, err = '', checking = false;
+  let recOpen = false, pickOpen = false;
   const row = (k, t, sub) => `<div class="row"><span>${t}<small>${sub}</small></span><button class="sw${S[k] !== false ? ' on' : ''}" data-sw="${k}" type="button"><i></i></button></div>`;
+
+  /** 🛟 Carte de dépannage : réparer (réinstaller la même version), rétrograder d'un cran, ou choisir n'importe quelle version. */
+  function recoverCard(pp, cur, busyHere) {
+    const versions = (R.versions || []).slice().sort((a, b) => b.v - a.v);
+    const prev = pp.prev || 0, latest = pp.latest || 0;
+    const canRepair = pp.installed && (pp.url || latest);
+    const head = `<button class="ab wide glass rec-toggle${recOpen ? ' open' : ''}" data-a="rectoggle" type="button"><span class="rbuoy">🛟</span>Dépannage · réinstaller ou revenir en arrière<i class="chev">${recOpen ? '▲' : '▼'}</i></button>`;
+    if (!recOpen) return `<section class="ucard rec">${head}</section>`;
+    let body = `<p class="recnote">Un souci après une mise à jour ? Le chiot peut <b>réparer</b> (reposer la même version), <b>revenir à la version précédente</b>, ou réinstaller <b>n'importe quelle</b> version. 🐾</p>`;
+    body += `<div class="recwarn">⚠️ Revenir en arrière demande d'abord de <b>désinstaller</b> PuppyPhone. Pense à faire une sauvegarde depuis l'accueil (PupNiche) avant. Je reste ouvert et je réinstalle aussitôt, tes réglages de la version visée reviennent avec elle.</div>`;
+    if (canRepair) {
+      const rv = latest || cur, rurl = (rv === latest ? pp.url : (versions.find((x) => x.v === rv) || {}).url), rsz = (rv === latest ? pp.size : (versions.find((x) => x.v === rv) || {}).size) || 0;
+      body += `<button class="ab wide c2" data-a="repair" data-url="${esc(rurl)}" data-size="${rsz}" data-v="${rv}" ${busyHere ? 'disabled' : ''}>${ic('refresh', 'chrome', 'none')}Réparer — réinstaller v1.0.${rv}</button>`;
+    }
+    if (prev && pp.installed) {
+      body += `<button class="ab wide amber" data-a="rollback" data-url="${esc(pp.prevUrl)}" data-size="${pp.prevSize || 0}" data-v="${prev}" ${busyHere ? 'disabled' : ''}><span class="rgly">↩</span>Revenir à la version précédente — v1.0.${prev}</button>`;
+    }
+    body += `<button class="ab wide glass${pickOpen ? ' open' : ''}" data-a="picktoggle" type="button"><span class="rgly">🗂️</span>Choisir une version précise…<i class="chev">${pickOpen ? '▲' : '▼'}</i></button>`;
+    if (pickOpen) {
+      body += `<div class="vlist">${versions.length ? versions.map((x) => {
+        const isCur = x.v === cur, down = pp.installed && x.v < cur;
+        return `<button class="vitem${isCur ? ' cur' : ''}" data-a="pick" data-url="${esc(x.url)}" data-size="${x.size || 0}" data-v="${x.v}" data-down="${down ? 1 : 0}" ${busyHere || isCur ? 'disabled' : ''}>
+          <span class="vn">v1.0.${x.v}</span>
+          <span class="vmeta">${x.size ? fmtSize(x.size) : ''}${x.date ? ' · ' + new Date(x.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : ''}</span>
+          <span class="vtag">${isCur ? 'installée' : down ? '↩ rétrograder' : x.v > cur ? '↑ plus récente' : 'réinstaller'}</span></button>`;
+      }).join('') : '<p class="recnote">Vérifie d\'abord GitHub pour lister les versions.</p>'}</div>`;
+    }
+    return `<section class="ucard rec open">${head}${body}</section>`;
+  }
 
   function render() {
     const pp = R.pp || { cur: S.ppCur || 0, installed: (S.ppCur || 0) > 0 }, self = R.self || { cur: S.selfCur || 1 };
     const cur = pp.cur || S.ppCur || 0, latest = pp.latest || 0, hasNew = latest > cur, selfNew = (self.latest || 0) > (self.cur || S.selfCur || 0);
     let mood = hasNew ? 'new' : 'happy', title, sub;
-    const busyHere = state === 'downloading' || state === 'installing' || state === 'confirm';
+    const busyHere = state === 'downloading' || state === 'installing' || state === 'confirm' || state === 'rolluninstall' || state === 'rollinstall';
     if (checking) { mood = 'busy'; title = 'Je renifle GitHub…'; sub = 'Recherche de nouvelles versions'; }
     else if (state === 'downloading') { mood = 'busy'; title = which === 'self' ? 'Je rapporte la nouvelle PupUpdate…' : 'Je rapporte la nouvelle version…'; sub = 'Téléchargement en cours'; }
     else if (state === 'installing') { mood = 'busy'; title = 'Installation…'; sub = pp.silent ? 'Mise à jour express, sans confirmation ⚡' : 'Android va te demander de confirmer « Mettre à jour ».'; }
     else if (state === 'confirm') { mood = 'busy'; title = 'Presque fini !'; sub = 'Confirme « Mettre à jour » : tes réglages sont conservés.'; }
     else if (state === 'perm') { mood = 'sad'; title = 'Autorisation nécessaire'; sub = 'Active « Autoriser depuis cette source » pour PupUpdate, puis reviens : l\'installation reprend toute seule.'; }
+    else if (state === 'rolluninstall') { mood = 'busy'; title = 'Désinstallation nécessaire 🩹'; sub = 'Confirme la désinstallation de PuppyPhone. Je reste ouvert et je repose l\'ancienne version tout de suite après 🐾'; }
+    else if (state === 'rollinstall') { mood = 'busy'; title = 'Je repose l\'ancienne version…'; sub = (err || '') + ' · Confirme « Installer » si Android le demande.'; }
+    else if (state === 'rollcancel') { mood = 'sad'; title = 'Désinstallation annulée'; sub = 'PuppyPhone est toujours là. Tu peux réessayer quand tu veux.'; }
     else if (state === 'error') { mood = 'sad'; title = 'Oups…'; sub = err || 'Quelque chose a raté.'; }
     else if (state === 'done') { mood = 'done'; title = 'PuppyPhone est à jour ! 🎉'; sub = S.retour !== false ? 'Je te ramène sur l\'accueil PuppyPhone…' : 'Tu peux revenir sur l\'accueil.'; }
     else if (!pp.installed) { mood = 'sad'; title = 'PuppyPhone n\'est pas installé'; sub = latest ? 'Je peux l\'installer pour toi.' : 'Vérifie GitHub pour le récupérer.'; }
@@ -58,6 +91,7 @@
       </section>
       ${selfNew ? `<section class="ucard"><h2>${ic('download', 'green')}Nouvelle PupUpdate<em>v1.${self.latest}</em></h2><p style="margin:0;font-size:13px;color:#eadcf7">Le chien de garde a aussi une nouvelle version. PupUpdate se fermera le temps de s'installer, rouvre-le ensuite.</p><button class="ab wide green" data-a="self" type="button" ${busyHere ? 'disabled' : ''}>${ic('download', 'chrome', 'none')}Mettre à jour PupUpdate</button></section>` : ''}
       ${notes.length ? `<section class="ucard notes"><h3>Nouveautés à venir 🐾</h3>${notes.map((n) => { const body = String(n.body || '').split('\n---')[0].trim(); const lines = body.split('\n'); const t = lines.shift() || ''; return `<div class="note"><div class="nv"><span>v1.0.${n.v}</span><span>${n.date ? new Date(n.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : ''}</span></div><b>${esc(t)}</b>${lines.join('\n').trim() ? `<p>${esc(lines.join('\n').trim())}</p>` : ''}</div>`; }).join('')}</section>` : ''}
+      ${recoverCard(pp, cur, busyHere)}
       <section class="ucard">
         <div class="sep"><span class="apps">${ic('download', 'green')}<i>⇄</i>${ic('paw', 'pink')}</span><span>PupUpdate est une <b>appli à part</b> : quand Android remplace PuppyPhone, c'est PuppyPhone qui redémarre, pas PupUpdate. Il peut donc te ramener tout seul sur l'accueil.</span></div>
         ${row('retour', 'Me ramener sur PuppyPhone', 'Rouvre l\'accueil PuppyPhone dès que la mise à jour est finie')}
@@ -74,6 +108,14 @@
     if (a === 'update') { which = 'pp'; state = 'downloading'; err = ''; prog = { d: 0, t: pp.size || 0 }; render(); uc('update', 'pp', pp.url, pp.size || 0); }
     if (a === 'self') { which = 'self'; state = 'downloading'; err = ''; prog = { d: 0, t: self.size || 0 }; render(); uc('update', 'self', self.url, self.size || 0); }
     if (a === 'cancel') { uc('cancel'); state = 'idle'; render(); }
+    if (a === 'rectoggle') { recOpen = !recOpen; if (!recOpen) pickOpen = false; snd('clic'); render(); }
+    if (a === 'picktoggle') { pickOpen = !pickOpen; render(); }
+    if (a === 'repair' || a === 'rollback' || a === 'pick') {
+      const url = b.dataset.url, size = +b.dataset.size || 0, v = +b.dataset.v || 0;
+      const down = a === 'rollback' || b.dataset.down === '1';
+      which = 'pp'; state = 'downloading'; err = ''; prog = { d: 0, t: size };
+      render(); uc('recover', url, size, v, down);
+    }
     if (a === 'puppy') uc('openPuppy');
     if (a === 'page') uc('openPage');
     if (b.dataset.sw) { const on = !b.classList.contains('on'); S[b.dataset.sw] = on; uc('set', b.dataset.sw, on); render(); }

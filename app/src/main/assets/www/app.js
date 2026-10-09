@@ -610,10 +610,25 @@
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     async function run() {
       $('#pcgo', scr).remove();
-      const list = pending(); const total = list.length;
+      let list = pending(); let total = list.length;
       if (!total) { log('<span class="ok">✓ rien à ranger — accueil déjà nickel 🐶</span>'); const d = dedupHome(); if (d) { log(`<span class="ok">✓ ${d} raccourci(s) en double retiré(s) 🧹</span>`); saveHome(); } done(0, 0, d); return; }
       cfg.autoTidy = true; saveCfg();
+      // 🧠 Phase d'apprentissage : le chiot apprend de TON rangement actuel (éditeurs → dossiers)
+      log('<span class="cmd">&gt; flair --apprendre</span>');
+      let learned = 0;
+      const known = apps.filter((a) => !/sort/.test(catOf(a)) && (overrides[a.id] || flairOf(a).conf >= 0.8));
+      for (const a of known) {
+        const cat = catOf(a), v = Flair.vendorOf(a.pkg);
+        if (!v || cat === 'puppy' || cat === 'system') continue;
+        const before = (learn[v] && learn[v][cat]) || 0;
+        learn = Flair.learnFrom(a, cat, learn);
+        if (!before) { learned++; if (learned <= 8) { addBlip(true); log(`<span class="dim">apprend</span> ${esc(v)} <span class="arrow">→</span> <b>${esc(Flair.cat(cat).n)}</b>`); await wait(55); } }
+      }
+      S.set('learn', learn); flairCache.clear();
+      log(learned ? `<span class="ok">✓ ${learned} indice(s) d'éditeur appris de ton rangement 🧠</span>` : `<span class="dim">rien de neuf à apprendre</span>`);
+      await wait(300);
       log('<span class="cmd">&gt; flair --scan --tri-auto</span>');
+      list = pending(); total = list.length;
       log(`renifle ${total} appli(s) dans « À trier »…`); await wait(400);
       let ranged = 0, kept = 0;
       for (let i = 0; i < total; i++) {
