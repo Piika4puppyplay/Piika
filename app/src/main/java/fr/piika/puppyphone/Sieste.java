@@ -54,7 +54,7 @@ final class Sieste {
 
     View create() {
         web = new WebView(ctx);
-        web.setBackgroundColor(0xFF05020A);
+        web.setBackgroundColor(0xFF000000);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(false); s.setTextZoom(100);
         web.setWebViewClient(new WebViewClient() {

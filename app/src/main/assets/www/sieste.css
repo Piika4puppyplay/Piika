@@ -1,6 +1,6 @@
 /* La sieste du chiot — horloge-batterie néon */
-body.sieste{--acc:#ff3fa4;--acc2:#29e6ff;--fc:hsl(60 100% 50%);background:#05020a;overflow:hidden}
-.sky{position:fixed;inset:0;background:radial-gradient(70% 45% at 20% 0%,color-mix(in srgb,var(--acc) 30%,transparent),transparent 70%),radial-gradient(60% 40% at 100% 60%,color-mix(in srgb,var(--acc2) 18%,transparent),transparent 70%),linear-gradient(#0b0518,#05020a 70%)}
+body.sieste{--acc:#ff3fa4;--acc2:#29e6ff;--fc:hsl(60 100% 50%);background:#000;overflow:hidden}
+.sky{position:fixed;inset:0;background:#000}
 #stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:tw var(--d,3s) ease-in-out infinite alternate;opacity:.2}
 @keyframes tw{to{opacity:.9;transform:scale(1.6)}}
 .floor{position:absolute;left:-20%;right:-20%;bottom:0;height:30%;transform:perspective(300px) rotateX(60deg);transform-origin:bottom;
@@ -59,3 +59,8 @@ body.lum1 #wrap{filter:brightness(.62) saturate(.9)}
 body.lum1 .sky{opacity:.55}
 /* fin de sieste : fondu au noir avant que l'écran s'éteigne */
 body.dodo #wrap,body.dodo .sky{opacity:0!important;transition:opacity 2.2s ease-in}
+
+/* noir OLED absolu : pas de sol ni de ciel coloré, seules quelques étoiles très fines */
+.floor{display:none}
+#stars i{width:1.5px;height:1.5px}
+@keyframes tw{to{opacity:.55;transform:scale(1.3)}}
