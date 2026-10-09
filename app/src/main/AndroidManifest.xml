@@ -759,6 +759,44 @@
         </receiver>
 
         <activity
+            android:name=".DownActivity"
+            android:label="PupDown"
+            android:icon="@mipmap/ic_pupdown"
+            android:roundIcon="@mipmap/ic_pupdown"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.down"
+            android:theme="@style/PupNetTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".DefisActivity"
+            android:label="Piika"
+            android:icon="@mipmap/ic_pupdefis"
+            android:roundIcon="@mipmap/ic_pupdefis"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.defis"
+            android:theme="@style/PupNetTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".ReveilActivity"
             android:label="PupRéveil"
             android:icon="@mipmap/ic_pupreveil"

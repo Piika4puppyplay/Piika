@@ -966,6 +966,7 @@
       const st = wall.type || 'neon';
       const isDef = !!status.isDefault;
       const sorted = appsIn('sort').length;
+      const piikaSkin = call('get', 'piikaSkin') === '1';
       w.set(`
       <div class="cp" style="--wc:var(--acc)">
         <div class="cp-h">${I('paw', 'pink', { shape: 'orb' })}<div><b class="chrome">Mode PuppyPhone</b><small>Transforme ton téléphone en vrai PuppyPhone : PuppyPhone remplace Nova comme écran d'accueil.</small></div></div>
@@ -1039,6 +1040,11 @@
       </div>
 
       <div class="cp">
+        <div class="cp-h">${I('heart', 'pink')}<div><b>Les défis · Piika</b><small>Ton appli de défis est embarquée hors ligne. Par défaut elle garde son habillage sobre.</small></div></div>
+        <div class="row"><span>Thème PuppyPlay sur Piika<small>${piikaSkin ? 'néon puppyplay' : 'sobre (habillage d\'origine)'}</small></span><button class="sw${piikaSkin ? ' on' : ''}" data-act="piikaskin" type="button"><i></i></button></div>
+      </div>
+
+      <div class="cp">
         <div class="cp-h">${I('home', 'pink')}<div><b>Écran d'accueil</b><small>Remettre la disposition de départ (tes corrections de tri sont gardées).</small></div></div>
         <button class="ab small glass" data-act="resethome" type="button">Réorganiser l'accueil par défaut</button>
       </div>
@@ -1067,6 +1073,7 @@
         if (d.act === 'tidynow') { closeTop(); openClean(); }
         if (d.act === 'forget') { overrides = {}; learn = {}; S.set('cats', overrides); S.set('learn', learn); flairCache.clear(); renderAll(); w.refresh(); toast('Flair remis à zéro', 'Toutes les applis sont re-triées automatiquement.'); }
         if (d.act === 'resethome') { home = defaultHome(); saveHome(); renderAll(); toast('Accueil réorganisé', 'Disposition puppy par défaut.'); }
+        if (d.act === 'piikaskin') { const on = call('get', 'piikaSkin') !== '1'; call('set', 'piikaSkin', on ? '1' : null); w.refresh(); toast(on ? 'Thème PuppyPlay activé sur Piika' : 'Piika repasse en sobre', 'Rouvre les défis pour voir le changement.'); }
       };
       const rng = (id, fn) => { const r = $('#' + id, w.w); if (!r) return; const min = +r.min, max = +r.max; const u = () => r.style.setProperty('--v', ((r.value - min) / (max - min) * 100) + '%'); u(); r.oninput = () => { u(); fn(+r.value); }; };
       rng('setv', (v) => { wall.volume = v / 100; call('setWallVolume', wall.volume); });

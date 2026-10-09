@@ -35,6 +35,8 @@ public abstract class PupWebActivity extends Activity {
     abstract String page();
     abstract String uiName();
     Object bridge() { return new Common(); }
+    /** Appelé quand la page est prête (après onPageFinished) : les sous-classes peuvent injecter du CSS/JS. */
+    void onReady() { }
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -55,7 +57,7 @@ public abstract class PupWebActivity extends Activity {
                 try { startActivity(new Intent(Intent.ACTION_VIEW, r.getUrl())); } catch (Exception ignored) { }
                 return true;
             }
-            @Override public void onPageFinished(WebView v, String u) { pushInsets(); }
+            @Override public void onPageFinished(WebView v, String u) { pushInsets(); onReady(); }
         });
         web.setWebChromeClient(new WebChromeClient() {
             @Override public void onPermissionRequest(android.webkit.PermissionRequest r) { ui.post(() -> askWeb(r)); }
