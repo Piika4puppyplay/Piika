@@ -95,11 +95,16 @@ final class PupVeille {
                 PixelFormat.OPAQUE);
         lp.gravity = Gravity.TOP | Gravity.START;
         // la « ruse du lecteur vidéo » : la fenêtre impose sa luminosité à l'écran
-        lp.screenBrightness = lum >= 2 ? WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : lum == 1 ? 0.12f : 0.03f;
+        lp.screenBrightness = (lum >= 2 || preview) ? WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : lum == 1 ? 0.12f : 0.03f; // aperçu : luminosité normale pour bien voir
         if (Build.VERSION.SDK_INT >= 28) lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         lp.setTitle("PupVeille");
         v.setOnTouchListener((x, e) -> { if (e.getAction() == MotionEvent.ACTION_UP) hide(); return true; });
-        try { wm.addView(v, lp); view = v; } catch (Exception e) { s.stop(); s = null; return; }
+        try { wm.addView(v, lp); view = v; }
+        catch (Exception e) {
+            s.stop(); s = null;
+            if (preview) c.startActivity(new Intent(c, sieste ? SiesteActivity.class : VeilleActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("preview", true));
+            return;
+        }
         s.start();
         showing = true;
         int sec = sieste ? Sieste.duree(svc) : Pelage.sp(svc).getInt("veilleDuree", 30);

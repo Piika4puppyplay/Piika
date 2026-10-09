@@ -14,12 +14,12 @@
   function liquidColor(p) { const h = Math.max(0, Math.min(120, p * 1.2)); return [hsl(h, 100, 62), hsl(h, 100, 45), hsl(h, 100, 30), h]; }
   function bolt(c, x, y, s, a) {
     c.save(); c.translate(x, y); c.scale(s / 36, s / 36); c.globalAlpha = a;
-    c.shadowColor = '#ffb627'; c.shadowBlur = 18; c.fillStyle = '#fff8c9'; c.strokeStyle = '#ffb627'; c.lineWidth = 2;
+    c.shadowColor = '#ffb627'; c.shadowBlur = 4; c.fillStyle = '#fff8c9'; c.strokeStyle = '#ffb627'; c.lineWidth = 2;
     c.beginPath(); c.moveTo(14, 1); c.lineTo(2, 21); c.lineTo(10, 21); c.lineTo(7, 35); c.lineTo(22, 13); c.lineTo(13, 13); c.closePath(); c.fill(); c.stroke(); c.restore();
   }
   function pctText(c, x, y, size, pct, col) {
     c.save(); c.font = `${size}px Bungee, Impact, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.shadowColor = col; c.shadowBlur = size * .35; c.fillStyle = '#fff'; c.fillText(pct + '%', x, y);
+    c.shadowColor = col; c.shadowBlur = size * .08; c.fillStyle = '#fff'; c.fillText(pct + '%', x, y);
     c.shadowBlur = 0; c.lineWidth = Math.max(1, size * .04); c.strokeStyle = 'rgba(0,0,0,.45)'; c.strokeText(pct + '%', x, y); c.restore();
   }
   // mini chiot endormi (posé sur la batterie)
@@ -41,11 +41,11 @@
     const bw = w * .78, bh = bw * .44, x0 = (w - bw) / 2 - w * .03, y0 = h * .52 - bh / 2, r = bh * .22, pad = bh * .08;
     const [l1, l2, l3, hue] = liquidColor(pct);
     // halo
-    c.fillStyle = RG(c, x0 + bw / 2, y0 + bh / 2, bw * .75, [[0, hsl(hue, 100, 50, .22)], [1, hsl(hue, 100, 50, 0)]]); c.fillRect(0, 0, w, h);
+    // noir OLED : pas de halo autour
     // embout
     c.fillStyle = chrome(c, 0, y0 + bh * .3, 0, y0 + bh * .7); c.beginPath(); c.roundRect(x0 + bw - 2, y0 + bh * .3, bw * .07, bh * .4, [0, r * .5, r * .5, 0]); c.fill();
     // cadre chromé
-    c.save(); c.shadowColor = hsl(hue, 100, 50, .6); c.shadowBlur = bh * .25;
+    c.save();
     c.fillStyle = chrome(c, x0, y0, x0 + bw * .4, y0 + bh); c.beginPath(); c.roundRect(x0, y0, bw, bh, r); c.fill(); c.restore();
     for (const [rx, ry] of [[x0 + pad * 1.3, y0 + pad * 1.3], [x0 + bw - pad * 1.3, y0 + pad * 1.3], [x0 + pad * 1.3, y0 + bh - pad * 1.3], [x0 + bw - pad * 1.3, y0 + bh - pad * 1.3]]) rivet(c, rx, ry, bh * .035);
     // intérieur en verre
@@ -80,9 +80,9 @@
       c.beginPath(); c.roundRect(x0, cy - tube / 2 - grow, L, tube + grow * 2, tube / 2);
       for (const [bx, by] of [[x0, cy - R * .72], [x0, cy + R * .72], [x1, cy - R * .72], [x1, cy + R * .72]]) { c.moveTo(bx + R + grow, by); c.arc(bx, by, R + grow, 0, 7); }
     };
-    c.fillStyle = RG(c, cx, cy, L * .8, [[0, hsl(hue, 100, 50, .22)], [1, hsl(hue, 100, 50, 0)]]); c.fillRect(0, 0, w, h);
+    // noir OLED : pas de halo autour
     // coque chromée
-    c.save(); c.shadowColor = hsl(hue, 100, 50, .6); c.shadowBlur = R * .8; c.fillStyle = chrome(c, x0 - R, cy - R * 2, x0 + L * .3, cy + R * 2); bone(R * .16); c.fill('nonzero'); c.restore();
+    c.save(); c.fillStyle = chrome(c, x0 - R, cy - R * 2, x0 + L * .3, cy + R * 2); bone(R * .16); c.fill('nonzero'); c.restore();
     // verre sombre
     c.fillStyle = LG(c, 0, cy - R * 2, 0, cy + R * 2, [[0, '#120a20'], [1, '#030106']]); bone(); c.fill('nonzero');
     // liquide
