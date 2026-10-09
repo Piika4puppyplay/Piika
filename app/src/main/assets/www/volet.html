@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Volet PuppyPhone</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="volet.css">
+</head>
+<body class="volet">
+<div id="panel">
+  <!-- en-tête cuir façon collier -->
+  <header class="collar" id="hdr">
+    <div class="stitch"></div>
+    <div class="hrow">
+      <div class="clk"><b id="hh">13</b><i>:</i><b id="mm">23</b></div>
+      <div class="hdate"><span id="d1">Vendredi</span><small id="d2">9 octobre</small></div>
+      <button class="bat" id="bat" data-g="niche" type="button"><span class="cell"><span class="liq" id="liq"></span><span class="bolt" id="bolt">⚡</span></span><b id="bpct">--%</b></button>
+    </div>
+    <div class="rivets">
+      <button class="rv" data-g="android" type="button" title="Volet Android"><span class="k">🤖</span><small>Android</small></button>
+      <button class="rv" data-g="alarm" type="button"><span class="k">⏰</span><small id="alm">Réveil</small></button>
+      <button class="rv" data-g="niche" type="button"><span class="k">🐾</span><small>Niche</small></button>
+      <button class="rv" data-g="settings" type="button"><span class="k">⚙️</span><small>Réglages</small></button>
+      <button class="rv red" data-g="power" type="button"><span class="k">⏻</span><small>Éteindre</small></button>
+    </div>
+    <i class="buckle"></i>
+  </header>
+
+  <!-- tuiles -->
+  <section class="tiles" id="tiles"></section>
+  <button class="more" id="more" type="button"><span>▾</span></button>
+
+  <!-- curseurs -->
+  <section class="sliders">
+    <div class="sl"><span class="si">☀️</span><div class="groove" data-sl="bright"><i class="fill"></i><i class="bone"></i></div><button class="auto" id="autob" data-t="autobright" type="button">A</button></div>
+    <div class="sl"><span class="si">🔊</span><div class="groove" data-sl="vol"><i class="fill"></i><i class="bone"></i></div><span class="vv" id="vv"></span></div>
+  </section>
+
+  <!-- musique en cours -->
+  <section class="media hidden" id="media">
+    <div class="deckm"><div class="vinyl" id="vinyl"><img id="art" alt=""><i></i></div><div class="arm"></div></div>
+    <div class="mt"><b id="mtit"></b><span id="mart"></span><small id="mapp"></small></div>
+    <div class="mbtn"><button data-m="prev" type="button">⏮</button><button class="big" data-m="toggle" id="mplay" type="button">▶</button><button data-m="next" type="button">⏭</button></div>
+  </section>
+
+  <!-- notifications -->
+  <section class="nhead"><h3>📬 La boîte aux lettres<em id="ncount"></em></h3><button class="broom" id="clear" type="button">🧹 Tout balayer</button></section>
+  <section id="nlist"></section>
+
+  <div class="grip" id="grip"><i class="gbone"></i></div>
+</div>
+<div id="out"></div>
+<script src="notifcard.js"></script>
+<script src="volet.js"></script>
+</body>
+</html>

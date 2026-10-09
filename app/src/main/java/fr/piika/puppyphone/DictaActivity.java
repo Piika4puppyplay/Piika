@@ -33,6 +33,7 @@ public class DictaActivity extends PupWebActivity {
     @Override protected void onDestroy() { stopP(); super.onDestroy(); }
 
     void stopP() { if (mp != null) { try { mp.release(); } catch (Exception ignored) { } mp = null; } playing = ""; }
+    static String mimeOf(File f) { return f.getName().endsWith(".aac") ? "audio/aac" : "audio/mp4"; }
     File file(String name) { File f = new File(DictaService.dir(this), new File(name).getName()); return f; }
     void svc(String act, String q) {
         Intent i = new Intent(this, DictaService.class).setAction(act); if (q != null) i.putExtra("q", q);
@@ -73,6 +74,18 @@ public class DictaActivity extends PupWebActivity {
             } catch (Exception ignored) { }
             return o.toString();
         }
+        @JavascriptInterface public String guard() {
+            try {
+                return new JSONObject().put("batt", getSystemService(android.os.PowerManager.class).isIgnoringBatteryOptimizations(getPackageName())).put("a11y", PupNavA11y.I != null).toString();
+            } catch (Exception e) { return "{}"; }
+        }
+        @JavascriptInterface public void battery() {
+            ui.post(() -> {
+                try { startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName()))); }
+                catch (Exception e) { try { startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); } catch (Exception ignored) { } }
+            });
+        }
+        @JavascriptInterface public void a11y() { ui.post(() -> { try { startActivity(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void clearSaved() { DictaService.lastSaved = ""; DictaService.error = ""; }
         @JavascriptInterface public void start(String q) {
             ui.post(() -> {
@@ -92,7 +105,7 @@ public class DictaActivity extends PupWebActivity {
 
         @JavascriptInterface public String list() {
             JSONArray a = new JSONArray();
-            File[] fs = DictaService.dir(DictaActivity.this).listFiles((d, n) -> n.endsWith(".m4a"));
+            File[] fs = DictaService.dir(DictaActivity.this).listFiles((d, n) -> n.endsWith(".m4a") || n.endsWith(".aac"));
             if (fs == null) return "[]";
             Arrays.sort(fs, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
             for (File f : fs) {
@@ -122,7 +135,7 @@ public class DictaActivity extends PupWebActivity {
             String clean = to == null ? "" : to.replaceAll("[\\\\/:*?\"<>|\\n\\r]", "_").trim();
             if (clean.isEmpty()) return "";
             if (clean.length() > 60) clean = clean.substring(0, 60);
-            File f = file(name), t = new File(f.getParentFile(), clean + ".m4a");
+            File f = file(name), t = new File(f.getParentFile(), clean + (name.endsWith(".aac") ? ".aac" : ".m4a"));
             if (t.exists() && !t.equals(f)) return "";
             if (name.equals(playing)) stopP();
             if (!f.renameTo(t)) return "";
@@ -136,13 +149,13 @@ public class DictaActivity extends PupWebActivity {
         }
         @JavascriptInterface public void shareRec(String name) {
             File f = file(name);
-            ui.post(() -> PupSave.share(DictaActivity.this, PupFileProvider.uriFor(f), "audio/mp4", f.getName()));
+            ui.post(() -> PupSave.share(DictaActivity.this, PupFileProvider.uriFor(f), mimeOf(f), f.getName()));
         }
         /** Copie dans Musique/PupDicta (visible dans PupMusic et les autres applis). */
         @JavascriptInterface public String export(String name) {
             File f = file(name);
             try {
-                Uri u = PupSave.save(DictaActivity.this, "audio", "PupDicta", f.getName(), "audio/mp4", o -> {
+                Uri u = PupSave.save(DictaActivity.this, "audio", "PupDicta", f.getName(), mimeOf(f), o -> {
                     try (FileInputStream in = new FileInputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
                 });
                 return u == null ? "" : "ok";

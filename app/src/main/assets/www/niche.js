@@ -9,9 +9,9 @@
   const PEL = [['auto', 'Chacun son pelage', '#ff3fa4', '#29e6ff', '#0b0614'], ['rose', 'Néon Rose', '#ff3fa4', '#29e6ff', '#0b0614'], ['cyan', 'Laser Turquoise', '#29e6ff', '#ff3fa4', '#030b12'], ['violet', 'Violet Velours', '#9b5cff', '#29e6ff', '#0b0418'], ['cuir', 'Cuir & Rivets', '#ff3fa4', '#29e6ff', '#120a10'], ['or', 'Or Royal', '#ffb627', '#ff3fa4', '#0e0802'], ['vert', 'Vert Fluo', '#3dffb0', '#9b5cff', '#020e0a']]
     .map(([id, nom, acc, acc2, bg]) => ({ id, nom, acc, acc2, bg }));
   const N = window.Niche || {
-    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, siesteCharge: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0 }),
+    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, siesteCharge: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0, voletOn: true, popOn: true, aodNotif: true, aodNotifTxt: false, homeNotif: true, voletZone: 0, notifOk: false, writeOk: false, dndOk: false }),
     pelage() {}, backup() { const st = ['Réglages des Pup-apps…', 'Fichiers de la niche…', 'Mémoire des pages (playlists, favoris…)…', 'Rangement dans Téléchargements…']; st.forEach((m, i) => setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'step', msg: m })), 500 * (i + 1))); setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'done', name: 'niche_2026-10-09_02h10.puppy' })), 2600); },
-    pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, setStr() {}, veillePreview() {}, aodSave: (st) => 'pup_aod_' + st + '.gif', openAod() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
+    pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, setStr() {}, veillePreview() {}, aodSave: (st) => 'pup_aod_' + st + '.gif', openAod() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, notifAccess() {}, writeAccess() {}, dndAccess() {}, voletTest: () => true, popTest() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
   };
   const nc = (fn, ...a) => { try { return N[fn] ? N[fn](...a) : undefined; } catch (e) { console.warn(fn, e); } };
   const fmtD = (t) => t ? new Date(t).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
@@ -167,6 +167,31 @@
     </section>`;
   }
 
+  function renderVolet() {
+    const off = !S.voletOn;
+    $('#s-volet').innerHTML = `<section class="ncard">
+      <h2>${ic('menu', 'violet')}Volet & notifications<em>${S.voletOn ? 'Volet puppy ON' : 'Volet Android'}</em></h2>
+      <p class="hint">Quand tu glisses le doigt depuis le haut de l'écran, c'est <b>le volet PuppyPhone</b> qui descend : collier en cuir, boutons chromés, curseurs-os, platine vinyle et ta boîte aux lettres. Il passe <b>au-dessus</b> de celui d'Android grâce à PupNav. Écran verrouillé, c'est toujours <b>le volet One UI</b> qui répond (ta sécurité ne change pas). Le bouton 🤖 du volet ouvre celui d'Android quand tu en as besoin.</p>
+      ${!S.a11y ? `<div class="warnbox"><span>⚠️ Le volet passe par le service <b>PupNav</b> (accessibilité).</span><button class="ab small amber" data-a="a11y" type="button">Ouvrir l'accessibilité</button></div>` : ''}
+      ${!S.notifOk ? `<div class="warnbox"><span>🙉 Pour lire tes notifications, autorise <b>PuppyPhone</b> dans <b>Accès aux notifications</b>. Si l'interrupteur est grisé : Réglages › Applications › PuppyPhone › ⋮ › <b>Autoriser les paramètres restreints</b>, puis réessaie.</span><button class="ab small amber" data-a="notifacc" type="button">Autoriser</button></div>` : ''}
+      <h3 class="subh">1 · Le volet (glisser depuis le haut)</h3>
+      ${row('voletOn', 'Volet PuppyPhone', 'Éteins-le et le geste ouvre de nouveau le volet Android, comme avant')}
+      <div class="row${off ? ' dim' : ''}"><span>Zone du geste<small>Sur une moitié, l'autre moitié garde le volet Android</small></span></div>
+      ${seg('voletZone', [[0, 'Toute la largeur'], [1, 'Moitié droite'], [2, 'Moitié gauche']], S.voletZone || 0, off)}
+      <div class="nrow"><button class="ab c2" data-a="volettest" type="button">${ic('eye', 'chrome', 'none')}Ouvrir le volet</button></div>
+      ${!S.writeOk || !S.dndOk ? `<p class="hint">Pour que les boutons du volet agissent directement :</p><div class="nrow">${!S.writeOk ? `<button class="ab glass" data-a="writeacc" type="button">☀️ Luminosité & rotation</button>` : ''}${!S.dndOk ? `<button class="ab glass" data-a="dndacc" type="button">🌙 Ne pas déranger</button>` : ''}</div>` : ''}
+      <h3 class="subh">2 · Pop-ups de notifications</h3>
+      ${row('popOn', 'Pop-ups puppyplay', 'Une carte puppyplay glisse en haut de l\'écran par-dessus le pop-up d\'Android. Glisse-la vers le haut pour la ranger, sur le côté pour l\'effacer, vers le bas pour ouvrir le volet')}
+      <p class="hint">💡 Pour que celui d'Android ne dépasse pas derrière : Réglages › Notifications › <b>Style des fenêtres contextuelles</b> › <b>Bref</b>.</p>
+      <div class="nrow"><button class="ab amber" data-a="poptest" type="button">🔔 Pop-up de test</button></div>
+      <h3 class="subh">3 · Sur la Veille puppy et la Sieste</h3>
+      ${row('aodNotif', 'Médailles de notifications', 'L\'icône de chaque appli qui t\'a écrit, avec le nombre, sous l\'horloge de l\'écran éteint')}
+      ${row('aodNotifTxt', 'Afficher aussi le texte', 'Visible même téléphone verrouillé : laisse éteint si quelqu\'un peut voir ton écran', !S.aodNotif)}
+      <h3 class="subh">4 · Sous l'horloge de l'accueil</h3>
+      ${row('homeNotif', 'Médailles sous l\'horloge', 'Touche-les pour ouvrir le volet')}
+    </section>`;
+  }
+
   function render() {
     const cur = S.pelage || 'auto', pels = S.pelages && S.pelages.length ? S.pelages : PEL;
     const curP = pels.find((p) => p.id === cur) || pels[0];
@@ -180,7 +205,7 @@
         <div class="medals">${pels.map((p, i) => `<button data-nosound class="medal${p.id === cur ? ' on' : ''}${p.id === 'auto' ? ' auto' : ''}" data-pel="${esc(p.id)}" type="button" style="--a:${p.acc};--b:${p.acc2};--dl:${(i * -0.6).toFixed(1)}s"><i class="ring"></i><span class="disc">${PAW}</span><b>${esc(p.nom)}</b></button>`).join('')}</div>
       </section>`;
     { const md = $('.medals'), on = $('.medal.on'); if (md && on) md.scrollLeft = on.offsetLeft - (md.clientWidth - on.clientWidth) / 2; }
-    renderSons(); renderVerrou(); renderAod();
+    renderSons(); renderVerrou(); renderAod(); renderVolet();
     $('#s-bone').innerHTML = `      <section class="ncard">
         <h2>${ic('bone', 'amber')}La cachette à os<em>Sauvegarde</em></h2>
         <div class="dig${working ? ' work' : ''}${bk.st === 'done' ? ' down' : ''}" id="dig">${DIG}</div>
@@ -198,7 +223,7 @@
     $('#s-dur').innerHTML = [[15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [0, 'Jamais']].map(([v, l]) => `<button type="button" data-dur="${v}" class="${(S.siesteDuree == null ? 60 : S.siesteDuree) === v ? 'on' : ''}">${l}</button>`).join('');
   }
   function init() {
-    $('#nbody').innerHTML = '<div id="s-pel"></div><div id="s-wall"></div><div id="s-sons"></div><div id="s-verrou"></div><div id="s-aod"></div><div id="s-bone"></div>' + `      <section class="ncard">
+    $('#nbody').innerHTML = '<div id="s-pel"></div><div id="s-wall"></div><div id="s-sons"></div><div id="s-verrou"></div><div id="s-aod"></div><div id="s-volet"></div><div id="s-bone"></div>' + `      <section class="ncard">
         <h2>${ic('battery', 'green')}La sieste du chiot<em>Charge</em></h2>
         <div class="siestprev"><iframe src="sieste.html?apercu=1" tabindex="-1" title="Aperçu de la sieste"></iframe></div>
         <p class="hint">Pendant la charge, ton chiot dort sur son coussin pendant que <b>l'horloge s'allume dans une batterie en verre</b> : rouge quand la gamelle est vide, elle vire au <b>vert</b> en se remplissant jusqu'à 100 %, puis le chiot se réveille avec son os. La scène glisse doucement toute seule pour ne jamais marquer l'écran.</p>
@@ -249,6 +274,11 @@
     if (a === 'lockgo') { const ok = nc('lockToo'); veil(); toast(ok === false ? "One UI n'a pas voulu 🥺 utilise le choix « accueil et verrouillage » de l'aperçu" : 'Verrouille ton téléphone pour voir 🐾'); }
     const wc = e.target.closest('[data-wall]'); if (wc) { wsel = wc.dataset.wall; renderWall(); return; }
     if (a === 'sieste') nc('siestePreview');
+    if (a === 'notifacc') nc('notifAccess');
+    if (a === 'writeacc') nc('writeAccess');
+    if (a === 'dndacc') nc('dndAccess');
+    if (a === 'volettest') { if (nc('voletTest') === false) toast('Active PupNav dans l\'accessibilité pour le volet 🐶'); }
+    if (a === 'poptest') { nc('popTest'); toast(S.popOn ? 'Le facteur arrive dans 2 secondes… 📬' : 'Allume les pop-ups puppyplay pour voir la carte 🐾'); }
     if (a === 'dream') nc('dreamSettings');
     if (a === 'rs-no') { nc('cancelRestore'); veil(); toast("L'os reste enterré, rien n'a bougé 🐶"); }
     if (a === 'rs-go') { veil(`<h3>Le chiot creuse… 🦴</h3><p>La niche redémarre avec ton os. Ne quitte pas, ça prend quelques secondes.</p>`); setTimeout(() => nc('restoreNow'), 600); }

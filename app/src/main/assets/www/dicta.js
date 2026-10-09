@@ -6,7 +6,7 @@
   const COLS = ['#ff3fa4', '#29e6ff', '#3dffb0', '#ffb627', '#9b5cff', '#ff5a3c'];
   const P = window.Pup || mock();
   const fmt = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0'); };
-  const nice = (n) => String(n || '').replace(/\.m4a$/i, '');
+  const nice = (n) => String(n || '').replace(/\.(m4a|aac)$/i, '');
   const colOf = (it) => (it && it.col) || COLS[[...String(it && it.name)].reduce((a, c) => a + c.charCodeAt(0), 0) % COLS.length];
   function toast(msg) { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2800); }
   let pref = { q: 'std', s: 1 };
@@ -63,7 +63,7 @@
     try { st = JSON.parse(P.state()); } catch (e) { st = {}; }
     try { ps = JSON.parse(P.pstate()); } catch (e) { ps = {}; }
     if (st.saved) { const n = st.saved; P.clearSaved(); refresh(); const it = items.find((x) => x.name === n); if (it) load(it); toast('📼 Cassette rangée sur l’étagère 🐾'); }
-    else if (st.error) { P.clearSaved(); toast('😿 ' + st.error); }
+    else if (st.error) { P.clearSaved(); toast(/^↻/.test(st.error) ? st.error + ' 🐾' : '😿 ' + st.error); }
     if (ps.playing) curPos = ps.pos;
     const k = (n) => $(`[data-k="${n}"]`);
     k('rec').classList.toggle('down', !!(st.rec && !st.paused));
@@ -182,7 +182,7 @@
 
   window.DictaUI = {
     on(ev, d) {
-      if (ev === 'resume') { refresh(); poll(); }
+      if (ev === 'resume') { refresh(); poll(); guard(); }
       if (ev === 'rec') poll();
       if (ev === 'pend') { curPos = 0; }
       if (ev === 'perr') toast('Lecture impossible 😿');
@@ -190,11 +190,19 @@
     },
     back() { if (!$('#veil').classList.contains('hidden')) { unveil(); return true; } return false; },
   };
-  refresh(); poll();
+  function guard() {
+    let g = {}; try { g = JSON.parse(P.guard ? P.guard() : '{}'); } catch (e) { }
+    const w = [];
+    if (g.batt === false) w.push(`<div class="warnbox">🔋 One UI peut couper le magnétophone pour « économiser » la batterie. Laisse PuppyPhone en <b>batterie illimitée</b> :<button class="ab small amber" data-g="batt" type="button">Autoriser</button></div>`);
+    if (g.a11y === false) w.push(`<div class="warnbox">🛡️ Active <b>PupNav</b> dans l'accessibilité : la « fausse vidéo » garde le magnétophone éveillé et le relance tout seul après une coupure.<button class="ab small amber" data-g="a11y" type="button">Ouvrir l'accessibilité</button></div>`);
+    $('#guard').innerHTML = w.join('');
+  }
+  document.addEventListener('click', (e) => { const g = e.target.closest('[data-g]'); if (g) { if (g.dataset.g === 'batt') P.battery(); else P.a11y(); } });
+  refresh(); poll(); guard();
 
   // ------------------------------------------------------------ maquette navigateur
   function mock() {
-    const L = [{ name: 'Idée de chanson pour Rex.m4a', size: 2.1e6, at: Date.now() - 36e5, ms: 184000, marks: [32000, 95000] }, { name: 'Courses de la semaine.m4a', size: .6e6, at: Date.now() - 864e5, ms: 41000, col: '#3dffb0' }, { name: 'Dicta 2026-10-07 21h14.m4a', size: 5.4e6, at: Date.now() - 2 * 864e5, ms: 612000 }];
+    const L = [{ name: 'Idée de chanson pour Rex.aac', size: 2.1e6, at: Date.now() - 36e5, ms: 184000, marks: [32000, 95000] }, { name: 'Courses de la semaine.m4a', size: .6e6, at: Date.now() - 864e5, ms: 41000, col: '#3dffb0' }, { name: 'Dicta 2026-10-07 21h14.m4a', size: 5.4e6, at: Date.now() - 2 * 864e5, ms: 612000 }];
     let r = { rec: false, paused: false, t0: 0, acc: 0, marks: [] }, p = { name: '', playing: false, pos: 0, t0: 0 };
     const W = Array.from({ length: 1840 }, (_, i) => Math.max(0, Math.min(255, 120 + 90 * Math.sin(i / 7) * Math.sin(i / 53) + (Math.random() * 60 - 30))));
     return {
@@ -204,7 +212,7 @@
       list: () => JSON.stringify(L), wave: (n) => JSON.stringify({ wave: W, marks: (L.find((x) => x.name === n) || {}).marks || [] }), setColor(n, c) { const it = L.find((x) => x.name === n); if (it) it.col = c; },
       rename(n, to) { const it = L.find((x) => x.name === n); it.name = to + '.m4a'; return it.name; }, del(n) { L.splice(L.findIndex((x) => x.name === n), 1); return true; }, shareRec() {}, export: () => 'ok',
       play(n, from) { p = { name: n, playing: true, pos: from >= 0 ? from : p.pos, t0: Date.now() - (from >= 0 ? from : p.pos) }; }, pauseP() { p.pos = Date.now() - p.t0; p.playing = false; }, stopPlay() { p = { name: '', playing: false, pos: 0 }; }, seek(ms) { p.t0 = Date.now() - ms; }, setSpeed() {},
-      pstate: () => JSON.stringify({ name: p.name, playing: p.playing, pos: p.playing ? Date.now() - p.t0 : p.pos, dur: 0 }), haptic() {},
+      guard: () => JSON.stringify({ batt: false, a11y: true }), battery() {}, a11y() {}, pstate: () => JSON.stringify({ name: p.name, playing: p.playing, pos: p.playing ? Date.now() - p.t0 : p.pos, dur: 0 }), haptic() {},
     };
   }
 })();

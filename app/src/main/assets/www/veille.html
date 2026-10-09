@@ -24,8 +24,10 @@ body.dodo #vw{opacity:0}
   <div id="vdate"></div>
   <canvas id="vbat" width="600" height="600"></canvas>
   <div id="vsay"></div>
+  <div id="aodn"></div>
 </div>
 <script src="aodbat.js"></script>
+<script src="aodnotif.js"></script>
 <script>
 (function () {
   const $ = (s) => document.querySelector(s), J = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
@@ -47,7 +49,9 @@ body.dodo #vw{opacity:0}
     $('#vsay').textContent = bat.full || bat.pct >= 100 ? 'Gamelle pleine 🐾' : bat.charging ? (r ? `Plein dans ${r >= 60 ? Math.floor(r / 60) + ' h ' + String(r % 60).padStart(2, '0') : r + ' min'}` : 'Le chiot recharge ses croquettes') : bat.pct <= 15 ? 'Gamelle presque vide 🥺' : 'Le chiot veille 🐶';
   }
   function drift() { const x = (Math.random() - .5) * 12, y = (Math.random() - .5) * 14; $('#vw').style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`; }
-  window.SiesteUI = { on(ev, data) { if (ev === 'battery') { bat = J(data, bat) || bat; clock(); } if (ev === 'dodo') document.body.classList.add('dodo'); } };
+  const notifs = () => { if (B.notifs) AodNotif.render(B.notifs()); };
+  window.SiesteUI = { on(ev, data) { if (ev === 'battery') { bat = J(data, bat) || bat; clock(); } if (ev === 'dodo') document.body.classList.add('dodo'); if (ev === 'notifs') notifs(); } };
+  notifs();
   frame(); clock(); drift(); setInterval(clock, 1000); setInterval(drift, 20000);
 })();
 </script>

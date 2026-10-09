@@ -208,7 +208,9 @@ public class MainActivity extends Activity {
         long ver = wallPrefs().getLong("wall_ver", 0);
         if (ver != appliedWallVer) { applyWallMode(); emit("wall", wallInfo()); }
         emit("resume", "");
+        PupNotifs.listeners.remove(homeNotifL); PupNotifs.listeners.add(homeNotifL);
     }
+    final Runnable homeNotifL = () -> emit("notifs", "");
 
     @Override
     protected void onStop() {
@@ -237,6 +239,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        PupNotifs.listeners.remove(homeNotifL);
         try { if (statusRx != null) unregisterReceiver(statusRx); } catch (Exception ignored) { }
         try { if (laCb != null) la.unregisterCallback(laCb); } catch (Exception ignored) { }
         try { if (torchCb != null && cam != null) cam.unregisterTorchCallback(torchCb); } catch (Exception ignored) { }
@@ -271,6 +274,11 @@ public class MainActivity extends Activity {
                 byte[] png = appIcon(u.getQueryParameter("id"), "1".equals(u.getQueryParameter("raw")), String.valueOf(u.getQueryParameter("v")));
                 if (png == null) return notFound();
                 h.put("Cache-Control", "max-age=31536000");
+                return new WebResourceResponse("image/png", null, 200, "OK", h, new ByteArrayInputStream(png));
+            }
+            if (p.equals("/nicon")) {
+                byte[] png = PupNotifs.appIcon(this, u.getQueryParameter("pkg"));
+                if (png == null) return notFound();
                 return new WebResourceResponse("image/png", null, 200, "OK", h, new ByteArrayInputStream(png));
             }
             if (p.equals("/sicon")) {
@@ -884,6 +892,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface public void expand() {
             ui.post(() -> {
+                if (PupVolet.voletOn(MainActivity.this) && PupVolet.openFromApp()) return; // le volet PuppyPhone d'abord
                 try {
                     Object sb = getSystemService("statusbar");
                     Class<?> c = Class.forName("android.app.StatusBarManager");
@@ -894,5 +903,9 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface public void toast(String s) { MainActivity.this.toast(s); }
+        @JavascriptInterface public String notifs() {
+            if (!Pelage.sp(MainActivity.this).getBoolean("homeNotif", true) || PupNotifs.I == null) return "[]";
+            return PupNotifs.summary(MainActivity.this, true);
+        }
     }
 }

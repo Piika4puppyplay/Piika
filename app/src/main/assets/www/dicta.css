@@ -96,3 +96,5 @@
 .toast{position:fixed;left:50%;bottom:calc(var(--sb) + 30px);transform:translate(-50%,30px);opacity:0;z-index:60;max-width:90vw;padding:10px 16px;border-radius:14px;font-size:13.5px;text-align:center;pointer-events:none;
   background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,.04)),#1d0f30;border:1px solid rgba(255,255,255,.4);box-shadow:0 10px 24px rgba(0,0,0,.7);transition:.35s}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+#guard{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+#guard .warnbox{display:flex;flex-direction:column;gap:8px;align-items:flex-start}

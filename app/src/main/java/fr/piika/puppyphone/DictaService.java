@@ -42,6 +42,17 @@ public class DictaService extends Service {
     static Runnable onChange;
 
     MediaRecorder mr;
+    android.os.PowerManager.WakeLock wl;
+    static android.content.SharedPreferences sp(Context c) { return c.getSharedPreferences("pupdicta", MODE_PRIVATE); }
+
+    /** Un enregistrement était en cours quand PuppyPhone a été coupé : on repart sur une cassette « (suite) ». */
+    static void watchdog(Context c) {
+        String live = sp(c).getString("live", "");
+        if (live.isEmpty() || rec) return;
+        try {
+            c.startForegroundService(new Intent(c, DictaService.class).setAction(ACT_START).putExtra("q", sp(c).getString("q", "std")).putExtra("suite", live));
+        } catch (Exception e) { sp(c).edit().remove("live").apply(); }
+    }
     final Handler h = new Handler(Looper.getMainLooper());
     final Runnable poll = new Runnable() { @Override public void run() {
         if (mr != null && rec && !paused) {
@@ -61,7 +72,7 @@ public class DictaService extends Service {
 
     @Override public int onStartCommand(Intent i, int flags, int id) {
         String a = i == null ? null : i.getAction();
-        if (ACT_START.equals(a)) start(i.getStringExtra("q"));
+        if (ACT_START.equals(a)) start(i.getStringExtra("q"), i.getStringExtra("suite"));
         else if (ACT_PAUSE.equals(a)) pause();
         else if (ACT_RESUME.equals(a)) resume();
         else if (ACT_MARK.equals(a)) mark();
@@ -70,17 +81,18 @@ public class DictaService extends Service {
         return START_NOT_STICKY;
     }
 
-    void start(String q) {
+    void start(String q, String suite) {
         if (rec) return;
         error = "";
         try {
             startFg();
-            String name = "Dicta " + new SimpleDateFormat("yyyy-MM-dd HH'h'mm", Locale.FRANCE).format(new Date());
-            File f = new File(dir(this), name + ".m4a"); int n = 2;
-            while (f.exists()) f = new File(dir(this), name + " (" + n++ + ").m4a");
+            String name = suite != null && !suite.isEmpty() ? suite.replaceAll("\\.(m4a|aac)$", "").replaceAll(" \\(suite( \\d+)?\\)$", "") + " (suite)"
+                    : "Dicta " + new SimpleDateFormat("yyyy-MM-dd HH'h'mm", Locale.FRANCE).format(new Date());
+            File f = new File(dir(this), name + ".aac"); int n = 2;
+            while (f.exists()) f = new File(dir(this), name + " " + n++ + ".aac");
             mr = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(this) : new MediaRecorder();
             mr.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mr.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mr.setOutputFormat(MediaRecorder.OutputFormat.AAC_ADTS); // flux AAC : reste lisible même après une coupure brutale
             mr.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             if ("eco".equals(q)) { mr.setAudioSamplingRate(22050); mr.setAudioEncodingBitRate(40000); mr.setAudioChannels(1); }
             else if ("hifi".equals(q)) { mr.setAudioSamplingRate(48000); mr.setAudioEncodingBitRate(192000); mr.setAudioChannels(2); }
@@ -88,12 +100,16 @@ public class DictaService extends Service {
             mr.setOutputFile(f.getAbsolutePath());
             mr.prepare(); mr.start();
             cur = f; rec = true; paused = false; accMs = 0; segStart = SystemClock.elapsedRealtime();
+            sp(this).edit().putString("live", f.getName()).putString("q", q == null ? "std" : q).apply();
+            try { wl = getSystemService(android.os.PowerManager.class).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "puppyphone:dicta"); wl.setReferenceCounted(false); wl.acquire(6 * 3600_000L); } catch (Exception ignored) { }
+            PupAncre.hold("dicta");
+            if (suite != null) error = "↻ Coupure détectée : l'enregistrement a repris sur « " + f.getName().replace(".aac", "") + " »";
             synchronized (marks) { marks.clear(); } synchronized (wave) { wave.clear(); }
             h.removeCallbacks(poll); h.post(poll);
             notifyFg(); changed();
         } catch (Exception e) {
             error = String.valueOf(e.getMessage());
-            release(); rec = false; cur = null;
+            release(); rec = false; cur = null; sp(this).edit().remove("live").apply(); unhold();
             stopForeground(true); stopSelf(); changed();
         }
     }
@@ -114,6 +130,7 @@ public class DictaService extends Service {
         boolean ok = true;
         try { mr.stop(); } catch (Exception e) { ok = false; }
         release(); rec = false; paused = false; h.removeCallbacks(poll); level = 0;
+        sp(this).edit().remove("live").apply(); unhold();
         File f = cur; cur = null;
         if (f != null) {
             if (!ok || f.length() < 1024) { f.delete(); lastSaved = ""; error = "Enregistrement trop court"; }
@@ -130,6 +147,7 @@ public class DictaService extends Service {
         }
         stopForeground(true); stopSelf(); changed();
     }
+    void unhold() { try { if (wl != null && wl.isHeld()) wl.release(); } catch (Exception ignored) { } wl = null; PupAncre.release("dicta"); }
     void release() { if (mr != null) { try { mr.release(); } catch (Exception ignored) { } mr = null; } }
     static void changed() { Runnable r = onChange; if (r != null) new Handler(Looper.getMainLooper()).post(r); }
 
@@ -151,7 +169,7 @@ public class DictaService extends Service {
         Notification.Builder b = new Notification.Builder(this, CH)
                 .setSmallIcon(R.drawable.ic_paw)
                 .setContentTitle(paused ? "⏸️ PupDicta en pause" : "🎙️ PupDicta enregistre…")
-                .setContentText(cur == null ? "" : cur.getName().replace(".m4a", ""))
+                .setContentText(cur == null ? "" : cur.getName().replaceAll("\\.(m4a|aac)$", ""))
                 .setOngoing(true).setContentIntent(open).setCategory(Notification.CATEGORY_SERVICE)
                 .setColor(0xFFFF3FA4);
         if (!paused) { b.setUsesChronometer(true); b.setWhen(System.currentTimeMillis() - elapsed()); }
@@ -160,5 +178,6 @@ public class DictaService extends Service {
         b.addAction(new Notification.Action.Builder(null, "■ Stop", act(ACT_STOP, 4604)).build());
         return b.build();
     }
-    @Override public void onDestroy() { h.removeCallbacks(poll); if (rec) { try { mr.stop(); } catch (Exception ignored) { } release(); rec = false; } super.onDestroy(); }
+    // fermé par le système en plein enregistrement : on garde la marque « live » pour que le chien de garde reprenne
+    @Override public void onDestroy() { h.removeCallbacks(poll); if (rec) { try { mr.stop(); } catch (Exception ignored) { } release(); rec = false; cur = null; } unhold(); super.onDestroy(); }
 }

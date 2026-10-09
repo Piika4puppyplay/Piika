@@ -64,6 +64,10 @@ final class Sieste {
         });
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface public String battery() { return lastBattery; }
+            @JavascriptInterface public String notifs() {
+                if (!Pelage.sp(ctx).getBoolean("aodNotif", true) || PupNotifs.I == null) return "[]";
+                return PupNotifs.summary(ctx, Pelage.sp(ctx).getBoolean("aodNotifTxt", false));
+            }
             @JavascriptInterface public String prefs() {
                 try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).put("lum", lum(ctx)).put("style", Pelage.sp(ctx).getString("veilleStyle", "verre")).put("vlum", Pelage.sp(ctx).getInt("veilleLum", 0)).put("alarm", Reveil.nextText(ctx)).toString(); } catch (Exception e) { return "{}"; }
             }
@@ -81,12 +85,15 @@ final class Sieste {
         return web;
     }
 
+    final Runnable notifL = () -> emit("notifs", "");
     void start() {
+        PupNotifs.listeners.add(notifL);
         Intent i = ctx.registerReceiver(batt, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         if (i != null) push(i);
         ui.postDelayed(tick, 30000);
     }
     void stop() {
+        PupNotifs.listeners.remove(notifL);
         try { ctx.unregisterReceiver(batt); } catch (Exception ignored) { }
         ui.removeCallbacks(tick);
         if (web != null) { web.destroy(); web = null; }
@@ -118,6 +125,11 @@ final class Sieste {
         if (u == null || !HOST.equals(u.getHost())) return null;
         String p = u.getPath() == null ? "/" : u.getPath();
         try {
+            if (p.equals("/nicon")) {
+                byte[] png = PupNotifs.appIcon(ctx, u.getQueryParameter("pkg"));
+                if (png == null) throw new Exception("pas d'icône");
+                return new WebResourceResponse("image/png", null, 200, "OK", new HashMap<>(), new ByteArrayInputStream(png));
+            }
             String path = p.equals("/") ? page : p;
             InputStream in = Pelage.open(ctx, path);
             String mime = MainActivity.mime(path);

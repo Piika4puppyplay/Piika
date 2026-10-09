@@ -146,6 +146,9 @@ public class NicheActivity extends Activity {
                         .put("verrouPattes", p.getBoolean("verrouPattes", true)).put("verrouChiot", p.getBoolean("verrouChiot", true))
                         .put("verrouEtoiles", p.getBoolean("verrouEtoiles", true)).put("verrouCharge", p.getBoolean("verrouCharge", true))
                         .put("verrouForce", p.getInt("verrouForce", 1)).put("veille", p.getBoolean("veille", false)).put("siesteCharge", p.getBoolean("siesteCharge", false)).put("veilleStyle", p.getString("veilleStyle", "verre")).put("veilleQuand", p.getInt("veilleQuand", 0)).put("veilleDuree", p.getInt("veilleDuree", 30)).put("veilleLum", p.getInt("veilleLum", 0)).put("a11y", PupNavA11y.I != null)
+                        .put("voletOn", p.getBoolean("voletOn", true)).put("popOn", p.getBoolean("popOn", true)).put("aodNotif", p.getBoolean("aodNotif", true)).put("aodNotifTxt", p.getBoolean("aodNotifTxt", false))
+                        .put("homeNotif", p.getBoolean("homeNotif", true)).put("voletZone", p.getInt("voletZone", 0)).put("notifOk", PupNotifs.granted(NicheActivity.this))
+                        .put("writeOk", Settings.System.canWrite(NicheActivity.this)).put("dndOk", getSystemService(android.app.NotificationManager.class).isNotificationPolicyAccessGranted())
                         .put("version", PupUpdate.current(NicheActivity.this)).toString();
             } catch (Exception e) { return "{}"; }
         }
@@ -208,18 +211,20 @@ public class NicheActivity extends Activity {
             });
         }
         @JavascriptInterface public void set(String k, boolean v) {
-            if (!k.matches("veille|siesteCharge|siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge")) return;
+            if (!k.matches("veille|siesteCharge|siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge|voletOn|popOn|aodNotif|aodNotifTxt|homeNotif")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putBoolean(k, v);
             if ("sons".equals(k)) e.putLong("ver", System.currentTimeMillis()); // les Pup-apps rechargent leurs sons
             e.commit();
             if (k.startsWith("verrou")) decoRefresh();
+            if (k.equals("voletOn")) ui.post(PupVolet::update);
         }
         @JavascriptInterface public void setInt(String k, int v) {
-            if (!k.matches("sonsVol|verrouForce|siesteLum|siesteDuree|veilleQuand|veilleDuree|veilleLum")) return;
+            if (!k.matches("sonsVol|verrouForce|siesteLum|siesteDuree|veilleQuand|veilleDuree|veilleLum|voletZone")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putInt(k, v);
             if ("sonsVol".equals(k)) e.putLong("ver", System.currentTimeMillis());
             e.commit();
             if (k.startsWith("verrou")) decoRefresh();
+            if (k.equals("voletZone")) ui.post(PupVolet::update);
         }
         void decoRefresh() { ui.post(() -> { PupNavA11y a = PupNavA11y.I; if (a != null && a.deco != null) a.deco.refresh(); }); }
         /** Montre la déco par-dessus l'écran actuel pendant quelques secondes. */
@@ -262,6 +267,26 @@ public class NicheActivity extends Activity {
                         new Intent(Settings.ACTION_DISPLAY_SETTINGS)};
                 for (Intent i : tries) { try { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return; } catch (Exception ignored) { } }
             });
+        }
+        @JavascriptInterface public void notifAccess() { ui.post(() -> PupNotifs.openSettings(NicheActivity.this)); }
+        @JavascriptInterface public void writeAccess() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { } }); }
+        @JavascriptInterface public void dndAccess() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)); } catch (Exception ignored) { } }); }
+        @JavascriptInterface public boolean voletTest() { return PupVolet.openFromApp(); }
+        /** Une vraie notification de test (canal « important ») pour voir le pop-up puppyplay. */
+        @JavascriptInterface public void popTest() {
+            if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                ui.post(() -> requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 47));
+            ui.postDelayed(() -> {
+                try {
+                    android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
+                    if (nm.getNotificationChannel("puptest") == null) nm.createNotificationChannel(new android.app.NotificationChannel("puptest", "Tests PuppyPhone", android.app.NotificationManager.IMPORTANCE_HIGH));
+                    android.app.Notification n = new android.app.Notification.Builder(NicheActivity.this, "puptest").setSmallIcon(R.drawable.ic_paw)
+                            .setContentTitle("🐶 Wouf ! Notification de test").setContentText("Voilà à quoi ressemblent tes notifications en version puppyplay 🐾")
+                            .setAutoCancel(true).setColor(0xFFFF3FA4)
+                            .setContentIntent(android.app.PendingIntent.getActivity(NicheActivity.this, 4700, new Intent(NicheActivity.this, NicheActivity.class), android.app.PendingIntent.FLAG_IMMUTABLE)).build();
+                    nm.notify(4700, n);
+                } catch (Exception ignored) { }
+            }, 1800);
         }
         @JavascriptInterface public void openA11y() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void close() { ui.post(NicheActivity.this::finish); }

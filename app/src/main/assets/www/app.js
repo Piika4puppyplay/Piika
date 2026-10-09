@@ -937,10 +937,23 @@
     $('[data-act=def]', w.w).onclick = () => { call('askDefault'); done(); };
   }
 
+  // ------------------------------------------------------------------ médailles de notifications sous l'horloge
+  function homeNotifs() {
+    const el = $('#clnotif'); if (!el) return;
+    const a = J(call('notifs'), []) || [];
+    if (!a.length) { el.innerHTML = ''; el.hidden = true; return; }
+    el.hidden = false;
+    const tot = a.reduce((s, g) => s + (g.n || 0), 0), top = a[0];
+    el.innerHTML = `<div class="cn-tags">${a.slice(0, 6).map((g) => `<span class="cn-tag"><img src="https://pup.local/nicon?pkg=${encodeURIComponent(g.pkg)}" alt="" onerror="this.style.visibility='hidden'">${g.n > 1 ? `<b>${g.n > 99 ? '99+' : g.n}</b>` : ''}</span>`).join('')}${a.length > 6 ? `<span class="cn-more">+${a.length - 6}</span>` : ''}</div>
+      <div class="cn-last"><b>${esc(top.app)}</b>${esc(top.title || top.text || '')}</div><span class="cn-cnt">${tot} 📬</span>`;
+  }
+  $('#clnotif') && $('#clnotif').addEventListener('click', (e) => { e.stopPropagation(); call('haptic', 'tap'); call('expand'); });
+
   // ------------------------------------------------------------------ pont natif
   window.PupNative = {
     on(ev, data) {
-      if (ev === 'resume') { document.body.classList.remove('paused'); refreshApps('resume'); updateStatus(); takePins(); tick(); }
+      if (ev === 'resume') { document.body.classList.remove('paused'); refreshApps('resume'); updateStatus(); takePins(); tick(); homeNotifs(); }
+      else if (ev === 'notifs') homeNotifs();
       else if (ev === 'pause') document.body.classList.add('paused');
       else if (ev === 'apps') refreshApps(data);
       else if (ev === 'status') updateStatus();

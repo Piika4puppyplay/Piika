@@ -86,6 +86,7 @@ final class PupVeille {
             return;
         }
         hide();
+        PupVolet.closeNow(); PupVolet.popHideNow();
         if (!preview) wake(c);
         page = pg; previewMode = preview;
         boolean sieste = "/sieste.html".equals(pg);
@@ -132,6 +133,7 @@ final class PupVeille {
         if (view != null && wm != null) try { wm.removeViewImmediate(view); } catch (Exception ignored) { }
         if (s != null) s.stop();
         view = null; s = null; showing = false; ringMode = false;
+        PupVolet.h.post(PupVolet::update);
     }
 
     // ------------------------------------------------------------ PupRéveil dans la « fausse vidéo »

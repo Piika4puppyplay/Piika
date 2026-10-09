@@ -75,7 +75,9 @@
     const x = (Math.random() - .5) * 10, y = (Math.random() - .5) * 10;
     $('#wrap').style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh)) scale(${.94 + Math.random() * .08})`;
   }
-  window.SiesteUI = { on(ev, data) { if (ev === 'battery') { bat = J(data, bat) || bat; paint(); } if (ev === 'dodo') document.body.classList.add('dodo'); } };
+  const notifs = () => { if (B.notifs && window.AodNotif) AodNotif.render(B.notifs()); };
+  window.SiesteUI = { on(ev, data) { if (ev === 'battery') { bat = J(data, bat) || bat; paint(); } if (ev === 'dodo') document.body.classList.add('dodo'); if (ev === 'notifs') notifs(); } };
+  notifs();
   // aperçu hors service Android (ex. dans « Ta niche ») : vraie batterie via le navigateur
   if (!window.Sieste && navigator.getBattery && !/[?&]pct=/.test(location.search)) {
     navigator.getBattery().then((b) => {

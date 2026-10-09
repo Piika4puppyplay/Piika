@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Pop-up PuppyPhone</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="volet.css">
+</head>
+<body class="pop">
+<div id="pw"></div>
+<script src="notifcard.js"></script>
+<script>
+(function () {
+  'use strict';
+  const V = window.Volet || { prefs: () => '{}', openNotif() {}, act: () => true, dismiss() {}, popHide() {}, popPull() {}, haptic() {} };
+  const J = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
+  const pr = J(V.prefs(), {}) || {};
+  if (pr.acc) { document.documentElement.style.setProperty('--acc', pr.acc); document.documentElement.style.setProperty('--acc2', pr.acc2); }
+  const pw = document.getElementById('pw'), DUR = 6000;
+  let cur = null, tmr = 0, left = DUR, t0 = 0;
+  function arm(ms) { clearTimeout(tmr); t0 = Date.now(); left = ms; tmr = setTimeout(hide, ms); }
+  function hide() { clearTimeout(tmr); pw.classList.remove('on'); setTimeout(() => { if (!pw.classList.contains('on')) { pw.innerHTML = ''; cur = null; V.popHide(); } }, 380); }
+  function show(js) {
+    const n = J(js, null); if (!n) return;
+    cur = n;
+    pw.innerHTML = PupCard.card(n, { compact: true, timer: DUR });
+    requestAnimationFrame(() => pw.classList.add('on'));
+    V.haptic(); arm(DUR);
+    const el = pw.querySelector('.nc');
+    PupCard.swipe(el, {
+      open: (k) => { clearTimeout(tmr); V.openNotif(k); pw.classList.remove('on'); },
+      dismiss: (k) => { V.dismiss(k); hide(); },
+      cant: () => hide(),
+      y: (dy, end) => {
+        if (!end) { pw.style.transition = 'none'; pw.style.transform = `translateY(${Math.min(dy * .6, 40)}px)`; pw.classList.add('hold'); clearTimeout(tmr); return; }
+        pw.style.transition = ''; pw.style.transform = ''; pw.classList.remove('hold');
+        if (dy < -30) hide(); else if (dy > 50) { clearTimeout(tmr); V.popPull(); } else arm(2500);
+      },
+    });
+  }
+  pw.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-act]'); if (!a || !cur) return;
+    e.stopPropagation(); V.haptic();
+    if (a.dataset.reply === '1') { try { localStorage.setItem('replyKey', cur.key); } catch (x) { } V.popPull(); return; }
+    V.act(cur.key, +a.dataset.act, ''); hide();
+  });
+  window.PopUI = { show, gone() { hide(); } };
+  if (window.__pend) { const p = window.__pend; window.__pend = null; show(p); }
+})();
+</script>
+</body>
+</html>
