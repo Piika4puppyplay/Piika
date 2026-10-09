@@ -282,7 +282,7 @@ final class PupVolet {
         popKey = sbn.getKey();
         final String title = PupNotifs.str(PupNotifs.cs(n.extras, android.app.Notification.EXTRA_TITLE));
         final String key = popKey;
-        if (sp(svc).getBoolean("popForce", true)) { h.postDelayed(() -> kickHun(key, title, 0), 350); h.postDelayed(() -> kickHun(key, title, 1), 1300); }
+        if (sp(svc).getBoolean("popForce", true)) { h.postDelayed(() -> kickHun(key, title, 0), 380); }
         final String d = js;
         pweb.evaluateJavascript("window.PopUI?PopUI.show(" + JSONObject.quote(d) + "):(window.__pend=" + JSONObject.quote(d) + ")", null);
     }
@@ -326,30 +326,59 @@ final class PupVolet {
     }
 
     /** Pousse le pop-up d'Android vers le haut (geste d'accessibilité) pour ne laisser que la carte puppyplay. */
-    static void kickHun(String key, String title, int tryN) {
-        if (svc == null || !popAdded || !key.equals(popKey) || Build.VERSION.SDK_INT < 24) return;
-        android.graphics.Rect hit = null;
+    /** Laisse passer les doigts (vrais ou simulés) à travers nos fenêtres pendant un instant. */
+    static void passThrough(boolean on) {
+        if (pLp != null && popAdded) { if (on) pLp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; else pLp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; try { wm.updateViewLayout(pweb, pLp); } catch (Exception ignored) { } }
+        if (trigger != null && tLp != null) { if (on || !tTouchable) tLp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; else tLp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { } }
+    }
+    /** Où est le pop-up d'Android ? (par son titre, sinon par la petite fenêtre système en haut de l'écran) */
+    static android.graphics.Rect findHun(String title) {
+        int sh = svc.getResources().getDisplayMetrics().heightPixels;
+        android.graphics.Rect byWin = null;
         try {
-            int sh = svc.getResources().getDisplayMetrics().heightPixels;
             for (android.view.accessibility.AccessibilityWindowInfo w : svc.getWindows()) {
                 android.view.accessibility.AccessibilityNodeInfo root = w.getRoot();
-                if (root == null || root.getPackageName() == null || !"com.android.systemui".contentEquals(root.getPackageName())) continue;
-                hit = findText(root, title, sh * .5f, 0);
-                if (hit != null) break;
+                boolean sys = root != null && root.getPackageName() != null && "com.android.systemui".contentEquals(root.getPackageName());
+                if (!sys) continue;
+                android.graphics.Rect r = findText(root, title, sh * .5f, 0);
+                if (r != null) return r;
+                android.graphics.Rect wr = new android.graphics.Rect(); w.getBoundsInScreen(wr);
+                if (wr.top < sh * .25f && wr.height() > 50 * dens && wr.height() < sh * .45f && wr.bottom > sbH + 20 * dens) byWin = wr;
             }
         } catch (Exception ignored) { }
-        if (hit == null) { if (tryN == 1) diag("pop-up Android introuvable (déjà parti ?)"); return; }
-        diag("pop-up Android repéré → on le pousse vers le haut");
-        final android.graphics.Rect r = hit;
-        // la carte puppyplay laisse passer le geste le temps du coup de patte
-        if (pLp != null && popAdded) { pLp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; try { wm.updateViewLayout(pweb, pLp); } catch (Exception ignored) { } }
+        return byWin;
+    }
+    static boolean canGesture() {
+        try { return (svc.getServiceInfo().getCapabilities() & android.accessibilityservice.AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0; } catch (Exception e) { return false; }
+    }
+    /** Chasse le pop-up d'Android : 1) coup de patte vers le haut (geste), 2) si têtu, ouvre/referme le volet Android en un éclair. */
+    static void kickHun(String key, String title, int tryN) {
+        if (svc == null || !popAdded || !key.equals(popKey) || Build.VERSION.SDK_INT < 24) return;
+        android.graphics.Rect r = findHun(title);
+        if (r == null) { if (tryN >= 1) diag("pop-up Android : plus là ✓"); return; }
+        if (tryN >= 2 || !canGesture()) {
+            if (!canGesture()) diag("⚠️ PupNav n'a pas le droit aux gestes : éteins/rallume-le dans l'accessibilité");
+            if (Build.VERSION.SDK_INT >= 31 && sp(svc).getBoolean("popFlick", true)) {
+                diag("pop-up Android têtu → éclair de volet pour le ranger");
+                androidOk = android.os.SystemClock.uptimeMillis();
+                svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS);
+                h.postDelayed(() -> svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE), 170);
+                h.postDelayed(() -> svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE), 520);
+            }
+            return;
+        }
+        diag("pop-up Android repéré (" + r.top + "→" + r.bottom + ") → coup de patte n°" + (tryN + 1));
+        passThrough(true);
         android.graphics.Path path = new android.graphics.Path();
         float x = r.centerX(), y = Math.max(r.centerY(), sbH + 20 * dens);
-        path.moveTo(x, y); path.lineTo(x, Math.max(2, r.top - 120 * dens));
+        path.moveTo(x, y); path.lineTo(x, Math.max(2, r.top - 160 * dens));
         android.accessibilityservice.GestureDescription g = new android.accessibilityservice.GestureDescription.Builder()
-                .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 140)).build();
-        svc.dispatchGesture(g, null, null);
-        h.postDelayed(() -> { if (pLp != null && popAdded) { pLp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; try { wm.updateViewLayout(pweb, pLp); } catch (Exception ignored) { } } }, 320);
+                .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 120)).build();
+        boolean ok = svc.dispatchGesture(g, new AccessibilityService.GestureResultCallback() {
+            @Override public void onCompleted(android.accessibilityservice.GestureDescription d) { h.postDelayed(() -> passThrough(false), 80); h.postDelayed(() -> kickHun(key, title, tryN + 1), 550); }
+            @Override public void onCancelled(android.accessibilityservice.GestureDescription d) { passThrough(false); diag("coup de patte annulé"); h.postDelayed(() -> kickHun(key, title, 2), 300); }
+        }, h);
+        if (!ok) { passThrough(false); h.postDelayed(() -> kickHun(key, title, 2), 100); }
     }
     static android.graphics.Rect findText(android.view.accessibility.AccessibilityNodeInfo n, String title, float maxY, int depth) {
         if (n == null || depth > 40 || title == null || title.isEmpty()) return null;
