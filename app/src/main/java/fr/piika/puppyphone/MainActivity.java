@@ -103,8 +103,8 @@ public class MainActivity extends Activity {
     CameraManager.TorchCallback torchCb;
 
     // ---------------------------------------------------------------- cycle de vie
-    @Override
     String pendingOpen;
+    @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         if (getIntent() != null) pendingOpen = getIntent().getStringExtra("pup_open");
