@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupDicta</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="dicta.css">
+</head>
+<body class="dicta wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+<main id="dm">
+  <!-- ================= le magnétophone ================= -->
+  <section class="deck">
+    <div class="handle"><i></i></div>
+    <div class="top">
+      <div class="brand"><b class="chrome">PUP DICTA</b><small>CASSETTE-CORDER · C-90</small></div>
+      <div class="recled" id="recled"><i></i>REC</div>
+    </div>
+    <div class="meters">
+      <!-- VU-mètre à aiguille -->
+      <div class="vu">
+        <svg viewBox="0 0 200 118" aria-hidden="true">
+          <defs>
+            <radialGradient id="face" cx=".5" cy="1" r="1.05"><stop offset="0" stop-color="#fff6d6"/><stop offset=".65" stop-color="#ffe2a0"/><stop offset="1" stop-color="#d89a3a"/></radialGradient>
+            <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity=".06"/><stop offset=".46" stop-color="#fff" stop-opacity="0"/></linearGradient>
+          </defs>
+          <rect x="2" y="2" width="196" height="114" rx="10" fill="url(#face)"/>
+          <g id="scale" fill="none" stroke="#3a2208" stroke-width="1.6"></g>
+          <path id="redarc" fill="none" stroke="#d81f3a" stroke-width="5"/>
+          <g id="labels" font-family="Share Tech Mono, monospace" font-size="10" fill="#3a2208" text-anchor="middle"></g>
+          <text x="100" y="84" text-anchor="middle" font-family="Bungee, sans-serif" font-size="17" fill="#3a2208">VU</text>
+          <text x="100" y="98" text-anchor="middle" font-family="Share Tech Mono, monospace" font-size="7.5" fill="#6a4a1a" letter-spacing="1.5">🐾 WOUF-O-METRE</text>
+          <line id="needle" x1="100" y1="112" x2="100" y2="22" stroke="#111" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M70 116a30 22 0 0 1 60 0z" fill="#1b1622"/><path d="M78 116a22 14 0 0 1 44 0" fill="none" stroke="#5a5468" stroke-width="1.5"/>
+          <rect x="2" y="2" width="196" height="114" rx="10" fill="url(#glass)"/>
+        </svg>
+      </div>
+      <!-- compteur mécanique -->
+      <div class="counter">
+        <div class="drums" id="drums"><i>0</i><i>0</i><em>:</em><i>0</i><i>0</i></div>
+        <small id="cnt2">PRÊT</small>
+      </div>
+    </div>
+
+    <!-- fenêtre à cassette -->
+    <div class="well">
+      <svg class="cas" id="cas" viewBox="0 0 360 228" aria-hidden="true">
+        <defs>
+          <linearGradient id="shell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3446"/><stop offset=".5" stop-color="#1d1824"/><stop offset="1" stop-color="#2b2534"/></linearGradient>
+          <linearGradient id="lbl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#efe2c8"/></linearGradient>
+          <radialGradient id="tape" cx=".5" cy=".5" r=".5"><stop offset=".3" stop-color="#4a2a14"/><stop offset=".9" stop-color="#2a160a"/><stop offset="1" stop-color="#1a0d06"/></radialGradient>
+          <radialGradient id="hub" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#d6d0e2"/><stop offset="1" stop-color="#8e879c"/></radialGradient>
+          <linearGradient id="smoke" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a8298" stop-opacity=".35"/><stop offset="1" stop-color="#2a2433" stop-opacity=".55"/></linearGradient>
+        </defs>
+        <rect x="4" y="4" width="352" height="220" rx="14" fill="url(#shell)" stroke="#000" stroke-width="2"/>
+        <rect x="10" y="10" width="340" height="208" rx="10" fill="none" stroke="rgba(255,255,255,.12)"/>
+        <!-- étiquette -->
+        <rect x="26" y="18" width="308" height="150" rx="8" fill="url(#lbl)"/>
+        <rect id="stripe" x="26" y="18" width="308" height="30" rx="8" fill="#ff3fa4"/><rect x="26" y="40" width="308" height="8" fill="#ff3fa4" id="stripe2"/>
+        <text x="40" y="39" font-family="Bungee, sans-serif" font-size="14" fill="#fff">A</text>
+        <text id="clbl" x="180" y="38" text-anchor="middle" font-family="Dancing Script, cursive" font-style="italic" font-weight="700" font-size="17" fill="#fff">Nouvelle cassette</text>
+        <g stroke="#c9b48a" stroke-width="1"><line x1="40" y1="66" x2="320" y2="66"/><line x1="40" y1="150" x2="320" y2="150"/></g>
+        <text x="320" y="160" text-anchor="end" font-family="Share Tech Mono, monospace" font-size="9" fill="#8a6a4a">PUPDICTA · 90 MIN · TYPE I</text>
+        <g transform="translate(46 140) scale(.7)" fill="#ff3fa4" opacity=".55"><ellipse cx="0" cy="6" rx="9" ry="7"/><ellipse cx="-9" cy="-5" rx="3.2" ry="4"/><ellipse cx="-3" cy="-10" rx="3.2" ry="4"/><ellipse cx="4" cy="-10" rx="3.2" ry="4"/><ellipse cx="10" cy="-5" rx="3.2" ry="4"/></g>
+        <!-- fenêtre et bobines -->
+        <rect x="70" y="72" width="220" height="70" rx="35" fill="#0b0810" stroke="#000" stroke-width="2"/>
+        <g id="reelL"><circle id="packL" cx="118" cy="107" r="30" fill="url(#tape)"/><circle cx="118" cy="107" r="15" fill="url(#hub)" stroke="#000" stroke-width="1"/><g id="spkL" fill="#3a3446"><rect x="116" y="93" width="4" height="7" rx="1"/><rect x="116" y="114" width="4" height="7" rx="1"/><rect x="104" y="105" width="7" height="4" rx="1"/><rect x="125" y="105" width="7" height="4" rx="1"/></g><circle cx="118" cy="107" r="5" fill="#1b1622"/></g>
+        <g id="reelR"><circle id="packR" cx="242" cy="107" r="18" fill="url(#tape)"/><circle cx="242" cy="107" r="15" fill="url(#hub)" stroke="#000" stroke-width="1"/><g id="spkR" fill="#3a3446"><rect x="240" y="93" width="4" height="7" rx="1"/><rect x="240" y="114" width="4" height="7" rx="1"/><rect x="228" y="105" width="7" height="4" rx="1"/><rect x="249" y="105" width="7" height="4" rx="1"/></g><circle cx="242" cy="107" r="5" fill="#1b1622"/></g>
+        <path id="span" d="M118 137 L242 137" stroke="#3a1e0c" stroke-width="2"/>
+        <rect x="70" y="72" width="220" height="70" rx="35" fill="url(#smoke)"/>
+        <path d="M84 76 h70 l-26 62 h-50z" fill="#fff" opacity=".07"/>
+        <!-- bas de la cassette -->
+        <path d="M70 224 L84 178 H276 L290 224" fill="#2b2534" stroke="#000" stroke-width="2"/>
+        <circle cx="120" cy="204" r="6" fill="#0b0810"/><circle cx="240" cy="204" r="6" fill="#0b0810"/>
+        <rect x="160" y="196" width="40" height="14" rx="3" fill="#0b0810"/>
+        <g fill="url(#hub)" stroke="#000" stroke-width=".8"><circle cx="18" cy="18" r="5"/><circle cx="342" cy="18" r="5"/><circle cx="18" cy="210" r="5"/><circle cx="342" cy="210" r="5"/><circle cx="180" cy="186" r="5"/></g>
+      </svg>
+      <div class="lid"></div>
+    </div>
+
+    <!-- bande de lecture -->
+    <div class="tapebar hidden" id="tapebar">
+      <span id="tpos">0:00</span>
+      <div class="track" id="track"><canvas id="wv"></canvas><i class="head" id="head"></i></div>
+      <span id="tdur">0:00</span>
+    </div>
+
+    <!-- touches piano -->
+    <div class="keys" id="keys">
+      <button class="k rec" data-k="rec" type="button"><span>●</span><small>ENREG.</small></button>
+      <button class="k" data-k="play" type="button"><span>▶</span><small>LECTURE</small></button>
+      <button class="k" data-k="pause" type="button"><span>❚❚</span><small>PAUSE</small></button>
+      <button class="k" data-k="stop" type="button"><span>■</span><small>STOP</small></button>
+      <button class="k paw" data-k="mark" type="button"><span>🐾</span><small>MARQUE</small></button>
+    </div>
+
+    <div class="bottom">
+      <div class="grille"><div class="badge"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="url(#hub)" stroke="#000"/><g fill="#ff3fa4"><ellipse cx="20" cy="24" rx="7" ry="5.5"/><ellipse cx="12.5" cy="16" rx="2.6" ry="3.2"/><ellipse cx="17.5" cy="12" rx="2.6" ry="3.2"/><ellipse cx="22.5" cy="12" rx="2.6" ry="3.2"/><ellipse cx="27.5" cy="16" rx="2.6" ry="3.2"/></g></svg></div></div>
+      <div class="dials">
+        <div class="slide" id="qual"><small>QUALITÉ</small><div class="rail"><i class="nub"></i><button data-q="eco" type="button">ÉCO</button><button data-q="std" type="button">STD</button><button data-q="hifi" type="button">HI-FI</button></div></div>
+        <div class="slide" id="spd"><small>VITESSE</small><div class="rail"><i class="nub"></i><button data-s="0.75" type="button">×¾</button><button data-s="1" type="button">×1</button><button data-s="1.5" type="button">×1½</button><button data-s="2" type="button">×2</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= étagère à cassettes ================= -->
+  <section class="shelf">
+    <h3><span>📼 Mes cassettes</span><em id="cnt"></em></h3>
+    <div id="list"></div>
+  </section>
+</main>
+<div id="veil" class="hidden"></div>
+<script src="icons.js"></script>
+<script src="dicta.js"></script>
+</body>
+</html>

@@ -98,7 +98,7 @@ final class LayeredScene implements PupLiveWallpaper.Scene {
     }
 
     // ------------------------------------------------------------ effets
-    float[][] snow, rain, smoke = new float[0][], drops;
+    float[][] snow, snowIn, rain, smoke = new float[0][], drops;
     final ArrayList<float[]> puffs = new ArrayList<>();
     float shootT = -10, nextShoot = 5, shX, shY;
     Bitmap[] strip;
@@ -106,6 +106,7 @@ final class LayeredScene implements PupLiveWallpaper.Scene {
     void initFx() {
         if (fx.has("aurora") && strip == null) { int[] cols = {0xFF3DFFB0, acc2, acc}; strip = new Bitmap[3]; for (int i = 0; i < 3; i++) strip[i] = strip(cols[i]); }
         if ("aurore".equals(id)) { snow = new float[70][4]; for (float[] f : snow) { f[0] = rnd.nextFloat(); f[1] = rnd.nextFloat(); f[2] = .3f + rnd.nextFloat(); f[3] = rnd.nextFloat() * 6.28f; } }
+        if (fx.has("snowbox")) { snowIn = new float[46][4]; for (float[] f : snowIn) { f[0] = rnd.nextFloat(); f[1] = rnd.nextFloat(); f[2] = .3f + rnd.nextFloat(); f[3] = rnd.nextFloat() * 6.28f; } }
         if (fx.has("rain")) { rain = new float[110][3]; for (float[] r : rain) { r[0] = rnd.nextFloat(); r[1] = rnd.nextFloat(); r[2] = .6f + rnd.nextFloat() * .8f; } }
         if (fx.has("window")) { drops = new float[26][4]; for (float[] d : drops) { d[0] = rnd.nextFloat(); d[1] = rnd.nextFloat(); d[2] = .02f + rnd.nextFloat() * .06f; d[3] = 2 + rnd.nextFloat() * 4; } }
     }
@@ -135,6 +136,7 @@ final class LayeredScene implements PupLiveWallpaper.Scene {
         twinkles(c, t); windows(c, t); shooting(c, t);
         if (strip != null) aurora(c, t, 255, false);
         if (drops != null) windowRain(c, t, dt);
+        if (snowIn != null) snowBox(c, t, dt);
         c.restore();
         // décor
         c.save(); layer(c, px, pmid);
@@ -184,7 +186,7 @@ final class LayeredScene implements PupLiveWallpaper.Scene {
         }
     }
     void shooting(Canvas c, float t) {
-        if (!("cosmos".equals(id) || "aurore".equals(id))) return;
+        if (!("cosmos".equals(id) || "aurore".equals(id) || "lune".equals(id))) return;
         if (t > nextShoot) { shootT = t; nextShoot = t + 7 + rnd.nextFloat() * 9; shX = DW * (.3f + rnd.nextFloat() * .6f); shY = DH * (.04f + rnd.nextFloat() * .25f); }
         float k = (t - shootT) / .9f; if (k < 0 || k > 1) return;
         float hx = shX - DW * .45f * k, hy = shY + DH * .1f * k, al = (float) Math.sin(Math.PI * k);
@@ -286,6 +288,20 @@ final class LayeredScene implements PupLiveWallpaper.Scene {
             c.drawText("z", x + k * 90 + (float) Math.sin(t * 2 + i) * 10, y - k * 260, p);
         }
         p.clearShadowLayer();
+    }
+
+    /** Neige qui tombe derrière une fenêtre (coordonnées de la scène). */
+    void snowBox(Canvas c, float t, float dt) {
+        JSONArray w = fx.optJSONArray("snowbox"); if (w == null) return;
+        float x0 = (float) w.optDouble(0), y0 = (float) w.optDouble(1), x1 = (float) w.optDouble(2), y1 = (float) w.optDouble(3);
+        c.save(); c.clipRect(x0, y0, x1, y1);
+        for (float[] f : snowIn) {
+            f[1] += f[2] * dt * .05f; f[0] += (float) Math.sin(t * .8 + f[3]) * dt * .012f;
+            if (f[1] > 1.02f) { f[1] = -.02f; f[0] = rnd.nextFloat(); }
+            float r = 1.6f + f[2] * 2.6f;
+            p.setColor(PupLiveWallpaper.a(0xFFFFFFFF, (int) (120 + 110 * f[2] / 1.3f))); c.drawCircle(x0 + f[0] * (x1 - x0), y0 + f[1] * (y1 - y0), r, p);
+        }
+        c.restore();
     }
 
     void snow(Canvas c, float t, float dt) {

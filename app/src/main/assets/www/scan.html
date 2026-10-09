@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupScan</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="scan.css">
+</head>
+<body class="scan wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+
+<!-- =============== caméra =============== -->
+<main id="cam" class="scr">
+  <header class="plq">
+    <i class="screw a"></i><i class="screw b"></i><i class="screw c"></i><i class="screw d"></i>
+    <h1 class="chrome">PUP SCAN</h1><small>le flair qui scanne</small>
+  </header>
+  <div class="modes" id="modes"><i class="knob"></i><button data-mode="doc" class="on" type="button">📄 Document</button><button data-mode="qr" type="button">▦ QR code</button></div>
+  <div class="vf">
+    <div class="bez">
+      <video id="v" playsinline muted autoplay></video>
+      <canvas id="ov"></canvas>
+      <div class="laser"></div>
+      <div class="glare"></div>
+      <div class="fled" id="led"><i></i>FLAIR</div>
+      <div class="nocam hidden" id="nocam"><b>📷 La caméra dort</b><span id="nocamtxt">Autorise la caméra pour que le chiot puisse renifler tes documents.</span><button class="ab small" id="retry" type="button">Réveiller la caméra</button></div>
+    </div>
+    <div class="pup" id="pup">
+      <svg viewBox="0 0 120 92" aria-hidden="true">
+        <defs>
+          <radialGradient id="fur" cx=".45" cy=".35" r=".8"><stop offset="0" stop-color="#e2a86a"/><stop offset=".6" stop-color="#b8763c"/><stop offset="1" stop-color="#6e3e18"/></radialGradient>
+          <radialGradient id="ear" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#7a4522"/><stop offset="1" stop-color="#3a1c0a"/></radialGradient>
+          <radialGradient id="nose" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#6b5a66"/><stop offset=".5" stop-color="#1a1018"/><stop offset="1" stop-color="#000"/></radialGradient>
+          <radialGradient id="eye" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#4a2c18"/><stop offset="1" stop-color="#0b0503"/></radialGradient>
+        </defs>
+        <path class="earL" d="M22 26C8 22 2 44 6 62c2 9 12 10 16 2 4-10 6-24 8-34z" fill="url(#ear)"/>
+        <path class="earR" d="M98 26c14-4 20 18 16 36-2 9-12 10-16 2-4-10-6-24-8-34z" fill="url(#ear)"/>
+        <ellipse cx="60" cy="54" rx="40" ry="36" fill="url(#fur)"/>
+        <ellipse cx="60" cy="70" rx="24" ry="17" fill="#f3d3a8"/>
+        <ellipse cx="44" cy="46" rx="6.5" ry="7.5" fill="url(#eye)"/><ellipse cx="76" cy="46" rx="6.5" ry="7.5" fill="url(#eye)"/>
+        <circle cx="42" cy="43" r="2.4" fill="#fff"/><circle cx="74" cy="43" r="2.4" fill="#fff"/>
+        <ellipse cx="38" cy="60" rx="5" ry="3" fill="#ff7aa8" opacity=".45"/><ellipse cx="82" cy="60" rx="5" ry="3" fill="#ff7aa8" opacity=".45"/>
+        <g class="nose"><ellipse cx="60" cy="61" rx="9.5" ry="7" fill="url(#nose)"/><ellipse cx="57" cy="58.5" rx="3" ry="1.6" fill="#fff" opacity=".55"/></g>
+        <path d="M60 68v5M52 74q8 6 16 0" stroke="#5a3218" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path class="tongue" d="M56 76q4 9 8 0z" fill="#ff5c8a"/>
+      </svg>
+      <div class="bub" id="bub">Je renifle… 🐽</div>
+    </div>
+  </div>
+  <div class="ctl">
+    <button class="side" id="gal" type="button"><span>🖼️</span><small>Galerie</small></button>
+    <button class="shut" id="shut" type="button" aria-label="Scanner"><span class="paw"><i></i><i></i><i></i><i></i><b></b></span></button>
+    <button class="side" id="torch" type="button"><span>🔦</span><small>Lampe</small></button>
+  </div>
+  <div class="foot">
+    <button id="histb" class="ab glass small" type="button">🗂️ Mes scans</button>
+    <button id="stack" class="stack hidden" type="button"><span class="papers"><i></i><i></i><i></i></span><b id="np">0</b><em>Terminer ›</em></button>
+  </div>
+  <input type="file" id="file" accept="image/*" hidden>
+</main>
+
+<!-- =============== recadrage =============== -->
+<section id="crop" class="scr hidden">
+  <div class="ttl"><button class="rnd" data-c="cancel" type="button">✕</button><h2>Pose les pattes sur les coins</h2></div>
+  <div class="cropwrap" id="cropwrap"><canvas id="cc"></canvas><div class="loupe hidden" id="loupe"><canvas id="lc" width="132" height="132"></canvas><i></i></div></div>
+  <div class="row"><button class="ab glass" data-c="full" type="button">⛶ Page entière</button><button class="ab glass" data-c="auto" type="button">🐽 Flair auto</button></div>
+  <button class="ab wide green" data-c="ok" type="button">✓ Redresser la page</button>
+</section>
+
+<!-- =============== document =============== -->
+<section id="doc" class="scr hidden">
+  <div class="ttl"><button class="rnd" data-d="back" type="button">‹</button><label class="tape"><input id="dname" maxlength="60" spellcheck="false"></label></div>
+  <div class="board">
+    <div class="clip"><i></i></div>
+    <div class="sheetw"><img id="pg" alt=""><div class="busy hidden" id="busy"><i></i>Le chiot lisse la feuille…</div></div>
+    <div class="pgnav"><button data-d="prev" type="button">◀</button><b id="pgi">1 / 1</b><button data-d="next" type="button">▶</button></div>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div class="tools"><button data-d="rot" type="button"><span>↻</span>Pivoter</button><button data-d="recrop" type="button"><span>⛶</span>Recadrer</button><button data-d="delp" type="button"><span>🗑️</span>Retirer</button><button data-d="add" type="button"><span>＋</span>Page</button></div>
+  <div class="save"><button class="ab green" data-d="pdf" type="button">📄 Ranger en PDF</button><button class="ab c2" data-d="jpg" type="button">🖼️ En photos</button></div>
+</section>
+
+<div id="veil" class="hidden"></div>
+<script src="icons.js"></script>
+<script src="jsQR.js"></script>
+<script src="scan.js"></script>
+</body>
+</html>

@@ -6,6 +6,14 @@
     <string name="kbd_en">English 🐾</string>
     <string name="wall_name">Boulevard néon 🌆</string>
     <string name="wall_desc">Soleil rétro, ville néon sous la pluie, sol mouillé qui reflète tout et un chiot en blouson de cuir avec ses lunettes.</string>
+    <string name="wall_lune">Base lunaire des chiots 🌕</string>
+    <string name="wall_lune_desc">Un chiot astronaute plante son drapeau patte sur la Lune, dôme-niche éclairé, rover gamelle et planète à anneaux.</string>
+    <string name="wall_foret">Forêt enchantée 🌲</string>
+    <string name="wall_foret_desc">Forêt de nuit, cabane-niche dans les arbres, champignons lumineux, lucioles et un chiot qui dort près du feu de camp.</string>
+    <string name="wall_arcade">Pup Arcade sous la pluie ☔</string>
+    <string name="wall_arcade_desc">Rue néon sous la pluie, salle d\'arcade PUP ARCADE, café de l\'os, chiot en sweat et masque sous son parapluie néon.</string>
+    <string name="wall_chalet">Chalet sous la neige ❄️</string>
+    <string name="wall_chalet_desc">Chalet en rondins, feu de cheminée, neige qui tombe derrière la fenêtre, chocolat chaud et chiot sous sa couverture.</string>
     <string name="wall_author">PuppyPhone</string>
     <string name="wall_cosmos">Pup dans l\'espace 🚀</string>
     <string name="wall_cosmos_desc">Noir OLED profond, nébuleuse, planète à anneaux et un chiot astronaute qui flotte avec son jetpack, aux couleurs de ton pelage.</string>

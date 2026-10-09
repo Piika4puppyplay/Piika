@@ -47,7 +47,7 @@ public abstract class PupWebActivity extends Activity {
         web = new WebView(this);
         web.setBackgroundColor(Pelage.bg(this));
         WebSettings s = web.getSettings();
-        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(false); s.setTextZoom(100);
+        s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(false); s.setTextZoom(100); s.setMediaPlaybackRequiresUserGesture(false);
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return serve(r.getUrl()); }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -57,7 +57,15 @@ public abstract class PupWebActivity extends Activity {
             }
             @Override public void onPageFinished(WebView v, String u) { pushInsets(); }
         });
-        web.setWebChromeClient(new WebChromeClient());
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override public void onPermissionRequest(android.webkit.PermissionRequest r) { ui.post(() -> askWeb(r)); }
+            @Override public boolean onShowFileChooser(WebView v, android.webkit.ValueCallback<Uri[]> cb, FileChooserParams fp) {
+                if (fileCb != null) fileCb.onReceiveValue(null);
+                fileCb = cb;
+                try { startActivityForResult(fp.createIntent(), 78); } catch (Exception e) { fileCb = null; return false; }
+                return true;
+            }
+        });
         web.addJavascriptInterface(bridge(), "Pup");
         setContentView(web);
         web.setOnApplyWindowInsetsListener((v, ins) -> { insT = ins.getSystemWindowInsetTop(); insB = ins.getSystemWindowInsetBottom(); pushInsets(); return ins; });
@@ -68,6 +76,31 @@ public abstract class PupWebActivity extends Activity {
     @Override public void onBackPressed() {
         if (web != null) web.evaluateJavascript("window." + uiName() + "&&" + uiName() + ".back&&" + uiName() + ".back()", v -> { if (!"true".equals(v)) finish(); });
         else finish();
+    }
+
+    // ---------------- caméra / micro pour getUserMedia, sélecteur de fichiers
+    android.webkit.PermissionRequest pendingWeb;
+    android.webkit.ValueCallback<Uri[]> fileCb;
+    void askWeb(android.webkit.PermissionRequest r) {
+        java.util.ArrayList<String> need = new java.util.ArrayList<>();
+        for (String res : r.getResources()) {
+            if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(res)) need.add(android.Manifest.permission.CAMERA);
+            if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(res)) need.add(android.Manifest.permission.RECORD_AUDIO);
+        }
+        java.util.ArrayList<String> miss = new java.util.ArrayList<>();
+        for (String n : need) if (checkSelfPermission(n) != android.content.pm.PackageManager.PERMISSION_GRANTED) miss.add(n);
+        if (miss.isEmpty()) { r.grant(r.getResources()); return; }
+        pendingWeb = r; requestPermissions(miss.toArray(new String[0]), 77);
+    }
+    @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
+        super.onRequestPermissionsResult(code, perms, res);
+        boolean ok = res.length > 0; for (int g : res) ok &= g == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        if (code == 77 && pendingWeb != null) { if (ok) pendingWeb.grant(pendingWeb.getResources()); else pendingWeb.deny(); pendingWeb = null; }
+        emit("perm", code + ":" + ok);
+    }
+    @Override protected void onActivityResult(int code, int rc, Intent data) {
+        super.onActivityResult(code, rc, data);
+        if (code == 78 && fileCb != null) { fileCb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(rc, data)); fileCb = null; }
     }
 
     void emit(String ev, String data) { ui.post(() -> { if (web != null) web.evaluateJavascript("window." + uiName() + "&&" + uiName() + ".on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data == null ? "" : data) + ")", null); }); }
@@ -90,6 +123,13 @@ public abstract class PupWebActivity extends Activity {
                 try { startActivity(Intent.createChooser(i, "Partager 🐾")); } catch (Exception ignored) { }
             });
         }
+        @JavascriptInterface public void copy(String text) {
+            ui.post(() -> {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("PuppyPhone", text));
+            });
+        }
+        @JavascriptInterface public void openUrl(String u) { ui.post(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void close() { ui.post(PupWebActivity.this::finish); }
         @JavascriptInterface public void haptic() { ui.post(() -> { if (web != null) web.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); }); }
     }

@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
@@ -640,6 +641,51 @@
             android:theme="@style/PupInvisible" />
 
         <activity
+            android:name=".ScanActivity"
+            android:label="PupScan"
+            android:icon="@mipmap/ic_pupscan"
+            android:roundIcon="@mipmap/ic_pupscan"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.scan"
+            android:theme="@style/PupNetTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".DictaActivity"
+            android:label="PupDicta"
+            android:icon="@mipmap/ic_pupdicta"
+            android:roundIcon="@mipmap/ic_pupdicta"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.dicta"
+            android:theme="@style/PupNetTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".DictaService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <activity
             android:name=".NotesActivity"
             android:label="PupNotes"
             android:icon="@mipmap/ic_pupnotes"
@@ -780,6 +826,50 @@
                 <action android:name="android.service.wallpaper.WallpaperService" />
             </intent-filter>
             <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_aurore" />
+        </service>
+
+        <service
+            android:name=".PupWallLune"
+            android:label="@string/wall_lune"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_lune" />
+        </service>
+
+        <service
+            android:name=".PupWallForet"
+            android:label="@string/wall_foret"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_foret" />
+        </service>
+
+        <service
+            android:name=".PupWallArcade"
+            android:label="@string/wall_arcade"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_arcade" />
+        </service>
+
+        <service
+            android:name=".PupWallChalet"
+            android:label="@string/wall_chalet"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_chalet" />
         </service>
 
         <service

@@ -100,10 +100,10 @@ public class NicheActivity extends Activity {
             android.app.WallpaperInfo wi = WallpaperManager.getInstance(this).getWallpaperInfo();
             if (wi == null || !getPackageName().equals(wi.getPackageName())) return "";
             String n = wi.getServiceName();
-            return n.endsWith("Cosmos") ? "cosmos" : n.endsWith("Aurore") ? "aurore" : n.endsWith("Niche") ? "niche" : "neon";
+            return n.endsWith("Cosmos") ? "cosmos" : n.endsWith("Aurore") ? "aurore" : n.endsWith("Niche") ? "niche" : n.endsWith("Lune") ? "lune" : n.endsWith("Foret") ? "foret" : n.endsWith("Arcade") ? "arcade" : n.endsWith("Chalet") ? "chalet" : "neon";
         } catch (Exception e) { return ""; }
     }
-    static Class<?> wallClass(String id) { return "cosmos".equals(id) ? PupWallCosmos.class : "aurore".equals(id) ? PupWallAurore.class : "niche".equals(id) ? PupWallNiche.class : PupLiveWallpaper.class; }
+    static Class<?> wallClass(String id) { return "cosmos".equals(id) ? PupWallCosmos.class : "aurore".equals(id) ? PupWallAurore.class : "niche".equals(id) ? PupWallNiche.class : "lune".equals(id) ? PupWallLune.class : "foret".equals(id) ? PupWallForet.class : "arcade".equals(id) ? PupWallArcade.class : "chalet".equals(id) ? PupWallChalet.class : PupLiveWallpaper.class; }
 
     boolean liveWallpaperOn() {
         try {
