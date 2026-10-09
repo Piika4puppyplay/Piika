@@ -70,6 +70,7 @@
     if (isSelf(a) && /KbSettingsActivity/.test(a.id)) return null; // vrai logo : le chien au clavier
     if (isSelf(a)) return ['paw', 'pink'];
     if (p === 'fr.piika.pupdown') return ['piggy', 'pink'];
+    if (p === 'fr.piika.pupupdate') return ['download', 'green'];
     if (p === defs.dial || /dialer|incallui/.test(p) || l === 'telephone' || l === 'phone') return ['phone', 'green'];
     if (p === defs.sms || /\.messaging$|\.mms$|apps\.messaging/.test(p) || (a.system && l === 'messages')) return ['sms', 'cyan'];
     if (p === defs.browser && a.system) return ['globe', 'blue'];
@@ -294,6 +295,8 @@
       cfg.tasksAdded = true; S.set('cfg', cfg);
       if (!onHome({ t: 'app', id: tk.id })) { const k = home.dock.findIndex((x) => !x); if (k >= 0) home.dock[k] = { t: 'app', id: tk.id }; else home.pages[0].unshift({ t: 'app', id: tk.id }); saveHome(); }
     }
+    const maj = apps.find((x) => x.pkg === 'fr.piika.pupupdate');
+    if (maj && !cfg.majAdded) { cfg.majAdded = true; S.set('cfg', cfg); if (!onHome({ t: 'app', id: maj.id })) { home.pages[0].unshift({ t: 'app', id: maj.id }); saveHome(); } }
     if (net && !cfg.netAdded) { cfg.netAdded = true; S.set('cfg', cfg); if (!onHome({ t: 'app', id: net.id })) { home.pages[0].unshift({ t: 'app', id: net.id }); saveHome(); } }
     if (changed || added.length || reason === 'force') renderAll();
     added.slice(0, 4).forEach((a, i) => setTimeout(() => announceNew(a), 400 + i * 900));
@@ -327,7 +330,9 @@
   function renderDots() {
     $('#dots').innerHTML = [0, 1, 2].map((i) => `<i class="${i === curPage ? 'on' : ''}">${I('paw', i === 1 ? 'cyan' : 'pink', { shape: 'none' })}</i>`).join('');
   }
+  let wofRaf = 0;
   pager.addEventListener('scroll', () => {
+    if (wall.type === 'system' && !wofRaf) wofRaf = requestAnimationFrame(() => { wofRaf = 0; call('wallOffset', pager.scrollLeft / Math.max(1, pager.scrollWidth - pager.clientWidth)); });
     const p = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
     if (p !== curPage) { curPage = p; renderDots(); document.body.classList.toggle('on-niche', p === 1); }
   }, { passive: true });

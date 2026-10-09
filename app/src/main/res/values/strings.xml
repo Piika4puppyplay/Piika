@@ -7,5 +7,9 @@
     <string name="wall_name">Nuit néon 🐾</string>
     <string name="wall_desc">Des pattes lumineuses montent dans un ciel étoilé au-dessus d\'un sol néon rétro, aux couleurs du pelage de ta niche.</string>
     <string name="wall_author">PuppyPhone</string>
+    <string name="wall_cosmos">Pup dans l\'espace 🚀</string>
+    <string name="wall_cosmos_desc">Noir OLED profond, nébuleuse, planète à anneaux et un chiot astronaute qui flotte avec son jetpack, aux couleurs de ton pelage.</string>
+    <string name="wall_aurore">Aurore des pattes 🌌</string>
+    <string name="wall_aurore_desc">Une aurore boréale qui ondule au-dessus des montagnes et d\'un lac miroir, regardée par un chiot assis sur son rocher.</string>
     <string name="dream_name">La sieste du chiot</string>
 </resources>

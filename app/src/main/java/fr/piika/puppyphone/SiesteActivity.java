@@ -15,6 +15,7 @@ public class SiesteActivity extends Activity {
         s = new Sieste(this);
         View v = s.create();
         setContentView(v);
+        Sieste.dim(getWindow(), Pelage.sp(this).getBoolean("siesteBright", false));
         v.setOnTouchListener((x, e) -> { if (e.getAction() == android.view.MotionEvent.ACTION_UP) finish(); return true; });
     }
     @Override protected void onResume() { super.onResume(); s.start(); }

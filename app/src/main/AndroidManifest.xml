@@ -46,11 +46,13 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-feature android:name="android.software.live_wallpaper" android:required="false" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <queries>
+        <package android:name="fr.piika.pupupdate" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -651,6 +653,29 @@
                 <action android:name="android.service.wallpaper.WallpaperService" />
             </intent-filter>
             <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wallpaper" />
+        </service>
+
+
+        <service
+            android:name=".PupWallCosmos"
+            android:label="@string/wall_cosmos"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_cosmos" />
+        </service>
+
+        <service
+            android:name=".PupWallAurore"
+            android:label="@string/wall_aurore"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_aurore" />
         </service>
 
         <service

@@ -62,7 +62,18 @@ public class NicheActivity extends Activity {
         web.setOnApplyWindowInsetsListener((v, ins) -> { insT = ins.getSystemWindowInsetTop(); insB = ins.getSystemWindowInsetBottom(); pushInsets(); return ins.consumeSystemWindowInsets(); });
         web.loadUrl("https://" + HOST + "/niche.html");
     }
-    @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); emit("resume", ""); }
+    @Override protected void onResume() { super.onResume(); Pelage.watch(this, web); syncLauncherWall(); emit("resume", ""); }
+
+    /** Quand un fond animé PuppyPhone est posé, l'accueil PuppyPhone l'affiche aussi (mode « Fond du téléphone »). */
+    void syncLauncherWall() {
+        android.content.SharedPreferences w = getSharedPreferences(PupWallService.PREFS, MODE_PRIVATE);
+        String type = w.getString("wall_type", "neon");
+        if (liveWallpaperOn()) {
+            if (!"system".equals(type)) w.edit().putString("wall_before_live", type).putString("wall_type", "system").putLong("wall_ver", System.currentTimeMillis()).commit();
+        } else if ("system".equals(type) && w.contains("wall_before_live")) {
+            w.edit().putString("wall_type", w.getString("wall_before_live", "neon")).remove("wall_before_live").putLong("wall_ver", System.currentTimeMillis()).commit();
+        }
+    }
     @Override protected void onDestroy() { if (web != null) web.destroy(); super.onDestroy(); }
 
     void emit(String ev, String data) { ui.post(() -> { if (web != null) web.evaluateJavascript("window.NicheUI&&NicheUI.on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data == null ? "" : data) + ")", null); }); }
@@ -82,6 +93,17 @@ public class NicheActivity extends Activity {
             return new WebResourceResponse("text/plain", "utf-8", 404, "Introuvable", h, new ByteArrayInputStream(new byte[0]));
         }
     }
+
+    /** Fond animé PuppyPhone actuellement posé : neon / cosmos / aurore, ou "" si aucun. */
+    String liveId() {
+        try {
+            android.app.WallpaperInfo wi = WallpaperManager.getInstance(this).getWallpaperInfo();
+            if (wi == null || !getPackageName().equals(wi.getPackageName())) return "";
+            String n = wi.getServiceName();
+            return n.endsWith("Cosmos") ? "cosmos" : n.endsWith("Aurore") ? "aurore" : "neon";
+        } catch (Exception e) { return ""; }
+    }
+    static Class<?> wallClass(String id) { return "cosmos".equals(id) ? PupWallCosmos.class : "aurore".equals(id) ? PupWallAurore.class : PupLiveWallpaper.class; }
 
     boolean liveWallpaperOn() {
         try {
@@ -114,7 +136,7 @@ public class NicheActivity extends Activity {
                 for (String[] x : Pelage.ALL) pel.put(new JSONObject().put("id", x[0]).put("nom", x[1]).put("acc", x[2]).put("acc2", x[3]).put("bg", x[4]));
                 return new JSONObject().put("pelage", Pelage.id(NicheActivity.this)).put("pelages", pel)
                         .put("lastBackup", p.getLong("lastBackup", 0)).put("lastBackupName", p.getString("lastBackupName", ""))
-                        .put("restoredAt", p.getLong("restoredAt", 0)).put("live", liveWallpaperOn())
+                        .put("restoredAt", p.getLong("restoredAt", 0)).put("live", liveWallpaperOn()).put("liveId", liveId())
                         .put("siesteBright", p.getBoolean("siesteBright", false)).put("busy", busy)
                         .put("sons", p.getBoolean("sons", true)).put("sonsVol", p.getInt("sonsVol", 60))
                         .put("sonsNav", p.getBoolean("sonsNav", true)).put("sonsClavier", p.getBoolean("sonsClavier", false))
@@ -163,15 +185,20 @@ public class NicheActivity extends Activity {
                 finishAffinity();
             });
         }
-        @JavascriptInterface public void wallpaper() {
+        @JavascriptInterface public void wallpaper(String id) {
             ui.post(() -> {
                 Intent i = new Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
-                        .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(NicheActivity.this, PupLiveWallpaper.class));
+                        .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, new ComponentName(NicheActivity.this, wallClass(id)));
                 try { startActivity(i); }
                 catch (Exception e) {
                     try { startActivity(new Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)); } catch (Exception ignored) { }
                 }
             });
+        }
+        /** Retire l'image propre à l'écran de verrouillage : Android y affiche alors le fond animé de l'accueil. */
+        @JavascriptInterface public boolean lockToo() {
+            try { WallpaperManager.getInstance(NicheActivity.this).clear(WallpaperManager.FLAG_LOCK); return true; }
+            catch (Exception e) { return false; }
         }
         @JavascriptInterface public void siestePreview() { ui.post(() -> startActivity(new Intent(NicheActivity.this, SiesteActivity.class))); }
         @JavascriptInterface public void dreamSettings() {

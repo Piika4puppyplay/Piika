@@ -203,7 +203,7 @@ public class MainActivity extends Activity {
         super.onResume(); Pelage.watch(this, web);
         if (web != null) web.onResume();
         try { PupNav.ensure(this); } catch (Exception ignored) { }
-        try { PupUpdate.autoCheck(this); } catch (Exception ignored) { }
+        try { PupUpdate.syncLauncherIcon(this); PupUpdate.autoCheck(this); } catch (Exception ignored) { }
         // fond choisi depuis PupGalery / PupVidéo ?
         long ver = wallPrefs().getLong("wall_ver", 0);
         if (ver != appliedWallVer) { applyWallMode(); emit("wall", wallInfo()); }
@@ -823,6 +823,18 @@ public class MainActivity extends Activity {
                 i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                 try { startActivityForResult(i, "video".equals(kind) ? REQ_WALL_VIDEO : REQ_WALL_IMAGE); }
                 catch (Exception e) { toast("Aucun sélecteur de fichiers trouvé"); }
+            });
+        }
+
+        /** Parallaxe : le fond animé du téléphone suit le glissement entre les pages. */
+        @JavascriptInterface public void wallOffset(float x) {
+            ui.post(() -> {
+                try {
+                    if (web.getWindowToken() == null) return;
+                    android.app.WallpaperManager wm = android.app.WallpaperManager.getInstance(MainActivity.this);
+                    wm.setWallpaperOffsetSteps(0.5f, 0f);
+                    wm.setWallpaperOffsets(web.getWindowToken(), Math.max(0f, Math.min(1f, x)), 0.5f);
+                } catch (Exception ignored) { }
             });
         }
 

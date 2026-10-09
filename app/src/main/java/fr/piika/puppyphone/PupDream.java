@@ -9,9 +9,11 @@ public class PupDream extends DreamService {
         super.onAttachedToWindow();
         setInteractive(false);
         setFullscreen(true);
-        setScreenBright(Pelage.sp(this).getBoolean("siesteBright", false));
+        boolean bright = Pelage.sp(this).getBoolean("siesteBright", false);
+        setScreenBright(bright);
         s = new Sieste(this);
         setContentView(s.create());
+        Sieste.dim(getWindow(), bright); // One UI ignore parfois setScreenBright : on force la luminosité de la fenêtre
     }
     @Override public void onDreamingStarted() { super.onDreamingStarted(); if (s != null) s.start(); }
     @Override public void onDreamingStopped() { if (s != null) s.stop(); s = null; super.onDreamingStopped(); }

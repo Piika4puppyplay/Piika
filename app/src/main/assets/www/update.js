@@ -46,6 +46,8 @@
         ${hasNew && (state === 'idle' || state === 'error' || state === 'perm') ? `<button class="ab wide green" data-a="update" type="button">${ic('download', 'chrome', 'none')}Télécharger et installer</button>` : ''}
         <div class="urow"><button class="ab small c2" data-a="check" type="button" ${checking ? 'disabled' : ''}>${ic('refresh', 'chrome', 'none')}Vérifier</button><button class="ab small glass" data-a="page" type="button">${ic('external', 'chrome', 'none')}Page GitHub</button></div>
       </section>
+      ${!S.standalone ? `<section class="ucard reco"><div class="pup">${pup('new')}<div class="msg"><b>Nouveau : l'appli PupUpdate séparée 🦴</b><span>Ici, Android ferme PuppyPhone pendant sa mise à jour et te renvoie sur One UI. L'appli <b>PupUpdate séparée</b> installe PuppyPhone de l'extérieur, puis <b>te ramène toute seule sur l'accueil</b>. Sur Android 12 et plus, après la première fois, les mises à jour se font même <b>sans confirmation</b>.</span></div></div>
+        ${S.updUrl ? `<button class="ab wide green" data-a="standalone" type="button" ${state === 'downloading' ? 'disabled' : ''}>${ic('download', 'chrome', 'none')}Installer l'appli PupUpdate</button>` : `<p style="margin:0;font-size:12.5px;color:var(--muted)">Touche « Vérifier » pour la trouver sur GitHub.</p>`}</section>` : ''}
       ${notes.length ? `<section class="ucard notes"><h3>Nouveautés à venir 🐾</h3>${notes.map((n) => { const body = String(n.body || '').split('\n---')[0].trim(); const lines = body.split('\n'); const t = lines.shift() || ''; return `<div class="note"><div class="nv"><span>v1.0.${n.v}</span><span>${n.date ? new Date(n.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : ''}</span></div><b>${esc(t.startsWith('Télécharge') ? 'Nouvelle version' : t)}</b>${lines.join('\n').trim() ? `<p>${esc(lines.join('\n').trim())}</p>` : ''}</div>`; }).join('')}</section>` : ''}
       <section class="ucard">
         <div class="row"><span>Vérifier tout seul<small>Toutes les 6 h quand l'écran d'accueil s'ouvre</small></span><button class="sw${S.auto !== false ? ' on' : ''}" data-sw="auto" type="button"><i></i></button></div>
@@ -60,6 +62,7 @@
     if (a === 'check') { checking = true; render(); uc('check'); }
     if (a === 'update') { state = 'downloading'; err = ''; prog = { d: 0, t: S.size || 0 }; render(); uc('update', S.url, S.size || 0); }
     if (a === 'cancel') { uc('cancel'); state = 'idle'; render(); }
+    if (a === 'standalone') { state = 'downloading'; err = ''; prog = { d: 0, t: S.updSize || 0 }; render(); uc('installStandalone', S.updUrl, S.updSize || 0); }
     if (a === 'page') uc('openPage');
     if (b.dataset.sw) { const on = !b.classList.contains('on'); S[b.dataset.sw] = on; uc('set', b.dataset.sw, on); render(); }
   });
@@ -68,7 +71,7 @@
     on(ev, data) {
       if (ev === 'checked') { checking = false; const r = J(data, {}) || {}; if (r.err) { state = 'error'; err = r.err; } else if (state === 'error') state = 'idle'; S = J(uc('info'), S) || S; render(); }
       else if (ev === 'progress') { prog = J(data, prog); state = 'downloading'; render(); }
-      else if (ev === 'status') { const o = J(data, {}) || {}; state = o.st === 'done' ? 'idle' : o.st === 'error' && /Annulé/.test(o.msg || '') ? 'idle' : o.st; err = o.msg || ''; render(); }
+      else if (ev === 'status') { const o = J(data, {}) || {}; if (o.st === 'standalone') { S.standalone = true; state = 'idle'; render(); return; } state = o.st === 'done' ? 'idle' : o.st === 'error' && /Annulé/.test(o.msg || '') ? 'idle' : o.st; err = o.msg || ''; render(); }
       else if (ev === 'resume') { S = J(uc('info'), S) || S; render(); }
     },
     insets(t, b) { const r = document.documentElement.style; r.setProperty('--st', Math.max(t, 20) + 'px'); r.setProperty('--sb', Math.max(b, 0) + 'px'); },

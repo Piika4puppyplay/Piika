@@ -35,6 +35,14 @@ final class Sieste {
 
     Sieste(Context c) { ctx = c; }
 
+    /** Tamise vraiment l'écran (OLED : le noir reste noir, les néons restent lisibles). */
+    static void dim(android.view.Window w, boolean bright) {
+        if (w == null) return;
+        android.view.WindowManager.LayoutParams lp = w.getAttributes();
+        lp.screenBrightness = bright ? android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : 0.03f;
+        w.setAttributes(lp);
+    }
+
     View create() {
         web = new WebView(ctx);
         web.setBackgroundColor(0xFF05020A);
@@ -48,7 +56,7 @@ final class Sieste {
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface public String battery() { return lastBattery; }
             @JavascriptInterface public String prefs() {
-                try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).toString(); } catch (Exception e) { return "{}"; }
+                try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).put("dim", !Pelage.sp(ctx).getBoolean("siesteBright", false)).toString(); } catch (Exception e) { return "{}"; }
             }
         }, "Sieste");
         web.loadUrl("https://" + HOST + "/sieste.html");

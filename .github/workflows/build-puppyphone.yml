@@ -44,19 +44,26 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         run: |
           set -o pipefail
-          gradle --no-daemon :app:assembleRelease 2>&1 | tee build.log || { grep -E "error:|e: |\.java:[0-9]+: |What went wrong|Exception" build.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done; exit 1; }
+          gradle --no-daemon :app:assembleRelease :pupupdate:assembleRelease 2>&1 | tee build.log || { grep -E "error:|e: |\.java:[0-9]+: |What went wrong|Exception" build.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done; exit 1; }
       - name: Renommer
-        run: cp app/build/outputs/apk/release/app-release.apk PuppyPhone.apk
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk PuppyPhone.apk
+          UPDV=$(grep -oP 'def UPD_VERSION = \K[0-9]+' pupupdate/build.gradle)
+          cp pupupdate/build/outputs/apk/release/pupupdate-release.apk "PupUpdate-v$UPDV.apk"
+          echo "UPD_APK=PupUpdate-v$UPDV.apk" >> $GITHUB_ENV
+          ls -la *.apk
       - uses: actions/upload-artifact@v4
         with:
           name: PuppyPhone-apk
-          path: PuppyPhone.apk
+          path: |
+            PuppyPhone.apk
+            PupUpdate-v*.apk
       - name: Notes de version (nouveautés)
         env:
           MSG: ${{ github.event.head_commit.message }}
         run: |
           printf '%s\n' "$MSG" | grep -v -E '^(Co-Authored-By|Claude-Session):' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > notes.md
-          printf '\n---\nTélécharge **PuppyPhone.apk** ci-dessous (ou laisse PupUpdate faire 🦴).\n' >> notes.md
+          printf '\n---\nTélécharge **PuppyPhone.apk** ci-dessous, ou mieux : installe **%s** (l’appli PupUpdate séparée) qui met PuppyPhone à jour et te ramène sur l’accueil 🦴.\n' "$UPD_APK" >> notes.md
           cat notes.md
       - name: Publier la version
         uses: softprops/action-gh-release@v2
@@ -64,5 +71,7 @@ jobs:
           tag_name: puppyphone-v${{ github.run_number }}
           name: PuppyPhone v1.0.${{ github.run_number }} 🐾📱
           body_path: notes.md
-          files: PuppyPhone.apk
+          files: |
+            PuppyPhone.apk
+            ${{ env.UPD_APK }}
           make_latest: true

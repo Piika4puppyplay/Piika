@@ -6,6 +6,7 @@
   const B = window.Sieste || { battery: () => JSON.stringify({ pct: +(new URLSearchParams(location.search).get('pct') || 63), charging: true, plug: 'secteur', remain: 2520000 }), prefs: () => '{}' };
   let bat = J(B.battery(), {}) || {};
   const pr = J(B.prefs(), {}) || {};
+  if (pr.dim) document.body.classList.add('dim');
   if (pr.acc) { document.body.style.setProperty('--acc', pr.acc); document.body.style.setProperty('--acc2', pr.acc2); }
 
   // étoiles

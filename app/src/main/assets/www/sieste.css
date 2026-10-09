@@ -51,3 +51,7 @@ body.sieste{--acc:#ff3fa4;--acc2:#29e6ff;--fc:hsl(60 100% 50%);background:#05020
   .date{font-size:min(6vh,30px)}
   .say{font-size:min(3.6vh,16px)}
 }
+
+/* sieste tamisée : on baisse aussi les néons (le noir OLED reste éteint) */
+body.dim #wrap{filter:brightness(.62) saturate(.9)}
+body.dim .sky{opacity:.55}

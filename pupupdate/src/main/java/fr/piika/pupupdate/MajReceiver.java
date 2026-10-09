@@ -1,4 +1,4 @@
-package fr.piika.puppyphone;
+package fr.piika.pupupdate;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -6,25 +6,31 @@ import android.content.Intent;
 import android.content.pm.PackageInstaller;
 import android.widget.Toast;
 
-/** Retour de l'installateur Android pendant une mise à jour PupUpdate. */
-public class UpdateReceiver extends BroadcastReceiver {
+/** Retour de l'installateur Android. PuppyPhone installé → on te ramène sur son accueil. */
+public class MajReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context c, Intent i) {
         int st = i.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
+        String pkg = i.getStringExtra("pkg");
+        boolean puppy = Maj.PUPPY.equals(pkg);
         if (st == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             Intent confirm = i.getParcelableExtra(Intent.EXTRA_INTENT);
             if (confirm != null) {
                 confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try { c.startActivity(confirm); } catch (Exception e) { Toast.makeText(c, "Ouvre PupUpdate pour confirmer l'installation", Toast.LENGTH_LONG).show(); }
             }
-            UpdateActivity.status("confirm", "");
+            MajActivity.status("confirm", "");
             return;
         }
         if (st == PackageInstaller.STATUS_SUCCESS) {
-            if (PupUpdate.STANDALONE.equals(i.getStringExtra("pkg"))) {
-                UpdateActivity.status("standalone", "");
-                PupUpdate.syncLauncherIcon(c);
-                PupUpdate.openStandalone(c);
-            } else UpdateActivity.status("done", "");
+            if (puppy) {
+                MajActivity.status("done", "");
+                Maj.notifyDone(c, "✅ PuppyPhone est à jour !", "v1.0." + Maj.version(c, Maj.PUPPY) + " · touche pour revenir sur l'accueil 🐾");
+                if (Maj.sp(c).getBoolean("retour", true)) {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        if (Maj.openPuppy(c)) MajActivity.finishAll();
+                    }, 900);
+                }
+            } else MajActivity.status("selfdone", "");
             return;
         }
         String msg = i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
@@ -33,7 +39,7 @@ public class UpdateReceiver extends BroadcastReceiver {
                 : st == PackageInstaller.STATUS_FAILURE_STORAGE ? "Pas assez de place dans la gamelle"
                 : st == PackageInstaller.STATUS_FAILURE_INCOMPATIBLE ? "Version incompatible"
                 : "Échec de l'installation" + (msg == null ? "" : " : " + msg);
-        UpdateActivity.status("error", why);
+        MajActivity.status("error", why);
         Toast.makeText(c, "PupUpdate : " + why, Toast.LENGTH_LONG).show();
     }
 }

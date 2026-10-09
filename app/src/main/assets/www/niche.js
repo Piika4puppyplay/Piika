@@ -9,9 +9,9 @@
   const PEL = [['auto', 'Chacun son pelage', '#ff3fa4', '#29e6ff', '#0b0614'], ['rose', 'Néon Rose', '#ff3fa4', '#29e6ff', '#0b0614'], ['cyan', 'Laser Turquoise', '#29e6ff', '#ff3fa4', '#030b12'], ['violet', 'Violet Velours', '#9b5cff', '#29e6ff', '#0b0418'], ['cuir', 'Cuir & Rivets', '#ff3fa4', '#29e6ff', '#120a10'], ['or', 'Or Royal', '#ffb627', '#ff3fa4', '#0e0802'], ['vert', 'Vert Fluo', '#3dffb0', '#9b5cff', '#020e0a']]
     .map(([id, nom, acc, acc2, bg]) => ({ id, nom, acc, acc2, bg }));
   const N = window.Niche || {
-    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, siesteBright: false, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true }),
+    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteBright: false, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true }),
     pelage() {}, backup() { const st = ['Réglages des Pup-apps…', 'Fichiers de la niche…', 'Mémoire des pages (playlists, favoris…)…', 'Rangement dans Téléchargements…']; st.forEach((m, i) => setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'step', msg: m })), 500 * (i + 1))); setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'done', name: 'niche_2026-10-09_02h10.puppy' })), 2600); },
-    pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, setInt() {}, decoPreview: () => true, openA11y() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
+    pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
   };
   const nc = (fn, ...a) => { try { return N[fn] ? N[fn](...a) : undefined; } catch (e) { console.warn(fn, e); } };
   const fmtD = (t) => t ? new Date(t).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
@@ -114,6 +114,25 @@
     <rect x="28" y="72" width="44" height="7" rx="3.5" fill="#2a1020"/><circle cx="50" cy="83" r="5" fill="var(--acc)" stroke="#fff" stroke-width="1.2"/>
     <ellipse cx="34" cy="90" rx="10" ry="6.5" fill="#fff6ea" stroke="#d9b78a"/><ellipse cx="66" cy="90" rx="10" ry="6.5" fill="#fff6ea" stroke="#d9b78a"/></svg>`;
 
+
+  const WALLS = [
+    { id: 'cosmos', nom: "Pup dans l'espace", tag: 'NOUVEAU · OLED', txt: "Noir OLED absolu, nébuleuse en voie lactée, trois couches d'étoiles en profondeur, constellation de la Patte, lune cratérisée, satellite-os, étoiles filantes, planète à anneaux qui tourne et ton <b>chiot astronaute</b> qui flotte avec son jetpack (il cligne de l'œil sous son casque)." },
+    { id: 'aurore', nom: 'Aurore des pattes', tag: 'NOUVEAU · OLED', txt: "Des rideaux d'<b>aurore boréale</b> qui ondulent au-dessus de trois chaînes de montagnes, un lac miroir qui les reflète, des lucioles, et un chiot assis sur son rocher qui <b>remue la queue</b> en regardant le ciel." },
+    { id: 'neon', nom: 'Nuit néon', tag: 'CLASSIQUE', txt: 'Des pattes lumineuses qui montent dans un ciel étoilé, des faisceaux qui balaient et un sol néon rétro.' },
+  ];
+  let wsel = 'cosmos';
+  function renderWall() {
+    const W = WALLS.find((w) => w.id === wsel) || WALLS[0], posed = S.liveId || '';
+    $('#s-wall').innerHTML = `<section class="ncard">
+      <h2>${ic('moon', 'violet')}Fonds d'écran animés<em>${posed ? 'Posé : ' + esc((WALLS.find((w) => w.id === posed) || {}).nom || '') : 'Aucun posé'}</em></h2>
+      <div class="wgal">${WALLS.map((w) => `<button class="wcard${w.id === wsel ? ' on' : ''}" data-wall="${w.id}" type="button"><span class="wscreen"><img src="walls/${w.id}.png" alt=""><i class="wnotch"></i>${w.id === posed ? '<i class="wposed">POSÉ ✓</i>' : ''}</span><b>${esc(w.nom)}</b><small>${w.tag}</small></button>`).join('')}</div>
+      <p class="hint">${W.txt}</p>
+      <p class="hint">Dessiné en <b>pleine résolution</b> de ton écran, aux couleurs de ton pelage, avec de la profondeur quand tu glisses entre les pages (sur One UI et sur l'accueil PuppyPhone). Il se met en pause écran éteint et ralentit en mode économie d'énergie.</p>
+      <button class="ab wide violet" data-a="wall" type="button">${ic('sparkle', 'chrome', 'none')}${W.id === posed ? 'Reposer « ' + esc(W.nom) + ' »' : 'Poser « ' + esc(W.nom) + ' »'}</button>
+      <button class="ab wide glass" data-a="lock" type="button">${ic('lock', 'chrome', 'none')}Aussi sur l'écran de verrouillage</button>
+    </section>`;
+  }
+
   function render() {
     const cur = S.pelage || 'auto', pels = S.pelages && S.pelages.length ? S.pelages : PEL;
     const curP = pels.find((p) => p.id === cur) || pels[0];
@@ -137,19 +156,11 @@
         ${S.restoredAt ? `<p class="hint">🦴 Dernier os déterré : ${esc(fmtD(S.restoredAt))}</p>` : ''}
         <div class="nrow"><button class="ab green" data-a="backup" type="button" ${working ? 'disabled' : ''}>${ic('download', 'chrome', 'none')}${working ? 'Je creuse…' : 'Enterrer un os'}</button><button class="ab amber" data-a="restore" type="button" ${working ? 'disabled' : ''}>${ic('upload', 'chrome', 'none')}Déterrer un os</button></div>
       </section>`;
-    $('#wl-st').textContent = S.live ? 'Posé ✓' : 'Pas posé';
-    $('#wl-bt').innerHTML = ic('sparkle', 'chrome', 'none') + (S.live ? 'Reposer le fond animé' : "Poser sur l'écran d'accueil");
+    renderWall();
     $('#sb-sw').classList.toggle('on', !!S.siesteBright);
   }
   function init() {
-    $('#nbody').innerHTML = '<div id="s-pel"></div><div id="s-sons"></div><div id="s-verrou"></div><div id="s-bone"></div>' + `      <section class="ncard">
-        <h2>${ic('moon', 'violet')}Fond animé « Nuit néon »<em id="wl-st"></em></h2>
-        <div class="wallprev"><canvas id="wcv"></canvas><span class="phone">APERÇU EN DIRECT</span></div>
-        <p class="hint">Des pattes lumineuses qui montent dans un ciel étoilé, des faisceaux qui balaient et un sol néon rétro, <b>aux couleurs de ton pelage</b>. Il bouge doucement quand tu changes de page et se met en pause écran éteint pour ménager la batterie.</p>
-        <button class="ab wide violet" data-a="wall" type="button" id="wl-bt"></button>
-      </section>
-
-      <section class="ncard">
+    $('#nbody').innerHTML = '<div id="s-pel"></div><div id="s-wall"></div><div id="s-sons"></div><div id="s-verrou"></div><div id="s-bone"></div>' + `      <section class="ncard">
         <h2>${ic('battery', 'green')}La sieste du chiot<em>Charge</em></h2>
         <div class="siestprev"><iframe src="sieste.html?apercu=1" tabindex="-1" title="Aperçu de la sieste"></iframe></div>
         <p class="hint">Pendant la charge, ton chiot dort sur son coussin pendant que <b>l'horloge s'allume dans une batterie en verre</b> : rouge quand la gamelle est vide, elle vire au <b>vert</b> en se remplissant jusqu'à 100 %, puis le chiot se réveille avec son os. La scène glisse doucement toute seule pour ne jamais marquer l'écran.</p>
@@ -158,7 +169,6 @@
         <div class="row"><span>Écran lumineux pendant la sieste<small>Éteint par défaut : lumière tamisée, plus doux la nuit et pour l'écran</small></span><button class="sw" id="sb-sw" data-sw="siesteBright" type="button"><i></i></button></div>
         <div class="nrow"><button class="ab c2" data-a="sieste" type="button">${ic('eye', 'chrome', 'none')}Voir la sieste</button><button class="ab green" data-a="dream" type="button">${ic('gear', 'chrome', 'none')}Activer l'écran de veille</button></div>
       </section>`;
-    startWall();
   }
 
   function veil(html) { const v = $('#veil'); if (!html) { v.classList.add('hidden'); v.innerHTML = ''; return; } v.innerHTML = `<div class="nwin">${html}</div>`; v.classList.remove('hidden'); }
@@ -176,17 +186,21 @@
     const m = e.target.closest('[data-pel]');
     if (m) {
       const id = m.dataset.pel; if (id === S.pelage) return;
-      S.pelage = id; render(); startWall(); toast('Nouveau pelage ! Toute la niche se rhabille 🐾'); window.PupSons && PupSons.play('grelot'); setTimeout(() => nc('pelage', id), 350); return;
+      S.pelage = id; render(); toast('Nouveau pelage ! Toute la niche se rhabille 🐾'); window.PupSons && PupSons.play('grelot'); setTimeout(() => nc('pelage', id), 350); return;
     }
     const toy = e.target.closest('[data-son]');
     if (toy) { toy.classList.remove('boing'); void toy.offsetWidth; toy.classList.add('boing'); PupSons.preview(toy.dataset.son, (S.sonsVol || 60) / 100); return; }
     const fb = e.target.closest('[data-force]');
     if (fb && !fb.disabled) { S.verrouForce = +fb.dataset.force; nc('setInt', 'verrouForce', S.verrouForce); render(); return; }
+    const wc0 = e.target.closest('[data-wall]'); if (wc0) { wsel = wc0.dataset.wall; renderWall(); return; }
     const b = e.target.closest('[data-a],[data-sw]'); if (!b) return;
     const a = b.dataset.a;
     if (a === 'backup') { bk = { st: 'work', steps: [], name: '' }; render(); nc('backup'); }
     if (a === 'restore') nc('pickRestore');
-    if (a === 'wall') nc('wallpaper');
+    if (a === 'wall') nc('wallpaper', wsel);
+    if (a === 'lock') veil(`<h3>Aussi sur l'écran de verrouillage ? 🔒</h3><p>La meilleure façon : quand Android te montre l'aperçu du fond, choisis <b>« Écrans d'accueil et de verrouillage »</b> s'il te le propose.</p><p>Sinon, je peux retirer l'image propre à ton écran de verrouillage : Android y affichera alors le fond animé de l'accueil. Le verrouillage One UI (code, empreinte, horloge) ne change pas. Pour remettre une image, choisis-la comme d'habitude dans les réglages Fond d'écran.</p><div class="nrow"><button class="ab glass" data-a="ok" type="button">Annuler</button><button class="ab violet" data-a="lockgo" type="button">Retirer l'image</button></div>`);
+    if (a === 'lockgo') { const ok = nc('lockToo'); veil(); toast(ok === false ? "One UI n'a pas voulu 🥺 utilise le choix « accueil et verrouillage » de l'aperçu" : 'Verrouille ton téléphone pour voir 🐾'); }
+    const wc = e.target.closest('[data-wall]'); if (wc) { wsel = wc.dataset.wall; renderWall(); return; }
     if (a === 'sieste') nc('siestePreview');
     if (a === 'dream') nc('dreamSettings');
     if (a === 'rs-no') { nc('cancelRestore'); veil(); toast("L'os reste enterré, rien n'a bougé 🐶"); }

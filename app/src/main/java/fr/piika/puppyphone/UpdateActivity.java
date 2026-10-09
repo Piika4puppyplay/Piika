@@ -47,6 +47,8 @@ public class UpdateActivity extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        // l'appli PupUpdate séparée est installée : c'est elle qui fait les mises à jour (sans te renvoyer sur One UI)
+        if (PupUpdate.standalone(this) && PupUpdate.openStandalone(this)) { finish(); return; }
         I = this;
         Window w = getWindow();
         w.setStatusBarColor(Color.TRANSPARENT);
@@ -72,7 +74,7 @@ public class UpdateActivity extends Activity {
     @Override protected void onResume() {
         super.onResume(); Pelage.watch(this, web);
         // retour des réglages « sources inconnues » : on reprend l'installation
-        if (pendingApk != null && getPackageManager().canRequestPackageInstalls()) { File f = pendingApk; pendingApk = null; doInstall(f); }
+        if (pendingApk != null && getPackageManager().canRequestPackageInstalls()) { File f = pendingApk; pendingApk = null; doInstall(f, pendingPkg == null ? getPackageName() : pendingPkg); }
         emit("resume", "");
     }
     @Override protected void onDestroy() { if (I == this) I = null; cancel.set(true); if (web != null) web.destroy(); super.onDestroy(); }
@@ -80,15 +82,17 @@ public class UpdateActivity extends Activity {
     void emit(String ev, String data) { ui.post(() -> { if (web != null) web.evaluateJavascript("window.UpdUI&&UpdUI.on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data == null ? "" : data) + ")", null); }); }
     void pushInsets() { final float t = insT / dp, bt = insB / dp; ui.post(() -> web.evaluateJavascript("window.UpdUI&&UpdUI.insets(" + t + "," + bt + ")", null)); }
 
-    void doInstall(File f) {
+    String pendingPkg;
+    void doInstall(File f) { doInstall(f, getPackageName()); }
+    void doInstall(File f, String pkg) {
         if (!getPackageManager().canRequestPackageInstalls()) {
-            pendingApk = f;
+            pendingApk = f; pendingPkg = pkg;
             emit("status", "{\"st\":\"perm\",\"msg\":\"\"}");
             try { startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName()))); } catch (Exception ignored) { }
             return;
         }
         new Thread(() -> {
-            try { emit("status", "{\"st\":\"installing\",\"msg\":\"\"}"); PupUpdate.install(this, f); }
+            try { emit("status", "{\"st\":\"installing\",\"msg\":\"\"}"); PupUpdate.install(this, f, pkg); }
             catch (Exception e) { busy = false; emit("status", "{\"st\":\"error\",\"msg\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"); }
         }).start();
     }
@@ -113,7 +117,8 @@ public class UpdateActivity extends Activity {
                 android.content.SharedPreferences p = PupUpdate.sp(UpdateActivity.this);
                 return new JSONObject().put("current", PupUpdate.current(UpdateActivity.this)).put("auto", p.getBoolean("auto", true)).put("notify", p.getBoolean("notify", true))
                         .put("lastCheck", p.getLong("lastCheck", 0)).put("latest", p.getLong("latest", 0)).put("notes", new org.json.JSONArray(p.getString("notes", "[]")))
-                        .put("url", p.getString("url", "")).put("size", p.getLong("size", 0)).put("busy", busy).toString();
+                        .put("url", p.getString("url", "")).put("size", p.getLong("size", 0)).put("busy", busy)
+                        .put("updUrl", p.getString("updUrl", "")).put("updSize", p.getLong("updSize", 0)).put("standalone", PupUpdate.standalone(UpdateActivity.this)).toString();
             } catch (Exception e) { return "{}"; }
         }
         @JavascriptInterface public void check() { new Thread(() -> emit("checked", PupUpdate.check(UpdateActivity.this).toString())).start(); }
@@ -133,6 +138,21 @@ public class UpdateActivity extends Activity {
             }).start();
         }
         @JavascriptInterface public void cancel() { cancel.set(true); }
+        /** Installe l'appli PupUpdate séparée (recommandé) : PuppyPhone ne se ferme pas pendant cette installation. */
+        @JavascriptInterface public void installStandalone(String url, long size) {
+            if (busy || url == null || url.isEmpty()) return;
+            busy = true; cancel.set(false);
+            new Thread(() -> {
+                try {
+                    final long[] last = {0};
+                    File f = PupUpdate.download(UpdateActivity.this, url, size, "PupUpdate-standalone.apk", (d, t) -> {
+                        long now = System.currentTimeMillis();
+                        if (now - last[0] > 120 || d == t) { last[0] = now; emit("progress", "{\"d\":" + d + ",\"t\":" + t + "}"); }
+                    }, cancel);
+                    ui.post(() -> doInstall(f, PupUpdate.STANDALONE));
+                } catch (Exception e) { busy = false; emit("status", "{\"st\":\"error\",\"msg\":" + JSONObject.quote(String.valueOf(e.getMessage())) + "}"); }
+            }).start();
+        }
         @JavascriptInterface public void openPage() { ui.post(() -> { try { startActivity(new Intent(UpdateActivity.this, BrowserActivity.class).setData(Uri.parse(PupUpdate.PAGE))); } catch (Exception e) { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(PupUpdate.PAGE))); } catch (Exception ignored) { } } }); }
         @JavascriptInterface public void close() { ui.post(UpdateActivity.this::finish); }
     }

@@ -1,0 +1,53 @@
+plugins { id 'com.android.application' }
+
+// Version de l'appli PupUpdate elle-même : à augmenter uniquement quand PupUpdate change
+def UPD_VERSION = 1
+
+android {
+    namespace 'fr.piika.pupupdate'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'fr.piika.pupupdate'
+        minSdk 26
+        targetSdk 34
+        versionCode UPD_VERSION
+        versionName "1." + UPD_VERSION
+    }
+    signingConfigs {
+        release {
+            storeFile file('../app/pupdown.jks')
+            storePassword 'pupdown123'
+            keyAlias 'pupdown'
+            keyPassword 'pupdown123'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+    androidResources {
+        noCompress += ['ttf', 'woff2']
+    }
+    sourceSets {
+        main { assets.srcDirs += ["$buildDir/shared"] }
+    }
+}
+
+// Les mêmes habits que PuppyPhone : style, icônes, polices, sons
+tasks.register('copyShared', Copy) {
+    from('../app/src/main/assets') {
+        include 'www/style.css', 'www/icons.js', 'www/pupsons.js', 'www/update.css', 'www/leather.png', 'www/fonts/**', 'www/sons/**'
+    }
+    into "$buildDir/shared"
+}
+preBuild.dependsOn copyShared

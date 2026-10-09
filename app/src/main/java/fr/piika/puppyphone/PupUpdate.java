@@ -62,6 +62,7 @@ public final class PupUpdate {
             r.put("current", cur);
             JSONArray rel = new JSONArray(get(API));
             long latest = 0; String url = ""; long size = 0;
+            String updUrl = ""; long updSize = 0;
             JSONArray notes = new JSONArray();
             for (int i = 0; i < rel.length(); i++) {
                 JSONObject o = rel.getJSONObject(i);
@@ -71,13 +72,17 @@ public final class PupUpdate {
                 try { v = Long.parseLong(tag.substring("puppyphone-v".length())); } catch (Exception e) { continue; }
                 String apk = ""; long sz = 0;
                 JSONArray as = o.optJSONArray("assets");
-                if (as != null) for (int k = 0; k < as.length(); k++) { JSONObject a = as.getJSONObject(k); if (a.optString("name").endsWith(".apk")) { apk = a.optString("browser_download_url"); sz = a.optLong("size"); break; } }
+                if (as != null) for (int k = 0; k < as.length(); k++) {
+                    JSONObject a = as.getJSONObject(k); String n = a.optString("name");
+                    if (n.startsWith("PupUpdate-v") && n.endsWith(".apk")) { if (updUrl.isEmpty()) { updUrl = a.optString("browser_download_url"); updSize = a.optLong("size"); } continue; }
+                    if (n.endsWith(".apk") && apk.isEmpty()) { apk = a.optString("browser_download_url"); sz = a.optLong("size"); }
+                }
                 if (apk.isEmpty()) continue;
                 if (v > latest) { latest = v; url = apk; size = sz; }
                 if (v > cur) notes.put(new JSONObject().put("v", v).put("date", o.optString("published_at")).put("body", o.optString("body")));
             }
-            r.put("latest", latest).put("url", url).put("size", size).put("notes", notes).put("page", PAGE);
-            sp(c).edit().putLong("lastCheck", System.currentTimeMillis()).putLong("latest", latest).putString("url", url).putLong("size", size).putString("notes", notes.toString()).apply();
+            r.put("latest", latest).put("url", url).put("size", size).put("notes", notes).put("page", PAGE).put("updUrl", updUrl).put("updSize", updSize);
+            sp(c).edit().putString("updUrl", updUrl).putLong("updSize", updSize).putLong("lastCheck", System.currentTimeMillis()).putLong("latest", latest).putString("url", url).putLong("size", size).putString("notes", notes.toString()).apply();
         } catch (Exception e) {
             try { r.put("err", e.getMessage() == null ? e.toString() : e.getMessage()); } catch (Exception ignored) { }
         }
@@ -86,6 +91,7 @@ public final class PupUpdate {
 
     /** Vérification automatique (lanceur) : au plus toutes les 6 h ; notification si nouvelle version. */
     static void autoCheck(Context ctx) {
+        if (standalone(ctx)) return; // l'appli PupUpdate séparée s'en occupe
         SharedPreferences p = sp(ctx);
         if (!p.getBoolean("auto", true)) return;
         if (System.currentTimeMillis() - p.getLong("lastCheck", 0) < 6L * 3600 * 1000) return;
@@ -127,7 +133,10 @@ public final class PupUpdate {
 
     /** Télécharge l'APK dans le cache de l'appli. */
     static File download(Context c, String url, long expected, Progress pr, java.util.concurrent.atomic.AtomicBoolean cancel) throws Exception {
-        File out = new File(c.getCacheDir(), "PuppyPhone-update.apk");
+        return download(c, url, expected, "PuppyPhone-update.apk", pr, cancel);
+    }
+    static File download(Context c, String url, long expected, String name, Progress pr, java.util.concurrent.atomic.AtomicBoolean cancel) throws Exception {
+        File out = new File(c.getCacheDir(), name);
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
         con.setConnectTimeout(15000); con.setReadTimeout(30000);
         con.setInstanceFollowRedirects(true);
@@ -149,10 +158,11 @@ public final class PupUpdate {
     }
 
     /** Installe via PackageInstaller : Android demande la confirmation (et vérifie la signature). */
-    static void install(Context c, File apk) throws Exception {
+    static void install(Context c, File apk) throws Exception { install(c, apk, c.getPackageName()); }
+    static void install(Context c, File apk, String pkg) throws Exception {
         PackageInstaller pi = c.getPackageManager().getPackageInstaller();
         PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        params.setAppPackageName(c.getPackageName());
+        params.setAppPackageName(pkg);
         params.setSize(apk.length());
         int id = pi.createSession(params);
         try (PackageInstaller.Session s = pi.openSession(id)) {
@@ -161,9 +171,31 @@ public final class PupUpdate {
                 while ((n = in.read(b)) > 0) o.write(b, 0, n);
                 s.fsync(o);
             }
-            Intent i = new Intent(c, UpdateReceiver.class).setAction("fr.piika.puppyphone.UPDATE_STATUS");
+            Intent i = new Intent(c, UpdateReceiver.class).setAction("fr.piika.puppyphone.UPDATE_STATUS").putExtra("pkg", pkg);
             int flags = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
             s.commit(PendingIntent.getBroadcast(c, id, i, flags).getIntentSender());
         }
+    }
+
+    // ------------------------------------------------------------ appli PupUpdate séparée
+    static final String STANDALONE = "fr.piika.pupupdate";
+    static boolean standalone(Context c) {
+        try { c.getPackageManager().getPackageInfo(STANDALONE, 0); return true; } catch (Exception e) { return false; }
+    }
+    /** Ouvre l'appli PupUpdate séparée, habillée aux couleurs du pelage. */
+    static boolean openStandalone(Context c) {
+        String[] pel = Pelage.cur(c);
+        Intent i = new Intent("fr.piika.pupupdate.OUVRIR").setPackage(STANDALONE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra("acc", pel[2]).putExtra("acc2", pel[3]);
+        try { c.startActivity(i); return true; } catch (Exception e) { return false; }
+    }
+    /** Cache l'ancienne icône PupUpdate intégrée quand l'appli séparée est là (et la remet sinon). */
+    static void syncLauncherIcon(Context c) {
+        try {
+            android.content.pm.PackageManager pm = c.getPackageManager();
+            android.content.ComponentName cn = new android.content.ComponentName(c, UpdateActivity.class);
+            int want = standalone(c) ? android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED : android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
+            if (pm.getComponentEnabledSetting(cn) != want) pm.setComponentEnabledSetting(cn, want, android.content.pm.PackageManager.DONT_KILL_APP);
+        } catch (Exception ignored) { }
     }
 }
