@@ -43,6 +43,13 @@
     if (!has) { const pg = home.pages[1] || home.pages[0]; pg.unshift({ t: 'pup', app: 'clean' }); saveHome(); }
     cfg.cleanTile = true; S.set('cfg', cfg);
   }
+  // Migration : garantir le dossier PuppyPlay sur l'accueil (une fois)
+  function ensurePuppyFolder() {
+    if (!home || !home.pages || cfg.puppyFolder) return;
+    const has = home.pages.some((pg) => pg.some((it) => it && it.t === 'folder' && it.cat === 'puppy'));
+    if (!has) { home.pages[0].unshift({ t: 'folder', cat: 'puppy' }); saveHome(); }
+    cfg.puppyFolder = true; S.set('cfg', cfg);
+  }
   const flairCache = new Map();
   const saveHome = () => S.set('home', home);
 
@@ -52,7 +59,7 @@
     return r;
   }
   const isNet = (a) => a.pkg === defs.self && /BrowserActivity/.test(a.id);
-  const selfCat = (a) => !isSelf(a) ? null : /BrowserActivity/.test(a.id) ? 'web' : /GalleryActivity/.test(a.id) ? 'photo' : /VideoActivity/.test(a.id) ? 'video' : /CameraActivity/.test(a.id) ? 'photo' : /TasksActivity/.test(a.id) ? 'system' : /UpdateActivity/.test(a.id) ? 'system' : /CleanActivity/.test(a.id) ? 'system' : /RecoveryActivity/.test(a.id) ? 'system' : /NicheActivity/.test(a.id) ? 'system' : /ReveilActivity/.test(a.id) ? 'tools' : /NotesActivity/.test(a.id) ? 'tools' : /ScanActivity/.test(a.id) ? 'tools' : /DictaActivity/.test(a.id) ? 'tools' : /AgendaActivity/.test(a.id) ? 'tools' : /KbSettingsActivity/.test(a.id) ? 'tools' : /SmsActivity/.test(a.id) ? 'tel' : /DialerActivity/.test(a.id) ? 'tel' : /MusicActivity/.test(a.id) ? 'music' : /FileActivity/.test(a.id) ? 'tools' : null;
+  const selfCat = (a) => isSelf(a) ? 'puppy' : null;
   const catOf = (a) => { const o = overrides[a.id] || selfCat(a); if (o) return o; const r = flairOf(a); return (r.cat === 'sort' && cfg.autoTidy && r.guess) ? r.guess : r.cat; };
   const appsIn = (cat) => apps.filter((a) => catOf(a) === cat);
   const isSelf = (a) => a.pkg === defs.self;
@@ -166,7 +173,7 @@
 
   // ------------------------------------------------------------------ rendu accueil
   function defaultHome() {
-    const want = ['msg', 'social', 'date', 'photo', 'music', 'video', 'games', 'sort'];
+    const want = ['puppy', 'msg', 'social', 'date', 'photo', 'music', 'video', 'games', 'sort'];
     const items = want.filter((c) => appsIn(c).length).map((c) => ({ t: 'folder', cat: c }));
     items.push({ t: 'pup', app: 'son' }, { t: 'pup', app: 'settings' });
     const pick = (pkg, cat) => {
@@ -1059,7 +1066,7 @@
   // ------------------------------------------------------------------ pont natif
   window.PupNative = {
     on(ev, data) {
-      if (ev === 'resume') { document.body.classList.remove('paused'); refreshApps('resume'); updateStatus(); takePins(); tick(); homeNotifs(); ensureCleanTile(); }
+      if (ev === 'resume') { document.body.classList.remove('paused'); refreshApps('resume'); updateStatus(); takePins(); tick(); homeNotifs(); ensureCleanTile(); ensurePuppyFolder(); }
       else if (ev === 'notifs') homeNotifs();
       else if (ev === 'pause') document.body.classList.add('paused');
       else if (ev === 'apps') refreshApps(data);
