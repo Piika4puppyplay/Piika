@@ -72,7 +72,7 @@ final class PupVolet {
         if (Intent.ACTION_SCREEN_OFF.equals(i.getAction())) { closeNow(); popHideNow(); }
         update();
     } };
-    static final Runnable notifL = () -> { emitShade("notifs", ""); };
+    static final Runnable notifL = () -> { emitShade("notifs", ""); if (trigger != null && barreOn()) trigger.invalidate(); };
 
     static void start(AccessibilityService s) {
         svc = s; wm = s.getSystemService(WindowManager.class);
@@ -114,11 +114,119 @@ final class PupVolet {
             if (want) tLp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; else tLp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
             try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { }
         }
-        int zone = sp(svc).getInt("voletZone", 0);
-        int w = zone == 0 ? WindowManager.LayoutParams.MATCH_PARENT : svc.getResources().getDisplayMetrics().widthPixels / 2;
-        int g = Gravity.TOP | (zone == 2 ? Gravity.START : Gravity.END);
-        int th = zoneH();
-        if (trigger != null && (tLp.width != w || tLp.gravity != g || tLp.height != th)) { tLp.width = w; tLp.gravity = g; tLp.height = th; try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { } }
+        int[] z = zoneRect();
+        if (trigger != null && (tLp.width != z[2] || tLp.height != z[3] || tLp.x != z[0] || tLp.y != z[1] || tLp.gravity != (Gravity.TOP | Gravity.START))) {
+            tLp.gravity = Gravity.TOP | Gravity.START; tLp.x = z[0]; tLp.y = z[1]; tLp.width = z[2]; tLp.height = z[3];
+            try { wm.updateViewLayout(trigger, tLp); } catch (Exception ignored) { }
+        }
+        if (trigger != null) trigger.invalidate();
+        barLoop();
+    }
+
+    /** Zone du geste {x, y, largeur, hauteur} en pixels : préréglages ou mode perso (déplaçable, redimensionnable). */
+    static int[] zoneRect() {
+        int sw = svc.getResources().getDisplayMetrics().widthPixels;
+        SharedPreferences p = sp(svc);
+        int x, y, w, hh;
+        if (p.getBoolean("voletPerso", false)) {
+            hh = Math.round(p.getInt("voletZH", 64) * dens); y = Math.round(p.getInt("voletZY", 0) * dens);
+            w = Math.max(Math.round(40 * dens), sw * p.getInt("voletZW", 100) / 100);
+            x = Math.round((sw - w) * p.getInt("voletZX", 50) / 100f);
+        } else {
+            int zone = p.getInt("voletZone", 0);
+            hh = zoneH(); y = 0; w = zone == 0 ? sw : sw / 2; x = zone == 1 ? sw - w : 0;
+        }
+        if (barreOn() && y == 0) hh = Math.max(hh, sbH);
+        return new int[]{x, y, w, hh};
+    }
+    static boolean barreOn() { return svc != null && sp(svc).getBoolean("barrePuppy", false); }
+    static long previewUntil;
+    /** Montre la zone en rose pendant quelques secondes (réglages en direct). */
+    static void previewZone(long ms) { h.post(() -> { previewUntil = android.os.SystemClock.uptimeMillis() + ms; update(); if (trigger != null) trigger.invalidate(); h.postDelayed(() -> { if (trigger != null) trigger.invalidate(); }, ms + 50); }); }
+
+    // ------------------------------------------------------------ « Barre puppy » : la barre d'état en fausse vidéo
+    static final Runnable barTick = () -> { if (trigger != null) trigger.invalidate(); barLoop(); };
+    static void barLoop() { h.removeCallbacks(barTick); if (barreOn() && trigger != null) h.postDelayed(barTick, 15_000); }
+    static android.graphics.Typeface face;
+    static final java.util.HashMap<String, android.graphics.Bitmap> iconBmp = new java.util.HashMap<>();
+    static android.graphics.Bitmap icon(String pkg) {
+        if (iconBmp.containsKey(pkg)) return iconBmp.get(pkg);
+        byte[] b = PupNotifs.appIcon(svc, pkg);
+        android.graphics.Bitmap bm = b == null ? null : android.graphics.BitmapFactory.decodeByteArray(b, 0, b.length);
+        iconBmp.put(pkg, bm); return bm;
+    }
+    static class ZoneView extends View {
+        final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.FILTER_BITMAP_FLAG);
+        ZoneView(Context c) { super(c); }
+        @Override protected void onDraw(android.graphics.Canvas c) {
+            int W = getWidth(), H = getHeight();
+            boolean show = tTouchable; // pas en plein écran, pas verrouillé, volet fermé
+            if (barreOn() && show && tLp != null && tLp.y == 0) drawBar(c, W);
+            if (android.os.SystemClock.uptimeMillis() < previewUntil) {
+                int acc = 0xFFFF3FA4; try { acc = android.graphics.Color.parseColor(Pelage.cur(svc)[2]); } catch (Exception ignored) { }
+                p.setStyle(android.graphics.Paint.Style.FILL); p.setColor((acc & 0xFFFFFF) | 0x66000000); c.drawRect(0, 0, W, H, p);
+                p.setStyle(android.graphics.Paint.Style.STROKE); p.setStrokeWidth(3 * dens); p.setColor(0xFFFFFFFF);
+                p.setPathEffect(new android.graphics.DashPathEffect(new float[]{10 * dens, 6 * dens}, 0)); c.drawRect(1.5f * dens, 1.5f * dens, W - 1.5f * dens, H - 1.5f * dens, p); p.setPathEffect(null);
+                p.setStyle(android.graphics.Paint.Style.FILL); p.setTextAlign(android.graphics.Paint.Align.CENTER); p.setTextSize(Math.min(H * .45f, 15 * dens)); p.setColor(0xFFFFFFFF); p.setShadowLayer(4, 0, 1, 0xFF000000);
+                c.drawText("🐾 Zone du volet PuppyPhone", W / 2f, H / 2f + p.getTextSize() * .35f, p); p.clearShadowLayer(); p.setTextAlign(android.graphics.Paint.Align.LEFT);
+            }
+        }
+        void drawBar(android.graphics.Canvas c, int W) {
+            float H = sbH;
+            int acc = 0xFFFF3FA4, acc2 = 0xFF29E6FF;
+            try { acc = android.graphics.Color.parseColor(Pelage.cur(svc)[2]); acc2 = android.graphics.Color.parseColor(Pelage.cur(svc)[3]); } catch (Exception ignored) { }
+            if (face == null) try { face = android.graphics.Typeface.createFromAsset(svc.getAssets(), "www/fonts/Bungee-Regular.ttf"); } catch (Exception e) { face = android.graphics.Typeface.DEFAULT_BOLD; }
+            p.setShader(new android.graphics.LinearGradient(0, 0, 0, H, 0xFF22113A, 0xFF0D0617, android.graphics.Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, W, H, p); p.setShader(null);
+            // filet néon en bas
+            p.setShader(new android.graphics.LinearGradient(0, 0, W, 0, new int[]{acc2, acc, acc2}, null, android.graphics.Shader.TileMode.CLAMP));
+            c.drawRect(0, H - 2 * dens, W, H, p); p.setShader(null);
+            float cy = H / 2f + 1 * dens, pad = 14 * dens;
+            // heure
+            java.util.Calendar k = java.util.Calendar.getInstance();
+            String t = String.format(java.util.Locale.FRANCE, "%02d:%02d", k.get(java.util.Calendar.HOUR_OF_DAY), k.get(java.util.Calendar.MINUTE));
+            p.setTypeface(face); p.setTextSize(H * .48f); p.setColor(0xFFFFFFFF); p.setShadowLayer(6 * dens, 0, 0, acc);
+            c.drawText(t, pad, cy + p.getTextSize() * .36f, p); p.clearShadowLayer();
+            float x = pad + p.measureText(t) + 8 * dens;
+            PupDraw.paw(c, p, x + 6 * dens, cy, 6 * dens, -12, acc, 255);
+            x += 18 * dens;
+            // médailles des applis qui ont écrit
+            try {
+                org.json.JSONArray a = new org.json.JSONArray(PupNotifs.summary(svc, false));
+                float r = H * .3f;
+                for (int i = 0; i < Math.min(5, a.length()); i++) {
+                    android.graphics.Bitmap b = icon(a.getJSONObject(i).getString("pkg"));
+                    if (x + 2 * r > W * .42f) break;
+                    p.setColor(0xFFD6D0E2); c.drawCircle(x + r, cy, r + 1.5f * dens, p);
+                    if (b != null) { android.graphics.Path cl = new android.graphics.Path(); cl.addCircle(x + r, cy, r, android.graphics.Path.Direction.CW); c.save(); c.clipPath(cl); c.drawBitmap(b, null, new android.graphics.RectF(x, cy - r, x + 2 * r, cy + r), p); c.restore(); }
+                    x += 2 * r + 5 * dens;
+                }
+            } catch (Exception ignored) { }
+            // batterie à droite
+            android.content.Intent bi = svc.registerReceiver(null, new IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+            int lv = bi == null ? 50 : bi.getIntExtra(BatteryManager.EXTRA_LEVEL, 50) * 100 / Math.max(1, bi.getIntExtra(BatteryManager.EXTRA_SCALE, 100));
+            boolean chg = bi != null && bi.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
+            p.setTextSize(H * .42f); String pc = lv + "%";
+            float bw = 24 * dens, bh = H * .42f, bx = W - pad - bw, by = cy - bh / 2;
+            p.setStyle(android.graphics.Paint.Style.STROKE); p.setStrokeWidth(1.6f * dens); p.setColor(0xFFD6D0E2);
+            c.drawRoundRect(new android.graphics.RectF(bx, by, bx + bw, by + bh), 3 * dens, 3 * dens, p);
+            p.setStyle(android.graphics.Paint.Style.FILL); c.drawRect(bx + bw, cy - bh * .22f, bx + bw + 2.2f * dens, cy + bh * .22f, p);
+            p.setColor(lv <= 15 && !chg ? 0xFFFF4D5E : chg ? 0xFF3DFFB0 : acc2);
+            c.drawRoundRect(new android.graphics.RectF(bx + 2.2f * dens, by + 2.2f * dens, bx + 2.2f * dens + (bw - 4.4f * dens) * lv / 100f, by + bh - 2.2f * dens), 1.5f * dens, 1.5f * dens, p);
+            p.setColor(0xFFFFFFFF); c.drawText(pc, bx - 6 * dens - p.measureText(pc), cy + p.getTextSize() * .36f, p);
+            float wx = bx - 12 * dens - p.measureText(pc) - 16 * dens;
+            // wi-fi (éventails)
+            try {
+                android.net.ConnectivityManager cm = svc.getSystemService(android.net.ConnectivityManager.class);
+                android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                boolean wifi = nc != null && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI), cell = nc != null && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR);
+                p.setStyle(android.graphics.Paint.Style.STROKE); p.setStrokeWidth(1.8f * dens); p.setColor(0xFFFFFFFF); p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                if (wifi) for (int i = 1; i <= 3; i++) { float rr = i * 3.6f * dens; c.drawArc(new android.graphics.RectF(wx - rr, cy + 4 * dens - rr, wx + rr, cy + 4 * dens + rr), 225, 90, false, p); }
+                else if (cell) { p.setStyle(android.graphics.Paint.Style.FILL); for (int i = 0; i < 4; i++) c.drawRect(wx - 8 * dens + i * 4.2f * dens, cy + 5 * dens - (i + 1) * 2.6f * dens, wx - 5.4f * dens + i * 4.2f * dens, cy + 5 * dens, p); }
+                p.setStyle(android.graphics.Paint.Style.FILL);
+            } catch (Exception ignored) { }
+            p.setTypeface(null);
+        }
     }
 
     /** Hauteur de la zone qui attrape le geste : barre d'état + marge (fine / large / très large). */
@@ -139,12 +247,14 @@ final class PupVolet {
     }
 
     static void addTrigger() {
-        View v = new View(svc);
+        View v = new ZoneView(svc);
         tLp = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, zoneH(), WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT);
-        tLp.gravity = Gravity.TOP | Gravity.END; tLp.setTitle("PupVoletBande");
-        if (Build.VERSION.SDK_INT >= 28) tLp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        tLp.gravity = Gravity.TOP | Gravity.START; tLp.setTitle("PupVoletBande");
+        // jusqu'au tout dernier pixel du bord, encoche comprise
+        if (Build.VERSION.SDK_INT >= 30) tLp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        else if (Build.VERSION.SDK_INT >= 28) tLp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         tTouchable = true;
         // appli en plein écran (vidéo, jeu) : la barre d'état est cachée → on laisse passer les doigts
         v.setOnApplyWindowInsetsListener((x, ins) -> {
