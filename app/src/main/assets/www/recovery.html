@@ -86,22 +86,24 @@ h1{margin:4px 0 2px;font-size:26px;font-weight:800;letter-spacing:.02em;text-sha
 <div class="sheet" id="sheet"><div class="card">
   <h3>🧹 Repartir sur une base propre ?</h3>
   <p>Ça efface <b>tous les réglages, dossiers, pelage et données</b> de PuppyPhone, puis l'appli redémarre comme au premier jour. <b>Tes photos, musiques et SMS ne sont pas touchés.</b> Pense à avoir enterré un os (sauvegarde) avant, si tu peux.</p>
+  <button class="bn" id="wbk" type="button" style="width:100%;margin-bottom:10px">💾 Sauvegarder d'abord (recommandé)</button>
   <div class="row"><button class="bn" id="wno" type="button">Annuler</button><button class="bd" id="wyes" type="button">Tout effacer</button></div>
 </div></div>
 
 <div class="sheet" id="rsheet"><div class="card">
   <h3>⏪ Revenir en arrière</h3>
   <p id="rtxt">La version précédente a été téléchargée dans <b>Téléchargements › PuppyPhone</b>.</p>
-  <p style="font-size:12.5px;color:#c8b0d8">Android refuse de réinstaller une version plus ancienne par-dessus l'actuelle. Pour revenir en arrière :<br>1️⃣ <b>Désinstalle PuppyPhone</b> (tes photos, musiques et SMS ne sont pas touchés)<br>2️⃣ Ouvre le fichier <b id="rapk">l'APK</b> depuis <b>Fichiers › Téléchargements</b> pour réinstaller.</p>
-  <div class="row"><button class="bn" id="ropen" type="button">📂 Ouvrir Téléchargements</button><button class="bd" id="runi" type="button">Désinstaller</button></div>
-  <button class="bn" id="rclose" type="button" style="margin-top:10px;width:100%">Plus tard</button>
+  <p style="font-size:12.5px;color:#c8b0d8">Android refuse de réinstaller une version plus ancienne par-dessus l'actuelle. Pour revenir en arrière :<br>1️⃣ (conseillé) <b>Sauvegarde</b> tes réglages d'abord.<br>2️⃣ <b>Désinstalle PuppyPhone</b> (photos, musiques et SMS pas touchés).<br>3️⃣ Dès que le téléchargement de <b id="rapk">l'APK</b> est fini, <b>touche sa notification</b> « Téléchargement terminé » pour réinstaller — pas besoin d'explorateur. 🐾</p>
+  <div class="row"><button class="bn" id="rbk" type="button">💾 Sauvegarder</button><button class="bd" id="runi" type="button">Désinstaller</button></div>
+  <button class="bn" id="ropen" type="button" style="margin-top:10px;width:100%">📂 Ouvrir Téléchargements</button>
+  <button class="bn" id="rclose" type="button" style="margin-top:8px;width:100%">Plus tard</button>
 </div></div>
 
 <script>
 (function () {
   'use strict';
   const $ = (s) => document.querySelector(s);
-  const R = window.Rescue || { auto: () => true, pelage: () => '{}', current: () => 51, lastError: () => '', check() { setTimeout(() => RescueUI.on('checked', JSON.stringify({ current: 51, latest: 52, url: 'x', size: 1e7, prev: 50, prevUrl: 'y', prevSize: 1e7 })), 700); }, update() {}, rollback() { setTimeout(()=>RescueUI.on('rollready','PuppyPhone-v52.apk'),800); }, uninstallSelf() {}, openDownloads() {}, wipe() {}, retry() {}, cancel() {}, close() {} };
+  const R = window.Rescue || { auto: () => true, pelage: () => '{}', current: () => 51, lastError: () => '', check() { setTimeout(() => RescueUI.on('checked', JSON.stringify({ current: 51, latest: 52, url: 'x', size: 1e7, prev: 50, prevUrl: 'y', prevSize: 1e7 })), 700); }, update() {}, rollback() { setTimeout(()=>RescueUI.on('rollready','PuppyPhone-v52.apk'),800); }, uninstallSelf() {}, openDownloads() {}, backup() { setTimeout(()=>RescueUI.on('saved','niche_2026-10-09.puppy'),700); }, wipe() {}, retry() {}, cancel() {}, close() {} };
   let info = null;
   try { const p = JSON.parse(R.pelage()); if (p.acc) { document.documentElement.style.setProperty('--acc', p.acc); document.documentElement.style.setProperty('--acc2', p.acc2); } } catch (e) {}
   const cur = R.current();
@@ -125,6 +127,7 @@ h1{margin:4px 0 2px;font-size:26px;font-weight:800;letter-spacing:.02em;text-sha
     } else {
       o.appendChild(opt('up', '🔎', 'Chercher une solution', 'Regarder sur GitHub s’il y a une mise à jour ou une version de secours', '', doCheck));
     }
+    o.appendChild(opt('retry', '💾', 'Sauvegarder (gardien)', 'Enterre un os : copie tous tes réglages PuppyPlay dans Téléchargements. À restaurer après réinstallation.', '', () => R.backup()));
     o.appendChild(opt('wipe', '🧹', 'Effacer et repartir propre', 'Remet PuppyPhone à zéro (réglages & données). En dernier recours.', '', () => $('#sheet').classList.add('on')));
   }
   function doCheck() {
@@ -137,6 +140,8 @@ h1{margin:4px 0 2px;font-size:26px;font-weight:800;letter-spacing:.02em;text-sha
   $('#retry').onclick = () => R.retry();
   $('#ropen').onclick = () => R.openDownloads();
   $('#runi').onclick = () => R.uninstallSelf();
+  $('#rbk').onclick = () => R.backup();
+  $('#wbk').onclick = () => R.backup();
   $('#rclose').onclick = () => $('#rsheet').classList.remove('on');
   $('#wno').onclick = () => $('#sheet').classList.remove('on');
   $('#wyes').onclick = () => { $('#sheet').classList.remove('on'); busy('Grand nettoyage… l’appli va redémarrer à zéro 🐾', true); R.wipe(); };
@@ -149,6 +154,7 @@ h1{margin:4px 0 2px;font-size:26px;font-weight:800;letter-spacing:.02em;text-sha
       if (ev === 'prog') { const p = +data; if (p >= 0) { $('.spin').style.display = 'none'; $('.bar').style.display = ''; $('#xcancel').style.display = ''; $('#busy').classList.add('on'); $('#bmsg').textContent = 'Téléchargement…'; $('#bfill').style.width = p + '%'; $('#bpct').textContent = p + '%'; } }
       if (ev === 'err') { unbusy(); $('#err').style.display = 'block'; $('#err').textContent = '😿 ' + data; }
       if (ev === 'rollready') { unbusy(); $('#rapk').textContent = data; $('#rsheet').classList.add('on'); }
+      if (ev === 'saved') { unbusy(); const t = document.createElement('div'); t.className = 'err'; t.style.cssText = 'display:block;background:rgba(61,255,176,.12);border-color:rgba(61,255,176,.5);color:#bfffe0'; t.textContent = '✓ Os enterré : ' + data + '\nDans Téléchargements › PupNiche. Restaure-le après réinstallation (La Niche › Déterrer un os).'; $('#err').replaceWith(t); t.id = 'err'; }
     },
   };
   // auto : on lance tout de suite la recherche de solution

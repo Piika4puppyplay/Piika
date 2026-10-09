@@ -207,6 +207,10 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume(); Pelage.watch(this, web);
         if (web != null) web.onResume();
+        if (getIntent() != null) {
+            String open = getIntent().getStringExtra("pup_open");
+            if (open != null) { getIntent().removeExtra("pup_open"); if (pageReady) emit("open", open); else pendingOpen = open; }
+        }
         try { PupNav.ensure(this); } catch (Exception ignored) { }
         try { PupUpdate.syncLauncherIcon(this); PupUpdate.autoCheck(this); } catch (Exception ignored) { }
         // fond choisi depuis PupGalery / PupVidéo ?

@@ -546,9 +546,12 @@
   /** Retire les doublons de l'accueil : une même appli / dossier / Pup-app en plusieurs exemplaires → on garde le premier. */
   function dedupHome() {
     if (!home || !home.pages) return 0;
+    const hasNativeClean = apps.some((a) => isSelf(a) && /CleanActivity/.test(a.id));
     const seen = new Set(), keyOf = (it) => !it ? null : it.t === 'app' ? 'a:' + it.id : it.t === 'folder' ? 'f:' + it.cat : it.t === 'pup' ? 'p:' + it.app : it.t === 'sc' ? 's:' + it.pkg + '/' + it.sid : it.t === 'link' ? 'l:' + it.url : null;
     let removed = 0;
     home.pages = home.pages.map((pg) => pg.filter((it) => {
+      // la tuile-raccourci PupClean fait doublon avec l'icône native : on la retire
+      if (hasNativeClean && it && it.t === 'pup' && it.app === 'clean') { removed++; return false; }
       const k = keyOf(it); if (!k) return true;
       if (seen.has(k)) { removed++; return false; }
       seen.add(k); return true;

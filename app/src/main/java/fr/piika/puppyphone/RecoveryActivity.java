@@ -83,20 +83,21 @@ public class RecoveryActivity extends Activity {
         @JavascriptInterface public void check() { new Thread(() -> emit("checked", PupUpdate.check(RecoveryActivity.this).toString())).start(); }
         @JavascriptInterface public void update(String url, long size) { installFrom(url, size, "Téléchargement de la dernière version"); }
         @JavascriptInterface public void rollback(String url, long size) {
-            cancel.set(false);
-            new Thread(() -> {
+            ui.post(() -> {
                 try {
-                    emit("work", "Téléchargement de la version précédente");
-                    File apk = PupUpdate.download(RecoveryActivity.this, url, size, (done, total) -> emit("prog", total > 0 ? String.valueOf(done * 100 / total) : "-1"), cancel);
                     String digits = url.replaceAll(".*puppyphone-v", "").replaceAll("[^0-9].*", "");
                     final String name = "PuppyPhone-v" + (digits.isEmpty() ? "rollback" : digits) + ".apk";
-                    PupSave.save(RecoveryActivity.this, "download", "PuppyPhone", name, "application/vnd.android.package-archive", o -> {
-                        try (java.io.FileInputStream in = new java.io.FileInputStream(apk)) { byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
-                    });
-                    apk.delete();
+                    android.app.DownloadManager dm = (android.app.DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                    android.app.DownloadManager.Request req = new android.app.DownloadManager.Request(Uri.parse(url));
+                    req.setTitle("PuppyPhone " + (digits.isEmpty() ? "" : "v1.0." + digits) + " — version précédente");
+                    req.setDescription("Touche cette notification pour réinstaller après la désinstallation 🐾");
+                    req.setMimeType("application/vnd.android.package-archive");
+                    req.setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                    req.setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, "PuppyPhone/" + name);
+                    dm.enqueue(req);
                     emit("rollready", name);
                 } catch (Exception e) { emit("err", String.valueOf(e.getMessage())); }
-            }).start();
+            });
         }
         /** Désinstalle PuppyPhone (l'utilisateur rouvre ensuite l'APK téléchargé pour poser l'ancienne version). */
         @JavascriptInterface public void uninstallSelf() {
@@ -126,6 +127,13 @@ public class RecoveryActivity extends Activity {
                 try { startActivity(new Intent(RecoveryActivity.this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)); } catch (Exception ignored) { }
                 finish();
             });
+        }
+        /** Gardien : enterre un os (sauvegarde complète) dans Téléchargements/PupNiche avant d'effacer ou rétrograder. */
+        @JavascriptInterface public void backup() {
+            new Thread(() -> {
+                try { String n = NicheBackup.backup(RecoveryActivity.this, m -> emit("work", "Sauvegarde : " + m)); emit("saved", n); }
+                catch (Exception e) { emit("err", "Sauvegarde impossible : " + e.getMessage()); }
+            }).start();
         }
         @JavascriptInterface public void close() { ui.post(RecoveryActivity.this::finish); }
     }
