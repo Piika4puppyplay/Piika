@@ -36,12 +36,19 @@ final class Sieste {
     Sieste(Context c) { ctx = c; }
 
     /** Tamise vraiment l'écran (OLED : le noir reste noir, les néons restent lisibles). */
-    static void dim(android.view.Window w, boolean bright) {
+    static void dim(android.view.Window w, int lum) {
         if (w == null) return;
         android.view.WindowManager.LayoutParams lp = w.getAttributes();
-        lp.screenBrightness = bright ? android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : 0.03f;
+        lp.screenBrightness = lum >= 2 ? android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : lum == 1 ? 0.12f : 0.01f;
         w.setAttributes(lp);
     }
+    /** 0 = très sombre (défaut), 1 = tamisé, 2 = lumineux. */
+    static int lum(Context c) {
+        android.content.SharedPreferences p = Pelage.sp(c);
+        return p.contains("siesteLum") ? p.getInt("siesteLum", 0) : p.getBoolean("siesteBright", false) ? 2 : 0;
+    }
+    /** Secondes avant que la sieste s'arrête et laisse l'écran s'éteindre (0 = jamais). */
+    static int duree(Context c) { return Pelage.sp(c).getInt("siesteDuree", 60); }
 
     View create() {
         web = new WebView(ctx);
@@ -56,7 +63,7 @@ final class Sieste {
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface public String battery() { return lastBattery; }
             @JavascriptInterface public String prefs() {
-                try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).put("dim", !Pelage.sp(ctx).getBoolean("siesteBright", false)).toString(); } catch (Exception e) { return "{}"; }
+                try { return new JSONObject().put("pelage", Pelage.id(ctx)).put("acc", Pelage.cur(ctx)[2]).put("acc2", Pelage.cur(ctx)[3]).put("h24", true).put("lum", lum(ctx)).toString(); } catch (Exception e) { return "{}"; }
             }
         }, "Sieste");
         web.loadUrl("https://" + HOST + "/sieste.html");
@@ -90,7 +97,9 @@ final class Sieste {
             emit("battery", lastBattery);
         } catch (Exception ignored) { }
     }
-    void emit(String ev, String data) { ui.post(() -> { if (web != null) web.evaluateJavascript("window.SiesteUI&&SiesteUI.on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data) + ")", null); }); }
+    void emit(String ev, String data) {
+        final String d = data == null ? "" : data;
+        ui.post(() -> { if (web != null) web.evaluateJavascript("window.SiesteUI&&SiesteUI.on(" + JSONObject.quote(ev) + "," + JSONObject.quote(d) + ")", null); }); }
 
     WebResourceResponse serve(Uri u) {
         if (u == null || !HOST.equals(u.getHost())) return null;

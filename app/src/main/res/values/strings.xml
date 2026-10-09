@@ -4,12 +4,14 @@
     <string name="pupnav_sum">Barre de navigation puppyplay et multitâche PupTasks</string>
     <string name="kbd_fr">Français 🐾</string>
     <string name="kbd_en">English 🐾</string>
-    <string name="wall_name">Nuit néon 🐾</string>
-    <string name="wall_desc">Des pattes lumineuses montent dans un ciel étoilé au-dessus d\'un sol néon rétro, aux couleurs du pelage de ta niche.</string>
+    <string name="wall_name">Boulevard néon 🌆</string>
+    <string name="wall_desc">Soleil rétro, ville néon sous la pluie, sol mouillé qui reflète tout et un chiot en blouson de cuir avec ses lunettes.</string>
     <string name="wall_author">PuppyPhone</string>
     <string name="wall_cosmos">Pup dans l\'espace 🚀</string>
     <string name="wall_cosmos_desc">Noir OLED profond, nébuleuse, planète à anneaux et un chiot astronaute qui flotte avec son jetpack, aux couleurs de ton pelage.</string>
     <string name="wall_aurore">Aurore des pattes 🌌</string>
     <string name="wall_aurore_desc">Une aurore boréale qui ondule au-dessus des montagnes et d\'un lac miroir, regardée par un chiot assis sur son rocher.</string>
+    <string name="wall_niche">La niche douillette 🛋️</string>
+    <string name="wall_niche_desc">Un chiot qui dort dans son panier capitonné, guirlande lumineuse, néon PUPPY et pluie à la fenêtre.</string>
     <string name="dream_name">La sieste du chiot</string>
 </resources>

@@ -6,7 +6,7 @@
   const B = window.Sieste || { battery: () => JSON.stringify({ pct: +(new URLSearchParams(location.search).get('pct') || 63), charging: true, plug: 'secteur', remain: 2520000 }), prefs: () => '{}' };
   let bat = J(B.battery(), {}) || {};
   const pr = J(B.prefs(), {}) || {};
-  if (pr.dim) document.body.classList.add('dim');
+  document.body.classList.add('lum' + (pr.lum == null ? 2 : pr.lum));
   if (pr.acc) { document.body.style.setProperty('--acc', pr.acc); document.body.style.setProperty('--acc2', pr.acc2); }
 
   // étoiles
@@ -75,7 +75,7 @@
     const x = (Math.random() - .5) * 10, y = (Math.random() - .5) * 10;
     $('#wrap').style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh)) scale(${.94 + Math.random() * .08})`;
   }
-  window.SiesteUI = { on(ev, data) { if (ev === 'battery') { bat = J(data, bat) || bat; paint(); } } };
+  window.SiesteUI = { on(ev, data) { if (ev === 'battery') { bat = J(data, bat) || bat; paint(); } if (ev === 'dodo') document.body.classList.add('dodo'); } };
   // aperçu hors service Android (ex. dans « Ta niche ») : vraie batterie via le navigateur
   if (!window.Sieste && navigator.getBattery && !/[?&]pct=/.test(location.search)) {
     navigator.getBattery().then((b) => {

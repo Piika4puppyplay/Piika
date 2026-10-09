@@ -679,6 +679,17 @@
         </service>
 
         <service
+            android:name=".PupWallNiche"
+            android:label="@string/wall_niche"
+            android:exported="true"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/pup_wall_niche" />
+        </service>
+
+        <service
             android:name=".PupDream"
             android:label="@string/dream_name"
             android:exported="true"

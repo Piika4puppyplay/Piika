@@ -53,5 +53,9 @@ body.sieste{--acc:#ff3fa4;--acc2:#29e6ff;--fc:hsl(60 100% 50%);background:#05020
 }
 
 /* sieste tamisée : on baisse aussi les néons (le noir OLED reste éteint) */
-body.dim #wrap{filter:brightness(.62) saturate(.9)}
-body.dim .sky{opacity:.55}
+body.lum0 #wrap{filter:brightness(.38) saturate(.85)}
+body.lum0 .sky{opacity:.3}
+body.lum1 #wrap{filter:brightness(.62) saturate(.9)}
+body.lum1 .sky{opacity:.55}
+/* fin de sieste : fondu au noir avant que l'écran s'éteigne */
+body.dodo #wrap,body.dodo .sky{opacity:0!important;transition:opacity 2.2s ease-in}

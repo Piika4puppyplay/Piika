@@ -9,7 +9,7 @@
   const PEL = [['auto', 'Chacun son pelage', '#ff3fa4', '#29e6ff', '#0b0614'], ['rose', 'Néon Rose', '#ff3fa4', '#29e6ff', '#0b0614'], ['cyan', 'Laser Turquoise', '#29e6ff', '#ff3fa4', '#030b12'], ['violet', 'Violet Velours', '#9b5cff', '#29e6ff', '#0b0418'], ['cuir', 'Cuir & Rivets', '#ff3fa4', '#29e6ff', '#120a10'], ['or', 'Or Royal', '#ffb627', '#ff3fa4', '#0e0802'], ['vert', 'Vert Fluo', '#3dffb0', '#9b5cff', '#020e0a']]
     .map(([id, nom, acc, acc2, bg]) => ({ id, nom, acc, acc2, bg }));
   const N = window.Niche || {
-    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteBright: false, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true }),
+    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true }),
     pelage() {}, backup() { const st = ['Réglages des Pup-apps…', 'Fichiers de la niche…', 'Mémoire des pages (playlists, favoris…)…', 'Rangement dans Téléchargements…']; st.forEach((m, i) => setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'step', msg: m })), 500 * (i + 1))); setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'done', name: 'niche_2026-10-09_02h10.puppy' })), 2600); },
     pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
   };
@@ -115,19 +115,23 @@
     <ellipse cx="34" cy="90" rx="10" ry="6.5" fill="#fff6ea" stroke="#d9b78a"/><ellipse cx="66" cy="90" rx="10" ry="6.5" fill="#fff6ea" stroke="#d9b78a"/></svg>`;
 
 
+  const CATS = [['espace', '🚀 Espace'], ['nature', '🌌 Nature'], ['neon', '🌆 Néon'], ['cocon', '🛋️ Cocooning']];
   const WALLS = [
-    { id: 'cosmos', nom: "Pup dans l'espace", tag: 'NOUVEAU · OLED', txt: "Noir OLED absolu, nébuleuse en voie lactée, trois couches d'étoiles en profondeur, constellation de la Patte, lune cratérisée, satellite-os, étoiles filantes, planète à anneaux qui tourne et ton <b>chiot astronaute</b> qui flotte avec son jetpack (il cligne de l'œil sous son casque)." },
-    { id: 'aurore', nom: 'Aurore des pattes', tag: 'NOUVEAU · OLED', txt: "Des rideaux d'<b>aurore boréale</b> qui ondulent au-dessus de trois chaînes de montagnes, un lac miroir qui les reflète, des lucioles, et un chiot assis sur son rocher qui <b>remue la queue</b> en regardant le ciel." },
-    { id: 'neon', nom: 'Nuit néon', tag: 'CLASSIQUE', txt: 'Des pattes lumineuses qui montent dans un ciel étoilé, des faisceaux qui balaient et un sol néon rétro.' },
+    { id: 'cosmos', cat: 'espace', nom: "Pup dans l'espace", tag: 'PEINT · OLED', txt: "Noir OLED absolu, nébuleuse aux couleurs de ton pelage, des milliers d'étoiles, galaxie spirale, lune cratérisée et planète géante à anneaux. Ton <b>chiot astronaute</b> flotte avec son jetpack chromé (flammes et fumée animées), combinaison cousue, panneau de commande, gants en cuir et casque en verre qui reflète la nébuleuse. Étoiles filantes et antenne qui clignote." },
+    { id: 'aurore', cat: 'nature', nom: 'Aurore des pattes', tag: 'PEINT · OLED', txt: "Des rideaux d'<b>aurore boréale</b> qui ondulent au-dessus de trois chaînes de montagnes enneigées, une forêt de sapins, un lac gelé qui reflète l'aurore, de la neige qui tombe… et un chiot en écharpe tricotée assis sur son rocher qui respire doucement en regardant le ciel." },
+    { id: 'neon', cat: 'neon', nom: 'Boulevard néon', tag: 'PEINT · PLUIE', txt: "Soleil rétro à tranches, ville aux fenêtres allumées, montagnes en fil de fer, palmiers, enseigne <b>PUPPY</b> en tubes néon qui grésille, sol mouillé qui reflète tout sous la <b>pluie</b>, et un chiot en blouson de cuir et lunettes miroir à côté de son ghetto-blaster chromé." },
+    { id: 'niche', cat: 'cocon', nom: 'La niche douillette', tag: 'PEINT · COSY', txt: "Mur de briques, parquet ciré, fenêtre sur la ville avec la <b>pluie qui glisse sur la vitre</b>, guirlande lumineuse qui scintille, néon PUPPY, étagère de livres. Un chiot <b>dort en respirant</b> dans son panier en cuir capitonné, avec ses « z » qui s'envolent." },
   ];
-  let wsel = 'cosmos';
+  let wsel = 'cosmos', wcat = 'espace';
   function renderWall() {
     const W = WALLS.find((w) => w.id === wsel) || WALLS[0], posed = S.liveId || '';
     $('#s-wall').innerHTML = `<section class="ncard">
       <h2>${ic('moon', 'violet')}Fonds d'écran animés<em>${posed ? 'Posé : ' + esc((WALLS.find((w) => w.id === posed) || {}).nom || '') : 'Aucun posé'}</em></h2>
-      <div class="wgal">${WALLS.map((w) => `<button class="wcard${w.id === wsel ? ' on' : ''}" data-wall="${w.id}" type="button"><span class="wscreen"><img src="walls/${w.id}.png" alt=""><i class="wnotch"></i>${w.id === posed ? '<i class="wposed">POSÉ ✓</i>' : ''}</span><b>${esc(w.nom)}</b><small>${w.tag}</small></button>`).join('')}</div>
+      <div class="seg wcats">${CATS.map(([k, l]) => `<button type="button" data-wcat="${k}" class="${k === wcat ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="wbig"><img src="walls/${W.id}.jpg" alt=""><span class="phone">${esc(W.nom.toUpperCase())}</span></div>
+      <div class="wgal">${WALLS.filter((w) => w.cat === wcat).map((w) => `<button class="wcard${w.id === wsel ? ' on' : ''}" data-wall="${w.id}" type="button"><span class="wscreen"><img src="walls/${w.id}.jpg" alt=""><i class="wnotch"></i>${w.id === posed ? '<i class="wposed">POSÉ ✓</i>' : ''}</span><b>${esc(w.nom)}</b><small>${w.tag}</small></button>`).join('')}</div>
       <p class="hint">${W.txt}</p>
-      <p class="hint">Dessiné en <b>pleine résolution</b> de ton écran, aux couleurs de ton pelage, avec de la profondeur quand tu glisses entre les pages (sur One UI et sur l'accueil PuppyPhone). Il se met en pause écran éteint et ralentit en mode économie d'énergie.</p>
+      <p class="hint">Peint en haute définition, calque par calque (fond, décor, héros), avec des <b>halos aux couleurs de ton pelage</b>, avec de la profondeur quand tu glisses entre les pages (sur One UI et sur l'accueil PuppyPhone). Il se met en pause écran éteint et ralentit en mode économie d'énergie.</p>
       <button class="ab wide violet" data-a="wall" type="button">${ic('sparkle', 'chrome', 'none')}${W.id === posed ? 'Reposer « ' + esc(W.nom) + ' »' : 'Poser « ' + esc(W.nom) + ' »'}</button>
       <button class="ab wide glass" data-a="lock" type="button">${ic('lock', 'chrome', 'none')}Aussi sur l'écran de verrouillage</button>
     </section>`;
@@ -157,7 +161,8 @@
         <div class="nrow"><button class="ab green" data-a="backup" type="button" ${working ? 'disabled' : ''}>${ic('download', 'chrome', 'none')}${working ? 'Je creuse…' : 'Enterrer un os'}</button><button class="ab amber" data-a="restore" type="button" ${working ? 'disabled' : ''}>${ic('upload', 'chrome', 'none')}Déterrer un os</button></div>
       </section>`;
     renderWall();
-    $('#sb-sw').classList.toggle('on', !!S.siesteBright);
+    $('#s-lum').innerHTML = ['Très sombre', 'Tamisé', 'Lumineux'].map((l, i) => `<button type="button" data-lum="${i}" class="${(S.siesteLum || 0) === i ? 'on' : ''}">${l}</button>`).join('');
+    $('#s-dur').innerHTML = [[15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [0, 'Jamais']].map(([v, l]) => `<button type="button" data-dur="${v}" class="${(S.siesteDuree == null ? 60 : S.siesteDuree) === v ? 'on' : ''}">${l}</button>`).join('');
   }
   function init() {
     $('#nbody').innerHTML = '<div id="s-pel"></div><div id="s-wall"></div><div id="s-sons"></div><div id="s-verrou"></div><div id="s-bone"></div>' + `      <section class="ncard">
@@ -166,7 +171,10 @@
         <p class="hint">Pendant la charge, ton chiot dort sur son coussin pendant que <b>l'horloge s'allume dans une batterie en verre</b> : rouge quand la gamelle est vide, elle vire au <b>vert</b> en se remplissant jusqu'à 100 %, puis le chiot se réveille avec son os. La scène glisse doucement toute seule pour ne jamais marquer l'écran.</p>
         <ol class="howto"><li>Touche <b>Activer l'écran de veille</b> ci-dessous.</li><li>Choisis <b>« La sieste du chiot »</b> comme économiseur d'écran.</li><li>Règle « Quand démarrer » sur <b>Pendant la charge</b>.</li></ol>
         <p class="hint">🔒 L'écran de verrouillage de One UI reste intact : la sieste s'affiche par-dessus et disparaît dès que tu touches l'écran.</p>
-        <div class="row"><span>Écran lumineux pendant la sieste<small>Éteint par défaut : lumière tamisée, plus doux la nuit et pour l'écran</small></span><button class="sw" id="sb-sw" data-sw="siesteBright" type="button"><i></i></button></div>
+        <div class="row"><span>Luminosité de la sieste<small>Très sombre par défaut : l'OLED éteint le noir, seuls les néons brillent doucement</small></span></div>
+        <div class="seg" id="s-lum"></div>
+        <div class="row"><span>Éteindre l'écran après<small>La sieste s'endort en fondu, puis le téléphone se met en veille comme d'habitude</small></span></div>
+        <div class="seg" id="s-dur"></div>
         <div class="nrow"><button class="ab c2" data-a="sieste" type="button">${ic('eye', 'chrome', 'none')}Voir la sieste</button><button class="ab green" data-a="dream" type="button">${ic('gear', 'chrome', 'none')}Activer l'écran de veille</button></div>
       </section>`;
   }
@@ -190,8 +198,13 @@
     }
     const toy = e.target.closest('[data-son]');
     if (toy) { toy.classList.remove('boing'); void toy.offsetWidth; toy.classList.add('boing'); PupSons.preview(toy.dataset.son, (S.sonsVol || 60) / 100); return; }
+    const lb = e.target.closest('[data-lum]');
+    if (lb) { S.siesteLum = +lb.dataset.lum; nc('setInt', 'siesteLum', S.siesteLum); render(); return; }
+    const db = e.target.closest('[data-dur]');
+    if (db) { S.siesteDuree = +db.dataset.dur; nc('setInt', 'siesteDuree', S.siesteDuree); render(); return; }
     const fb = e.target.closest('[data-force]');
     if (fb && !fb.disabled) { S.verrouForce = +fb.dataset.force; nc('setInt', 'verrouForce', S.verrouForce); render(); return; }
+    const wk = e.target.closest('[data-wcat]'); if (wk) { wcat = wk.dataset.wcat; const f = WALLS.find((w) => w.cat === wcat); if (f) wsel = f.id; renderWall(); return; }
     const wc0 = e.target.closest('[data-wall]'); if (wc0) { wsel = wc0.dataset.wall; renderWall(); return; }
     const b = e.target.closest('[data-a],[data-sw]'); if (!b) return;
     const a = b.dataset.a;

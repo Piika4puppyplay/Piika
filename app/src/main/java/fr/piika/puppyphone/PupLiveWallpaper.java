@@ -19,7 +19,7 @@ import java.util.Random;
  * Moteur des fonds d'écran animés PuppyPhone. Chaque fond est une « scène » dessinée sur le GPU
  * (lockHardwareCanvas), en pleine résolution de l'écran, en pause dès qu'il n'est plus visible,
  * ralentie à 15 images/s en mode économie d'énergie.
- * Cette classe = « Nuit néon » ; PupWallCosmos et PupWallAurore en sont les variantes.
+ * Cette classe = « Boulevard néon » ; PupWallCosmos, PupWallAurore et PupWallNiche en sont les variantes.
  */
 public class PupLiveWallpaper extends WallpaperService {
 
@@ -28,7 +28,7 @@ public class PupLiveWallpaper extends WallpaperService {
         void draw(Canvas c, float t, float dt, float xOff);
     }
 
-    Scene scene(Context c) { return new NeonScene(c); }
+    Scene scene(Context c) { return new LayeredScene(c, "neon"); }
 
     @Override public Engine onCreateEngine() { return new PupEngine(); }
 
@@ -77,71 +77,5 @@ public class PupLiveWallpaper extends WallpaperService {
     static int mix(int a, int b, float t) {
         int ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255, br = (b >> 16) & 255, bgc = (b >> 8) & 255, bb = b & 255;
         return 0xFF000000 | ((int) (ar + (br - ar) * t) << 16) | ((int) (ag + (bgc - ag) * t) << 8) | (int) (ab + (bb - ab) * t);
-    }
-
-    /** « Nuit néon » : pattes lumineuses, faisceaux, sol néon rétro. */
-    static class NeonScene implements Scene {
-        final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        final Random rnd = new Random();
-        final float dens;
-        int W, H, acc, acc2, bg;
-        float[][] paws, stars;
-        NeonScene(Context c) { acc = Pelage.acc(c); acc2 = Pelage.acc2(c); bg = Pelage.bg(c); dens = c.getResources().getDisplayMetrics().density; }
-
-        @Override public void size(int w, int h) {
-            W = w; H = h;
-            paws = new float[22][7];
-            for (float[] q : paws) newPaw(q, true);
-            stars = new float[70][3];
-            for (float[] s : stars) { s[0] = rnd.nextFloat(); s[1] = rnd.nextFloat() * .6f; s[2] = rnd.nextFloat() * 6.28f; }
-        }
-        void newPaw(float[] q, boolean anywhere) {
-            q[0] = rnd.nextFloat() * W; q[1] = anywhere ? rnd.nextFloat() * H : H + 40;
-            q[2] = (10 + rnd.nextFloat() * 22) * dens / 2.2f; q[3] = (12 + rnd.nextFloat() * 26) * dens / 2.2f;
-            q[4] = rnd.nextFloat() * 6.28f; q[5] = rnd.nextBoolean() ? 1 : 0; q[6] = -25 + rnd.nextFloat() * 50;
-        }
-
-        @Override public void draw(Canvas c, float t, float dt, float xOff) {
-            float par = (xOff - .5f) * W * .12f, u = dens / 2.6f;
-            p.reset(); p.setAntiAlias(true);
-            p.setShader(new LinearGradient(0, 0, 0, H, new int[]{mix(bg, acc, .18f), bg, mix(bg, acc2, .14f)}, new float[]{0, .55f, 1}, Shader.TileMode.CLAMP));
-            c.drawRect(0, 0, W, H, p);
-            p.setShader(new RadialGradient(W * .15f - par * .3f, H * .05f, W * .8f, a(acc, 90), 0, Shader.TileMode.CLAMP)); c.drawRect(0, 0, W, H, p);
-            p.setShader(new RadialGradient(W * .95f - par * .3f, H * .45f, W * .7f, a(acc2, 60), 0, Shader.TileMode.CLAMP)); c.drawRect(0, 0, W, H, p);
-            p.setShader(null);
-            for (float[] s : stars) {
-                float tw = (float) (.5 + .5 * Math.sin(t * 1.6 + s[2]));
-                p.setColor(a(0xFFFFFFFF, (int) (40 + 140 * tw)));
-                c.drawCircle(s[0] * W - par * .2f, s[1] * H, (1.2f + tw * 1.3f) * u * 1.4f, p);
-            }
-            for (int i = 0; i < 3; i++) {
-                float ang = (float) Math.sin(t * (.18 + i * .07) + i * 2) * 28;
-                float bx = W * (.2f + i * .3f) - par * .5f;
-                c.save(); c.rotate(ang, bx, -40);
-                int col = i == 1 ? acc2 : acc;
-                p.setShader(new LinearGradient(bx, 0, bx, H * .9f, a(col, 120), a(col, 0), Shader.TileMode.CLAMP));
-                c.drawRect(bx - 2.5f * u, -40, bx + 2.5f * u, H * .9f, p);
-                p.setShader(new LinearGradient(bx, 0, bx, H * .7f, a(col, 28), a(col, 0), Shader.TileMode.CLAMP));
-                c.drawRect(bx - 26 * u, -40, bx + 26 * u, H * .7f, p);
-                c.restore();
-            }
-            p.setShader(null);
-            float hor = H * .7f;
-            p.setShader(new LinearGradient(0, hor, 0, H, a(acc, 0), a(acc, 70), Shader.TileMode.CLAMP));
-            c.drawRect(0, hor, W, H, p); p.setShader(null);
-            p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(1.6f * u);
-            float scroll = (t * .35f) % 1f;
-            for (int i = 0; i < 12; i++) { float k = (i + scroll) / 12f, y = hor + (H - hor) * k * k; p.setColor(a(acc, (int) (30 + 150 * k))); c.drawLine(0, y, W, y, p); }
-            for (int i = -10; i <= 10; i++) { float xb = W / 2f + i * W * .16f - par; p.setColor(a(acc2, 70)); c.drawLine(W / 2f - par * .2f + i * 6 * u, hor, xb, H, p); }
-            p.setStyle(Paint.Style.FILL);
-            p.setColor(a(acc, 160)); c.drawRect(0, hor - 1.5f * u, W, hor + 1.5f * u, p);
-            for (float[] q : paws) {
-                q[1] -= q[3] * dt * 2.2f;
-                if (q[1] < -60) newPaw(q, false);
-                float sway = (float) Math.sin(t * .9 + q[4]) * 10 * u;
-                float fade = Math.min(1f, Math.max(0f, q[1] / (H * .25f)));
-                PupDraw.paw(c, p, q[0] + sway - par * (.3f + q[2] / 40f), q[1], q[2], q[6], q[5] == 1 ? acc2 : acc, (int) (200 * fade));
-            }
-        }
     }
 }

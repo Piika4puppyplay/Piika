@@ -100,10 +100,10 @@ public class NicheActivity extends Activity {
             android.app.WallpaperInfo wi = WallpaperManager.getInstance(this).getWallpaperInfo();
             if (wi == null || !getPackageName().equals(wi.getPackageName())) return "";
             String n = wi.getServiceName();
-            return n.endsWith("Cosmos") ? "cosmos" : n.endsWith("Aurore") ? "aurore" : "neon";
+            return n.endsWith("Cosmos") ? "cosmos" : n.endsWith("Aurore") ? "aurore" : n.endsWith("Niche") ? "niche" : "neon";
         } catch (Exception e) { return ""; }
     }
-    static Class<?> wallClass(String id) { return "cosmos".equals(id) ? PupWallCosmos.class : "aurore".equals(id) ? PupWallAurore.class : PupLiveWallpaper.class; }
+    static Class<?> wallClass(String id) { return "cosmos".equals(id) ? PupWallCosmos.class : "aurore".equals(id) ? PupWallAurore.class : "niche".equals(id) ? PupWallNiche.class : PupLiveWallpaper.class; }
 
     boolean liveWallpaperOn() {
         try {
@@ -137,7 +137,7 @@ public class NicheActivity extends Activity {
                 return new JSONObject().put("pelage", Pelage.id(NicheActivity.this)).put("pelages", pel)
                         .put("lastBackup", p.getLong("lastBackup", 0)).put("lastBackupName", p.getString("lastBackupName", ""))
                         .put("restoredAt", p.getLong("restoredAt", 0)).put("live", liveWallpaperOn()).put("liveId", liveId())
-                        .put("siesteBright", p.getBoolean("siesteBright", false)).put("busy", busy)
+                        .put("siesteLum", Sieste.lum(NicheActivity.this)).put("siesteDuree", Sieste.duree(NicheActivity.this)).put("busy", busy)
                         .put("sons", p.getBoolean("sons", true)).put("sonsVol", p.getInt("sonsVol", 60))
                         .put("sonsNav", p.getBoolean("sonsNav", true)).put("sonsClavier", p.getBoolean("sonsClavier", false))
                         .put("sonsCharge", p.getBoolean("sonsCharge", true)).put("sonsVerrou", p.getBoolean("sonsVerrou", false))
@@ -215,7 +215,7 @@ public class NicheActivity extends Activity {
             if (k.startsWith("verrou")) decoRefresh();
         }
         @JavascriptInterface public void setInt(String k, int v) {
-            if (!k.matches("sonsVol|verrouForce")) return;
+            if (!k.matches("sonsVol|verrouForce|siesteLum|siesteDuree")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putInt(k, v);
             if ("sonsVol".equals(k)) e.putLong("ver", System.currentTimeMillis());
             e.commit();

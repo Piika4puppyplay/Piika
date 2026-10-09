@@ -303,6 +303,7 @@ public class MainActivity extends Activity {
         if (p.endsWith(".js")) return "application/javascript";
         if (p.endsWith(".svg")) return "image/svg+xml";
         if (p.endsWith(".png")) return "image/png";
+        if (p.endsWith(".jpg")) return "image/jpeg";
         if (p.endsWith(".ttf")) return "font/ttf";
         if (p.endsWith(".woff2")) return "font/woff2";
         if (p.endsWith(".json")) return "application/json";
