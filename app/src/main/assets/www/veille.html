@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Veille puppy</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body.veille{background:#000;overflow:hidden;margin:0}
+#vw{position:fixed;left:50%;top:50%;width:min(92vw,520px);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:6px;transition:transform 6s ease-in-out,opacity 2s}
+#vclock{font-family:var(--f-head);font-size:min(24vw,130px);line-height:1;color:#fff;letter-spacing:.02em;text-shadow:0 0 8px #fff,0 0 22px var(--acc),0 0 48px var(--acc)}
+#vclock i{font-style:normal;animation:vb 2s steps(1) infinite}
+@keyframes vb{50%{opacity:.25}}
+#vdate{font-family:var(--f-neon);font-size:min(6vw,30px);word-spacing:.3em;color:var(--acc2);text-shadow:0 0 8px var(--acc2),0 0 20px var(--acc2);text-transform:capitalize;white-space:nowrap}
+#vbat{width:100%;aspect-ratio:1;margin-top:-6%}
+#vsay{font-family:var(--f-num);font-size:min(3.4vw,14px);letter-spacing:.14em;color:#cdbfe0;text-transform:uppercase;margin-top:-10%;text-align:center}
+body.lum0 #vw{filter:brightness(.42)} body.lum1 #vw{filter:brightness(.68)}
+body.dodo #vw{opacity:0}
+</style>
+</head>
+<body class="veille">
+<div id="vw">
+  <div id="vclock"><b id="hh">00</b><i>:</i><b id="mm">00</b></div>
+  <div id="vdate"></div>
+  <canvas id="vbat" width="600" height="600"></canvas>
+  <div id="vsay"></div>
+</div>
+<script src="aodbat.js"></script>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s), J = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
+  const B = window.Sieste || { battery: () => JSON.stringify({ pct: +(new URLSearchParams(location.search).get('pct') || 64), charging: true, plug: 'secteur', remain: 1800000 }), prefs: () => JSON.stringify({ style: new URLSearchParams(location.search).get('style') || 'verre', vlum: 2 }) };
+  let bat = J(B.battery(), {}) || {}; const pr = J(B.prefs(), {}) || {};
+  if (pr.acc) { document.body.style.setProperty('--acc', pr.acc); document.body.style.setProperty('--acc2', pr.acc2); }
+  document.body.classList.add('lum' + (pr.vlum == null ? 0 : pr.vlum));
+  const cv = $('#vbat'), ctx = cv.getContext('2d'), style = pr.style === 'os' ? 'os' : 'verre';
+  let t0 = performance.now();
+  function frame() {
+    const pct = bat.pct >= 0 ? bat.pct : 0;
+    AodBat.draw(ctx, style, 600, 600, pct, (performance.now() - t0) / 1000, { charging: !!bat.charging && !bat.full, acc: pr.acc, transparent: true });
+    setTimeout(() => requestAnimationFrame(frame), 80); // ~12 images/s : doux pour la batterie
+  }
+  function clock() {
+    const n = new Date(); $('#hh').textContent = String(n.getHours()).padStart(2, '0'); $('#mm').textContent = String(n.getMinutes()).padStart(2, '0');
+    $('#vdate').textContent = n.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const r = bat.remain > 0 ? Math.round(bat.remain / 60000) : 0;
+    $('#vsay').textContent = bat.full || bat.pct >= 100 ? 'Gamelle pleine 🐾' : bat.charging ? (r ? `Plein dans ${r >= 60 ? Math.floor(r / 60) + ' h ' + String(r % 60).padStart(2, '0') : r + ' min'}` : 'Le chiot recharge ses croquettes') : bat.pct <= 15 ? 'Gamelle presque vide 🥺' : 'Le chiot veille 🐶';
+  }
+  function drift() { const x = (Math.random() - .5) * 12, y = (Math.random() - .5) * 14; $('#vw').style.transform = `translate(calc(-50% + ${x}vw), calc(-50% + ${y}vh))`; }
+  window.SiesteUI = { on(ev, data) { if (ev === 'battery') { bat = J(data, bat) || bat; clock(); } if (ev === 'dodo') document.body.classList.add('dodo'); } };
+  frame(); clock(); drift(); setInterval(clock, 1000); setInterval(drift, 20000);
+})();
+</script>
+</body>
+</html>

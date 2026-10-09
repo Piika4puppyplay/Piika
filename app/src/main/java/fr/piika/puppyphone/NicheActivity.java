@@ -145,7 +145,7 @@ public class NicheActivity extends Activity {
                         .put("verrou", p.getBoolean("verrou", false)).put("verrouCadre", p.getBoolean("verrouCadre", true))
                         .put("verrouPattes", p.getBoolean("verrouPattes", true)).put("verrouChiot", p.getBoolean("verrouChiot", true))
                         .put("verrouEtoiles", p.getBoolean("verrouEtoiles", true)).put("verrouCharge", p.getBoolean("verrouCharge", true))
-                        .put("verrouForce", p.getInt("verrouForce", 1)).put("a11y", PupNavA11y.I != null)
+                        .put("verrouForce", p.getInt("verrouForce", 1)).put("veille", p.getBoolean("veille", false)).put("veilleStyle", p.getString("veilleStyle", "verre")).put("veilleQuand", p.getInt("veilleQuand", 0)).put("veilleDuree", p.getInt("veilleDuree", 30)).put("veilleLum", p.getInt("veilleLum", 0)).put("a11y", PupNavA11y.I != null)
                         .put("version", PupUpdate.current(NicheActivity.this)).toString();
             } catch (Exception e) { return "{}"; }
         }
@@ -208,14 +208,14 @@ public class NicheActivity extends Activity {
             });
         }
         @JavascriptInterface public void set(String k, boolean v) {
-            if (!k.matches("siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge")) return;
+            if (!k.matches("veille|siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putBoolean(k, v);
             if ("sons".equals(k)) e.putLong("ver", System.currentTimeMillis()); // les Pup-apps rechargent leurs sons
             e.commit();
             if (k.startsWith("verrou")) decoRefresh();
         }
         @JavascriptInterface public void setInt(String k, int v) {
-            if (!k.matches("sonsVol|verrouForce|siesteLum|siesteDuree")) return;
+            if (!k.matches("sonsVol|verrouForce|siesteLum|siesteDuree|veilleQuand|veilleDuree|veilleLum")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putInt(k, v);
             if ("sonsVol".equals(k)) e.putLong("ver", System.currentTimeMillis());
             e.commit();
@@ -228,6 +228,40 @@ public class NicheActivity extends Activity {
             if (a == null || a.deco == null) return false;
             ui.post(() -> a.deco.preview(7000));
             return true;
+        }
+        @JavascriptInterface public void setStr(String k, String v) { if ("veilleStyle".equals(k) && v.matches("verre|os")) Pelage.sp(NicheActivity.this).edit().putString(k, v).commit(); }
+        @JavascriptInterface public void veillePreview() { ui.post(() -> PupVeille.show(NicheActivity.this, true)); }
+        /** Range le GIF de batterie puppy dans la Galerie (Images › PupAOD) pour l'Always On Display de Samsung. */
+        @JavascriptInterface public String aodSave(String style) {
+            if (!style.matches("verre|os")) return "";
+            String name = "pup_aod_" + style + ".gif";
+            try (java.io.InputStream in = getAssets().open("www/aod/" + style + ".gif")) {
+                java.io.OutputStream out;
+                if (Build.VERSION.SDK_INT >= 29) {
+                    android.content.ContentValues cv = new android.content.ContentValues();
+                    cv.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name);
+                    cv.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/gif");
+                    cv.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/PupAOD");
+                    Uri u = getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv);
+                    out = getContentResolver().openOutputStream(u);
+                } else {
+                    java.io.File d = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES), "PupAOD"); d.mkdirs();
+                    out = new java.io.FileOutputStream(new java.io.File(d, name));
+                }
+                try (java.io.OutputStream o = out) { byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
+                return name;
+            } catch (Exception e) { return ""; }
+        }
+        /** Ouvre les réglages Always On Display de Samsung (ou l'écran de verrouillage si introuvable). */
+        @JavascriptInterface public void openAod() {
+            ui.post(() -> {
+                Intent[] tries = {
+                        new Intent("com.samsung.android.app.aodservice.intent.action.AOD_SETTINGS"),
+                        new Intent().setClassName("com.samsung.android.app.aodservice", "com.samsung.android.app.aodservice.settings.AODSettingsActivity"),
+                        new Intent().setClassName("com.android.settings", "com.android.settings.Settings$LockscreenSettingsActivity"),
+                        new Intent(Settings.ACTION_DISPLAY_SETTINGS)};
+                for (Intent i : tries) { try { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return; } catch (Exception ignored) { } }
+            });
         }
         @JavascriptInterface public void openA11y() { ui.post(() -> { try { startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void close() { ui.post(NicheActivity.this::finish); }

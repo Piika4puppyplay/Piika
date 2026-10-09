@@ -9,9 +9,9 @@
   const PEL = [['auto', 'Chacun son pelage', '#ff3fa4', '#29e6ff', '#0b0614'], ['rose', 'Néon Rose', '#ff3fa4', '#29e6ff', '#0b0614'], ['cyan', 'Laser Turquoise', '#29e6ff', '#ff3fa4', '#030b12'], ['violet', 'Violet Velours', '#9b5cff', '#29e6ff', '#0b0418'], ['cuir', 'Cuir & Rivets', '#ff3fa4', '#29e6ff', '#120a10'], ['or', 'Or Royal', '#ffb627', '#ff3fa4', '#0e0802'], ['vert', 'Vert Fluo', '#3dffb0', '#9b5cff', '#020e0a']]
     .map(([id, nom, acc, acc2, bg]) => ({ id, nom, acc, acc2, bg }));
   const N = window.Niche || {
-    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true }),
+    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0 }),
     pelage() {}, backup() { const st = ['Réglages des Pup-apps…', 'Fichiers de la niche…', 'Mémoire des pages (playlists, favoris…)…', 'Rangement dans Téléchargements…']; st.forEach((m, i) => setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'step', msg: m })), 500 * (i + 1))); setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'done', name: 'niche_2026-10-09_02h10.puppy' })), 2600); },
-    pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
+    pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, setStr() {}, veillePreview() {}, aodSave: (st) => 'pup_aod_' + st + '.gif', openAod() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
   };
   const nc = (fn, ...a) => { try { return N[fn] ? N[fn](...a) : undefined; } catch (e) { console.warn(fn, e); } };
   const fmtD = (t) => t ? new Date(t).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'jamais';
@@ -137,6 +137,32 @@
     </section>`;
   }
 
+
+  const seg = (key, opts, cur, dis) => `<div class="seg${dis ? ' dim' : ''}">${opts.map(([v, l]) => `<button type="button" data-seg="${key}" data-v="${v}" class="${String(cur) === String(v) ? 'on' : ''}"${dis ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
+  function renderAod() {
+    const off = !S.veille, st = S.veilleStyle || 'verre';
+    $('#s-aod').innerHTML = `<section class="ncard">
+      <h2>${ic('battery', 'green')}Écran éteint<em>${S.veille ? 'Veille puppy ON' : 'AOD'}</em></h2>
+      <div class="aodpick">${[['verre', 'Gamelle de verre'], ['os', 'Os lumineux']].map(([k, l]) => `<button type="button" class="aodc${k === st ? ' on' : ''}" data-aod="${k}"><span class="aodscr"><img src="aod/${k}.gif" alt=""></span><b>${l}</b></button>`).join('')}</div>
+      <h3 class="subh">1 · Dans l'Always On Display de Samsung</h3>
+      <p class="hint">Samsung ne laisse aucune appli dessiner dans son AOD, mais il accepte <b>une image ou un GIF</b>. Je range la batterie choisie (animation de charge qui se remplit du rouge au vert) dans ta <b>Galerie › PupAOD</b>, puis tu la poses toi-même :</p>
+      <ol class="howto"><li>Touche <b>Enregistrer le GIF</b>.</li><li>Ouvre <b>Écran de verrouillage › Always On Display</b>.</li><li><b>Style d'horloge</b> → <b>Image / GIF</b> → choisis <b>pup_aod_${st}.gif</b>.</li></ol>
+      <p class="hint">Le chiffre ne bouge pas dans un GIF : l'AOD de Samsung affiche le vrai pourcentage à côté pendant la charge.</p>
+      <div class="nrow"><button class="ab green" data-a="aodsave" type="button">${ic('download', 'chrome', 'none')}Enregistrer le GIF</button><button class="ab glass" data-a="aodopen" type="button">${ic('gear', 'chrome', 'none')}Réglages AOD</button></div>
+      <h3 class="subh">2 · Veille puppy (mon AOD maison)</h3>
+      <p class="hint">Quand tu éteins l'écran, PuppyPhone le rallume <b>presque noir</b> par-dessus le verrouillage One UI (code, empreinte : intacts) avec l'horloge et la batterie puppy <b>en direct</b>, puis le rééteint tout seul. Elle consomme plus que l'AOD de Samsung : laisse-la plutôt sur « En charge ».</p>
+      ${!S.a11y ? `<div class="warnbox">⚠️ La Veille puppy passe par le service <b>PupNav</b> (accessibilité), comme la barre.<button class="ab small amber" data-a="a11y" type="button">Ouvrir l'accessibilité</button></div>` : ''}
+      ${row('veille', 'Veille puppy', 'Éteins-la et l\'écran éteint redevient exactement comme avant')}
+      <div class="row${off ? ' dim' : ''}"><span>Quand<small>« Toujours » = à chaque extinction, même débranché</small></span></div>
+      ${seg('veilleQuand', [[0, '🔌 En charge'], [1, '🐾 Toujours']], S.veilleQuand || 0, off)}
+      <div class="row${off ? ' dim' : ''}"><span>Durée avant de rééteindre</span></div>
+      ${seg('veilleDuree', [[10, '10 s'], [30, '30 s'], [60, '1 min'], [300, '5 min']], S.veilleDuree || 30, off)}
+      <div class="row${off ? ' dim' : ''}"><span>Luminosité</span></div>
+      ${seg('veilleLum', [[0, 'Très sombre'], [1, 'Tamisé'], [2, 'Lumineux']], S.veilleLum || 0, off)}
+      <button class="ab wide c2" data-a="veilleprev" type="button">${ic('eye', 'chrome', 'none')}Aperçu 10 secondes</button>
+    </section>`;
+  }
+
   function render() {
     const cur = S.pelage || 'auto', pels = S.pelages && S.pelages.length ? S.pelages : PEL;
     const curP = pels.find((p) => p.id === cur) || pels[0];
@@ -150,7 +176,7 @@
         <div class="medals">${pels.map((p, i) => `<button data-nosound class="medal${p.id === cur ? ' on' : ''}${p.id === 'auto' ? ' auto' : ''}" data-pel="${esc(p.id)}" type="button" style="--a:${p.acc};--b:${p.acc2};--dl:${(i * -0.6).toFixed(1)}s"><i class="ring"></i><span class="disc">${PAW}</span><b>${esc(p.nom)}</b></button>`).join('')}</div>
       </section>`;
     { const md = $('.medals'), on = $('.medal.on'); if (md && on) md.scrollLeft = on.offsetLeft - (md.clientWidth - on.clientWidth) / 2; }
-    renderSons(); renderVerrou();
+    renderSons(); renderVerrou(); renderAod();
     $('#s-bone').innerHTML = `      <section class="ncard">
         <h2>${ic('bone', 'amber')}La cachette à os<em>Sauvegarde</em></h2>
         <div class="dig${working ? ' work' : ''}${bk.st === 'done' ? ' down' : ''}" id="dig">${DIG}</div>
@@ -165,7 +191,7 @@
     $('#s-dur').innerHTML = [[15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [0, 'Jamais']].map(([v, l]) => `<button type="button" data-dur="${v}" class="${(S.siesteDuree == null ? 60 : S.siesteDuree) === v ? 'on' : ''}">${l}</button>`).join('');
   }
   function init() {
-    $('#nbody').innerHTML = '<div id="s-pel"></div><div id="s-wall"></div><div id="s-sons"></div><div id="s-verrou"></div><div id="s-bone"></div>' + `      <section class="ncard">
+    $('#nbody').innerHTML = '<div id="s-pel"></div><div id="s-wall"></div><div id="s-sons"></div><div id="s-verrou"></div><div id="s-aod"></div><div id="s-bone"></div>' + `      <section class="ncard">
         <h2>${ic('battery', 'green')}La sieste du chiot<em>Charge</em></h2>
         <div class="siestprev"><iframe src="sieste.html?apercu=1" tabindex="-1" title="Aperçu de la sieste"></iframe></div>
         <p class="hint">Pendant la charge, ton chiot dort sur son coussin pendant que <b>l'horloge s'allume dans une batterie en verre</b> : rouge quand la gamelle est vide, elle vire au <b>vert</b> en se remplissant jusqu'à 100 %, puis le chiot se réveille avec son os. La scène glisse doucement toute seule pour ne jamais marquer l'écran.</p>
@@ -198,6 +224,8 @@
     }
     const toy = e.target.closest('[data-son]');
     if (toy) { toy.classList.remove('boing'); void toy.offsetWidth; toy.classList.add('boing'); PupSons.preview(toy.dataset.son, (S.sonsVol || 60) / 100); return; }
+    const ap = e.target.closest('[data-aod]'); if (ap) { S.veilleStyle = ap.dataset.aod; nc('setStr', 'veilleStyle', S.veilleStyle); render(); return; }
+    const sg = e.target.closest('[data-seg]'); if (sg && !sg.disabled) { S[sg.dataset.seg] = +sg.dataset.v; nc('setInt', sg.dataset.seg, +sg.dataset.v); render(); return; }
     const lb = e.target.closest('[data-lum]');
     if (lb) { S.siesteLum = +lb.dataset.lum; nc('setInt', 'siesteLum', S.siesteLum); render(); return; }
     const db = e.target.closest('[data-dur]');
@@ -220,6 +248,9 @@
     if (a === 'rs-go') { veil(`<h3>Le chiot creuse… 🦴</h3><p>La niche redémarre avec ton os. Ne quitte pas, ça prend quelques secondes.</p>`); setTimeout(() => nc('restoreNow'), 600); }
     if (a === 'ok') veil();
     if (a === 'a11y') nc('openA11y');
+    if (a === 'aodsave') { const n = nc('aodSave', S.veilleStyle || 'verre'); toast(n ? `🦴 ${n} rangé dans Galerie › PupAOD` : "Oups, je n'ai pas pu l'enregistrer 🥺"); }
+    if (a === 'aodopen') nc('openAod');
+    if (a === 'veilleprev') nc('veillePreview');
     if (a === 'decoprev') { if (nc('decoPreview') === false) veil(`<h3>PupNav n'est pas activé 🐶</h3><p>La déco du verrou passe par le service d'accessibilité <b>PupNav</b>, comme la barre. Active-le puis reviens ici.</p><div class="nrow"><button class="ab glass" data-a="ok" type="button">Plus tard</button><button class="ab amber" data-a="a11y" type="button">Ouvrir</button></div>`); else toast('Regarde bien, la déco s\'affiche 7 secondes 🐾'); }
     if (b.dataset.sw && !b.disabled) { const on = !b.classList.contains('on'); S[b.dataset.sw] = on; nc('set', b.dataset.sw, on); if (b.dataset.sw === 'sons' && window.PupSons) PupSons.set(on); if (b.dataset.sw === 'sons' && on) PupSons.preview('jappe', (S.sonsVol || 60) / 100); render(); }
   });

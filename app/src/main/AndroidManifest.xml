@@ -636,6 +636,19 @@
             android:theme="@style/PupInvisible" />
 
         <activity
+            android:name=".VeilleActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity="fr.piika.puppyphone.veille"
+            android:noHistory="true"
+            android:hardwareAccelerated="true"
+            android:theme="@style/PupVeilleTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density" />
+
+        <activity
             android:name=".SiesteActivity"
             android:label="@string/dream_name"
             android:exported="false"

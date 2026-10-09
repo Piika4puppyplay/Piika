@@ -59,8 +59,8 @@ final class LockDeco {
         @Override public void onReceive(Context c, Intent i) {
             String a = i.getAction(); if (a == null) return;
             switch (a) {
-                case Intent.ACTION_SCREEN_OFF: hide(); break;
-                case Intent.ACTION_USER_PRESENT: hide(); PupSons.play(ctx, "sonsVerrou", "jappe"); break;
+                case Intent.ACTION_SCREEN_OFF: hide(); PupVeille.onScreenOff(ctx, charging); break;
+                case Intent.ACTION_USER_PRESENT: hide(); PupVeille.onUnlock(); PupSons.play(ctx, "sonsVerrou", "jappe"); break;
                 case Intent.ACTION_DREAMING_STARTED: dreaming = true; hide(); break;
                 case Intent.ACTION_DREAMING_STOPPED: dreaming = false; check(); break;
                 case Intent.ACTION_POWER_CONNECTED: charging = true; PupSons.play(ctx, "sonsCharge", "halete"); check(); break;
