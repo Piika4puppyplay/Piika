@@ -58,7 +58,7 @@ final class PupVolet {
     static final Handler h = new Handler(Looper.getMainLooper());
     static AccessibilityService svc;
     static WindowManager wm;
-    static View trigger; static WindowManager.LayoutParams tLp; static boolean tTouchable = true, barVisible = true;
+    static View trigger; static WindowManager.LayoutParams tLp; static boolean tTouchable = true, barVisible = true, everVis;
     static FrameLayout shade; static WebView sweb; static WindowManager.LayoutParams sLp; static boolean shadeAdded, open; static long openedAt;
     static WebView pweb; static WindowManager.LayoutParams pLp; static boolean popAdded; static String popKey = "";
     static float dens = 1; static int sbH;
@@ -130,7 +130,12 @@ final class PupVolet {
         tTouchable = true;
         // appli en plein écran (vidéo, jeu) : la barre d'état est cachée → on laisse passer les doigts
         v.setOnApplyWindowInsetsListener((x, ins) -> {
-            if (Build.VERSION.SDK_INT >= 30) { boolean vis = ins.isVisible(WindowInsets.Type.statusBars()); if (vis != barVisible) { barVisible = vis; h.post(PupVolet::update); } }
+            if (Build.VERSION.SDK_INT >= 30) {
+                boolean vis = ins.isVisible(WindowInsets.Type.statusBars());
+                if (vis) everVis = true;
+                boolean b = vis || !everVis; // tant qu'on ne l'a jamais vue « visible », on ne croit pas au plein écran
+                if (b != barVisible) { barVisible = b; diag(b ? "barre d'état visible" : "appli plein écran : bande en pause"); h.post(PupVolet::update); }
+            }
             return ins;
         });
         final float[] y0 = {0}; final boolean[] drag = {false}; final VelocityTracker[] vt = {null};
@@ -140,7 +145,7 @@ final class PupVolet {
                 case MotionEvent.ACTION_MOVE: {
                     if (vt[0] != null) vt[0].addMovement(e);
                     float dy = e.getRawY() - y0[0];
-                    if (!drag[0] && dy > 10 * dens) { drag[0] = true; showShade(); }
+                    if (!drag[0] && dy > 10 * dens) { drag[0] = true; diag("bande : glissé vers le bas ✓"); showShade(); }
                     if (drag[0]) setProgress(dy);
                     return true;
                 }
@@ -238,6 +243,7 @@ final class PupVolet {
 
     // ------------------------------------------------------------ pop-ups
     static void popup(Context c, StatusBarNotification sbn) {
+        if (svc != null) diag("notification importante : " + PupNotifs.label(svc, sbn.getPackageName()) + (popOn(svc) ? "" : " (pop-ups éteints)") + (locked() ? " (verrouillé)" : ""));
         if (svc == null || !popOn(svc) || open || PupVeille.showing || !awake() || locked()) return;
         android.app.Notification n = sbn.getNotification();
         if (sbn.isOngoing() || (n.flags & android.app.Notification.FLAG_GROUP_SUMMARY) != 0) return;
@@ -255,9 +261,93 @@ final class PupVolet {
             try { wm.addView(pweb, pLp); popAdded = true; } catch (Exception e) { return; }
         }
         popKey = sbn.getKey();
+        final String title = PupNotifs.str(PupNotifs.cs(n.extras, android.app.Notification.EXTRA_TITLE));
+        final String key = popKey;
+        if (sp(svc).getBoolean("popForce", true)) { h.postDelayed(() -> kickHun(key, title, 0), 350); h.postDelayed(() -> kickHun(key, title, 1), 1300); }
         final String d = js;
         pweb.evaluateJavascript("window.PopUI?PopUI.show(" + JSONObject.quote(d) + "):(window.__pend=" + JSONObject.quote(d) + ")", null);
     }
+    // ------------------------------------------------------------ mode costaud
+    static long androidOk, lastHijack; static boolean androidShade;
+    static final java.util.HashSet<String> seenTitles = new java.util.HashSet<>();
+    static final java.util.ArrayDeque<String> DIAG = new java.util.ArrayDeque<>();
+    static void diag(String m) {
+        String t = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.FRANCE).format(new java.util.Date());
+        synchronized (DIAG) { DIAG.addFirst(t + "  " + m); while (DIAG.size() > 14) DIAG.removeLast(); }
+    }
+    static String diagText() { synchronized (DIAG) { return String.join("\n", DIAG); } }
+
+    /** Le volet d'Android vient de s'ouvrir quand même ? On le referme et on ouvre celui de PuppyPhone. */
+    static void checkSystemShade() {
+        if (svc == null || !voletOn(svc) || !sp(svc).getBoolean("voletForce", true)) return;
+        boolean shade = false;
+        try {
+            int sh = svc.getResources().getDisplayMetrics().heightPixels;
+            for (android.view.accessibility.AccessibilityWindowInfo w : svc.getWindows()) {
+                if (w.getType() != android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM) continue;
+                CharSequence t = Build.VERSION.SDK_INT >= 24 ? w.getTitle() : null;
+                String ti = t == null ? "" : t.toString().toLowerCase(java.util.Locale.ROOT);
+                android.graphics.Rect r = new android.graphics.Rect(); w.getBoundsInScreen(r);
+                if (r.height() > sh * .55f && !ti.isEmpty() && !seenTitles.contains(ti)) { seenTitles.add(ti); diag("fenêtre système vue : « " + t + " »"); }
+                boolean named = ti.contains("notificationshade") || ti.contains("notification shade") || ti.contains("quickpanel") || ti.contains("notificationpanel") || ti.contains("volet");
+                // déplié = la fenêtre du volet a pris la main (focus) ; repliée, elle reste là mais sans focus
+                if (named && r.height() > sh * .55f && (w.isFocused() || w.isActive())) { shade = true; break; }
+            }
+        } catch (Exception ignored) { }
+        long now = android.os.SystemClock.uptimeMillis();
+        if (shade && !androidShade) diag("volet Android détecté" + (locked() ? " (verrouillé : on laisse)" : ""));
+        androidShade = shade;
+        if (!shade) { if (now - androidOk > 1500) androidOk = 0; return; }
+        if (locked() || androidOk != 0 || now - lastHijack < 700) return;
+        lastHijack = now;
+        diag("→ volet Android refermé, volet PuppyPhone ouvert 🐾");
+        if (Build.VERSION.SDK_INT >= 31) svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE);
+        else svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+        h.postDelayed(() -> { if (!open) { showShade(); h.postDelayed(PupVolet::animOpen, 60); } }, 160);
+    }
+
+    /** Pousse le pop-up d'Android vers le haut (geste d'accessibilité) pour ne laisser que la carte puppyplay. */
+    static void kickHun(String key, String title, int tryN) {
+        if (svc == null || !popAdded || !key.equals(popKey) || Build.VERSION.SDK_INT < 24) return;
+        android.graphics.Rect hit = null;
+        try {
+            int sh = svc.getResources().getDisplayMetrics().heightPixels;
+            for (android.view.accessibility.AccessibilityWindowInfo w : svc.getWindows()) {
+                android.view.accessibility.AccessibilityNodeInfo root = w.getRoot();
+                if (root == null || root.getPackageName() == null || !"com.android.systemui".contentEquals(root.getPackageName())) continue;
+                hit = findText(root, title, sh * .5f, 0);
+                if (hit != null) break;
+            }
+        } catch (Exception ignored) { }
+        if (hit == null) { if (tryN == 1) diag("pop-up Android introuvable (déjà parti ?)"); return; }
+        diag("pop-up Android repéré → on le pousse vers le haut");
+        final android.graphics.Rect r = hit;
+        // la carte puppyplay laisse passer le geste le temps du coup de patte
+        if (pLp != null && popAdded) { pLp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; try { wm.updateViewLayout(pweb, pLp); } catch (Exception ignored) { } }
+        android.graphics.Path path = new android.graphics.Path();
+        float x = r.centerX(), y = Math.max(r.centerY(), sbH + 20 * dens);
+        path.moveTo(x, y); path.lineTo(x, Math.max(2, r.top - 120 * dens));
+        android.accessibilityservice.GestureDescription g = new android.accessibilityservice.GestureDescription.Builder()
+                .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 140)).build();
+        svc.dispatchGesture(g, null, null);
+        h.postDelayed(() -> { if (pLp != null && popAdded) { pLp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE; try { wm.updateViewLayout(pweb, pLp); } catch (Exception ignored) { } } }, 320);
+    }
+    static android.graphics.Rect findText(android.view.accessibility.AccessibilityNodeInfo n, String title, float maxY, int depth) {
+        if (n == null || depth > 40 || title == null || title.isEmpty()) return null;
+        CharSequence t = n.getText();
+        if (t != null && t.toString().trim().equals(title.trim())) {
+            android.graphics.Rect r = new android.graphics.Rect(); n.getBoundsInScreen(r);
+            if (r.top < maxY && r.height() > 0) {
+                // on remonte jusqu'à la carte entière (le pop-up)
+                android.view.accessibility.AccessibilityNodeInfo p = n.getParent(); android.graphics.Rect best = r;
+                for (int i = 0; i < 6 && p != null; i++) { android.graphics.Rect pr = new android.graphics.Rect(); p.getBoundsInScreen(pr); if (pr.height() > maxY) break; best = pr; p = p.getParent(); }
+                return best;
+            }
+        }
+        for (int i = 0; i < n.getChildCount(); i++) { android.graphics.Rect r = findText(n.getChild(i), title, maxY, depth + 1); if (r != null) return r; }
+        return null;
+    }
+
     static void popupGone(String key) { if (popAdded && key.equals(popKey) && pweb != null) pweb.evaluateJavascript("window.PopUI&&PopUI.gone()", null); }
     static void popHideNow() { if (popAdded && pweb != null) try { wm.removeViewImmediate(pweb); } catch (Exception ignored) { } popAdded = false; popKey = ""; }
 
@@ -359,7 +449,7 @@ final class PupVolet {
             h.post(() -> {
                 switch (id) {
                     case "power": animClose(); h.postDelayed(() -> svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_POWER_DIALOG), 250); break;
-                    case "android": closeNow(); h.postDelayed(() -> svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS), 150); break;
+                    case "android": androidOk = android.os.SystemClock.uptimeMillis(); closeNow(); h.postDelayed(() -> svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS), 150); break;
                     case "settings": launch(new Intent(Settings.ACTION_SETTINGS)); break;
                     case "niche": launch(new Intent(svc, NicheActivity.class)); break;
                     case "alarm": launch(new Intent(svc, ReveilActivity.class)); break;

@@ -4,6 +4,7 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
     android:notificationTimeout="80"
     android:description="@string/pupnav_desc"
     android:summary="@string/pupnav_sum" />

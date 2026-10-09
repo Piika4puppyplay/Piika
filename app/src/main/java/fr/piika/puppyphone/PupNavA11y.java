@@ -46,6 +46,7 @@ public class PupNavA11y extends AccessibilityService implements PupNav.Host {
         }
         if (nav != null) nav.setImeVisible(imeShown());
         if (e.getEventType() == AccessibilityEvent.TYPE_WINDOWS_CHANGED) PupVolet.update();
+        if (e.getEventType() == AccessibilityEvent.TYPE_WINDOWS_CHANGED || (e.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && "com.android.systemui".contentEquals(e.getPackageName() == null ? "" : e.getPackageName()))) PupVolet.checkSystemShade();
         if (deco != null && (e.getEventType() == AccessibilityEvent.TYPE_WINDOWS_CHANGED || e.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)) deco.check();
     }
 
