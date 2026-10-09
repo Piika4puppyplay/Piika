@@ -290,14 +290,31 @@ public class NicheActivity extends Activity {
                 } finally { filming = false; }
             }, "PupWallVideo").start();
         }
-        /** Ouvre la vidéo dans la Galerie Samsung : ⋮ › Définir comme fond d'écran › Écran de verrouillage. */
-        @JavascriptInterface public void lockGallery(String uri) {
-            ui.post(() -> {
-                Uri u = Uri.parse(uri);
-                Intent v = new Intent(Intent.ACTION_VIEW).setDataAndType(u, "video/mp4").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                try { startActivity(new Intent(v).setPackage("com.sec.android.gallery3d")); }
-                catch (Exception e) { try { startActivity(v); } catch (Exception ignored) { } }
-            });
+        /** Ouvre la Galerie Samsung (sur la vidéo si elle accepte, sinon sur l'appli : Albums › PupWall). Renvoie "video", "app" ou "". */
+        @JavascriptInterface public String lockGallery(String uri) {
+            Uri u = Uri.parse(uri);
+            String g = "com.sec.android.gallery3d";
+            for (String type : new String[]{"video/mp4", "video/*", "image/*"}) {
+                Intent v = new Intent(Intent.ACTION_VIEW).setDataAndType(u, type).setPackage(g).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (v.resolveActivity(getPackageManager()) != null) { try { startActivity(v); return "video"; } catch (Exception ignored) { } }
+            }
+            Intent l = getPackageManager().getLaunchIntentForPackage(g);
+            if (l != null) { try { startActivity(l.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return "app"; } catch (Exception ignored) { } }
+            return "";
+        }
+        /** Le cadreur « Définir comme fond d'écran » de One UI (celui qu'utilise la Galerie). */
+        @JavascriptInterface public boolean lockCrop(String uri) {
+            try {
+                Intent i = WallpaperManager.getInstance(NicheActivity.this).getCropAndSetWallpaperIntent(Uri.parse(uri));
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i); return true;
+            } catch (Exception e) {
+                try {
+                    Intent i = new Intent("android.service.wallpaper.CROP_AND_SET_WALLPAPER").setDataAndType(Uri.parse(uri), "video/mp4").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    if (i.resolveActivity(getPackageManager()) == null) return false;
+                    startActivity(i); return true;
+                } catch (Exception e2) { return false; }
+            }
         }
         /** « Définir comme… » d'Android : One UI y propose parfois directement « Fond d'écran ». */
         @JavascriptInterface public void lockSetAs(String uri) {
