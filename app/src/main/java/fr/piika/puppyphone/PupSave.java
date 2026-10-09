@@ -19,12 +19,13 @@ final class PupSave {
 
     /** kind : "doc" (Documents), "img" (Pictures), "audio" (Music). sub : sous-dossier, ex. "PupScan". */
     static Uri save(Context c, String kind, String sub, String name, String mime, Writer w) throws Exception {
-        String dir = "img".equals(kind) ? Environment.DIRECTORY_PICTURES : "video".equals(kind) ? Environment.DIRECTORY_MOVIES : "audio".equals(kind) ? Environment.DIRECTORY_MUSIC : Environment.DIRECTORY_DOCUMENTS;
+        String dir = "img".equals(kind) ? Environment.DIRECTORY_PICTURES : "video".equals(kind) ? Environment.DIRECTORY_MOVIES : "audio".equals(kind) ? Environment.DIRECTORY_MUSIC : "download".equals(kind) ? Environment.DIRECTORY_DOWNLOADS : Environment.DIRECTORY_DOCUMENTS;
         if (Build.VERSION.SDK_INT >= 29) {
             ContentResolver cr = c.getContentResolver();
             Uri col = "img".equals(kind) ? MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                     : "video".equals(kind) ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                     : "audio".equals(kind) ? MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                    : "download".equals(kind) ? MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                     : MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
             ContentValues v = new ContentValues();
             v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);

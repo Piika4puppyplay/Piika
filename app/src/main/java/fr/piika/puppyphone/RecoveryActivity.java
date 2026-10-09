@@ -82,7 +82,35 @@ public class RecoveryActivity extends Activity {
         @JavascriptInterface public String lastError() { return CrashGuard.sp(RecoveryActivity.this).getString("lastErr", ""); }
         @JavascriptInterface public void check() { new Thread(() -> emit("checked", PupUpdate.check(RecoveryActivity.this).toString())).start(); }
         @JavascriptInterface public void update(String url, long size) { installFrom(url, size, "Téléchargement de la dernière version"); }
-        @JavascriptInterface public void rollback(String url, long size) { installFrom(url, size, "Retour à la version précédente"); }
+        @JavascriptInterface public void rollback(String url, long size) {
+            cancel.set(false);
+            new Thread(() -> {
+                try {
+                    emit("work", "Téléchargement de la version précédente");
+                    File apk = PupUpdate.download(RecoveryActivity.this, url, size, (done, total) -> emit("prog", total > 0 ? String.valueOf(done * 100 / total) : "-1"), cancel);
+                    String digits = url.replaceAll(".*puppyphone-v", "").replaceAll("[^0-9].*", "");
+                    final String name = "PuppyPhone-v" + (digits.isEmpty() ? "rollback" : digits) + ".apk";
+                    PupSave.save(RecoveryActivity.this, "download", "PuppyPhone", name, "application/vnd.android.package-archive", o -> {
+                        try (java.io.FileInputStream in = new java.io.FileInputStream(apk)) { byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
+                    });
+                    apk.delete();
+                    emit("rollready", name);
+                } catch (Exception e) { emit("err", String.valueOf(e.getMessage())); }
+            }).start();
+        }
+        /** Désinstalle PuppyPhone (l'utilisateur rouvre ensuite l'APK téléchargé pour poser l'ancienne version). */
+        @JavascriptInterface public void uninstallSelf() {
+            ui.post(() -> {
+                try { startActivity(new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { }
+            });
+        }
+        /** Ouvre le dossier Téléchargements (pour retrouver l'APK et le réinstaller). */
+        @JavascriptInterface public void openDownloads() {
+            ui.post(() -> {
+                try { startActivity(new Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
+                catch (Exception e) { try { startActivity(new Intent(Intent.ACTION_VIEW).setType("application/vnd.android.package-archive").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { } }
+            });
+        }
         @JavascriptInterface public void cancel() { cancel.set(true); }
         /** Repartir sur une base propre : efface données + cache, puis Android relance l'appli à zéro. */
         @JavascriptInterface public void wipe() {
