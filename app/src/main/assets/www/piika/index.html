@@ -1373,7 +1373,7 @@ function updShow(){if(!UPD.w||UPD.later||updHidden())return;if(updBusy()){setTim
 function updClose(){var w=document.getElementById("updw");if(w&&w.remove)w.remove()}
 function updGo(){UPD.go=1;var w=document.getElementById("updw");if(w){var b=w.querySelector("[data-a='updgo']");if(b)b.textContent=_t("Mise à jour…")}try{if(!lockR)save()}catch(e){}
  try{UPD.w.postMessage({type:"SKIP_WAITING"})}catch(e){}setTimeout(function(){try{location.reload()}catch(e){}},4000)}
-if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)&&location.hostname!=="pupdefis.local"){window.addEventListener("load",function(){
+if("serviceWorker" in navigator&&/^https?:/.test(location.protocol)){window.addEventListener("load",function(){
  var rl=0;navigator.serviceWorker.addEventListener("controllerchange",function(){if(UPD.go&&!rl){rl=1;try{location.reload()}catch(e){}}});
  navigator.serviceWorker.register("sw.js").then(function(reg){
   function seen(n){if(n&&navigator.serviceWorker.controller){UPD.w=n;UPD.vd=0;var done=function(v){if(UPD.vd)return;UPD.vd=1;UPD.v=v||"";updShow()};try{var ch=new MessageChannel();ch.port1.onmessage=function(e){done(e.data&&e.data.version)};n.postMessage({type:"GET_VERSION"},[ch.port2]);setTimeout(function(){done("")},1500)}catch(e){done("")}}}

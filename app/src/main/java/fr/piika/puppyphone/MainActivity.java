@@ -213,6 +213,8 @@ public class MainActivity extends Activity {
         }
         try { PupNav.ensure(this); } catch (Exception ignored) { }
         try { PupUpdate.syncLauncherIcon(this); PupUpdate.autoCheck(this); } catch (Exception ignored) { }
+        // horloge internet de confiance (anti-triche) : on la garde au chaud, re-synchro si vieille
+        try { if (PupTime.stale(this)) PupTime.syncAsync(this, t -> { if (t > 0) emit("nettime", String.valueOf(t)); }); } catch (Exception ignored) { }
         // fond choisi depuis PupGalery / PupVidéo ?
         long ver = wallPrefs().getLong("wall_ver", 0);
         if (ver != appliedWallVer) { applyWallMode(); emit("wall", wallInfo()); }
@@ -829,6 +831,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String get(String k) {
             return getSharedPreferences("pup_store", MODE_PRIVATE).getString(k, null);
         }
+
+        /** Horloge internet de confiance (ms epoch) ou -1 : l'accueil peut afficher l'heure réseau, pas l'heure trafiquable. */
+        @JavascriptInterface public long netNow() { return PupTime.now(MainActivity.this); }
+        @JavascriptInterface public boolean netTrusted() { return PupTime.now(MainActivity.this) > 0; }
 
         @JavascriptInterface public void set(String k, String v) {
             SharedPreferences.Editor e = getSharedPreferences("pup_store", MODE_PRIVATE).edit();

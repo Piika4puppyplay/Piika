@@ -252,9 +252,15 @@
   }
   const DAYS = ['DIMANCHE', 'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
   const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  // horloge internet de confiance (anti-triche) : on affiche l'heure réseau de PuppyPhone si dispo, sinon celle du téléphone
+  let netBase = null, netP0 = 0;
+  const trustedNow = () => netBase == null ? Date.now() : Math.round(netBase + (performance.now() - netP0));
+  const setNet = (t) => { t = +t; if (t > 0) { netBase = t; netP0 = performance.now(); } };
+  (function () { try { const t = call('netNow'); if (t > 0) setNet(t); } catch (e) {} })();
+
   let lastH = '', lastM = '';
   function tick() {
-    const d = new Date();
+    const d = new Date(trustedNow());
     const h = String(d.getHours()).padStart(2, '0'), m = String(d.getMinutes()).padStart(2, '0');
     if (h !== lastH) { const c = $('#fh'); $('b', c).textContent = h; if (lastH) { c.classList.remove('flipit'); void c.offsetWidth; c.classList.add('flipit'); } lastH = h; }
     if (m !== lastM) {
@@ -1123,6 +1129,7 @@
       else if (ev === 'wall') { wall = J(data, wall) || wall; applyWall(); renderPower(); const t = winStack[winStack.length - 1]; if (t && t.refresh) t.refresh(); }
       else if (ev === 'home') { closeMenu(); while (closeTop()); closeDrawer(); goPage(0); }
       else if (ev === 'open') { if (data === 'clean') { closeMenu(); closeDrawer(); openClean(); } }
+      else if (ev === 'nettime') { setNet(data); tick(); }
     },
     back() {
       if (closeMenu()) return true;

@@ -134,5 +134,8 @@ public abstract class PupWebActivity extends Activity {
         @JavascriptInterface public void openUrl(String u) { ui.post(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) { } }); }
         @JavascriptInterface public void close() { ui.post(PupWebActivity.this::finish); }
         @JavascriptInterface public void haptic() { ui.post(() -> { if (web != null) web.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); }); }
+        /** Horloge internet de confiance de PuppyPhone (ms epoch), ou -1 si pas encore synchronisée. Anti-triche : les apps lisent l'heure de l'OS, pas Internet. */
+        @JavascriptInterface public long netNow() { return PupTime.now(PupWebActivity.this); }
+        @JavascriptInterface public boolean netTrusted() { return PupTime.now(PupWebActivity.this) > 0; }
     }
 }
