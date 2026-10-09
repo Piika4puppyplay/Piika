@@ -38,10 +38,11 @@
   let home = S.get('home', null);
   // Migration : garantir une tuile PupClean sur l'accueil (une fois)
   function ensureCleanTile() {
-    if (!home || !home.pages || cfg.cleanTile) return;
-    const has = home.pages.some((pg) => pg.some((it) => it && it.t === 'pup' && it.app === 'clean'));
-    if (!has) { const pg = home.pages[1] || home.pages[0]; pg.unshift({ t: 'pup', app: 'clean' }); saveHome(); }
-    cfg.cleanTile = true; S.set('cfg', cfg);
+    // PupClean a maintenant sa vraie icône (dans PuppyPlay) : on retire l'ancienne tuile-raccourci en double
+    if (!home || !home.pages) return;
+    let changed = false;
+    home.pages = home.pages.map((pg) => pg.filter((it) => { if (it && it.t === 'pup' && it.app === 'clean') { changed = true; return false; } return true; }));
+    if (changed) saveHome();
   }
   // Migration : garantir le dossier PuppyPlay sur l'accueil (une fois)
   function ensurePuppyFolder() {
@@ -181,7 +182,7 @@
       if (!a && cat) a = appsIn(cat)[0];
       return a ? { t: 'app', id: a.id } : null;
     };
-    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'clean' }, { t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
+    return { pages: [items.slice(0, 12), [{ t: 'pup', app: 'drawer' }, { t: 'pup', app: 'niche' }]], dock: [pick(defs.dial, 'tel'), pick(defs.sms, 'tel'), pick(defs.browser, 'web'), pick(defs.camera, 'photo')] };
   }
 
   function renderGrid(p) {
@@ -283,7 +284,7 @@
   function loadDefaults() { defs = J(call('defaults'), {}) || {}; }
   let appsSig = '';
   function refreshApps(reason) {
-    const list = (J(call('apps'), []) || []).filter((a) => !(a.pkg === defs.self && /MainActivity|CleanActivity/.test(a.id)));
+    const list = (J(call('apps'), []) || []).filter((a) => !(a.pkg === defs.self && /MainActivity/.test(a.id)));
     list.sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
     apps = list;
     byId = new Map(apps.map((a) => [a.id, a]));
@@ -535,6 +536,19 @@
     if (e.onClose) e.onClose();
   }
   // ------------------------------------------------------------------ PupClean 🧹 — le grand nettoyage façon Matrix
+  /** Retire les doublons de l'accueil : une même appli / dossier / Pup-app en plusieurs exemplaires → on garde le premier. */
+  function dedupHome() {
+    if (!home || !home.pages) return 0;
+    const seen = new Set(), keyOf = (it) => !it ? null : it.t === 'app' ? 'a:' + it.id : it.t === 'folder' ? 'f:' + it.cat : it.t === 'pup' ? 'p:' + it.app : it.t === 'sc' ? 's:' + it.pkg + '/' + it.sid : it.t === 'link' ? 'l:' + it.url : null;
+    let removed = 0;
+    home.pages = home.pages.map((pg) => pg.filter((it) => {
+      const k = keyOf(it); if (!k) return true;
+      if (seen.has(k)) { removed++; return false; }
+      seen.add(k); return true;
+    }));
+    return removed;
+  }
+
   function openClean() {
     const veil = document.createElement('div'); veil.className = 'veil';
     const scr = document.createElement('div'); scr.className = 'pupclean';
@@ -589,7 +603,7 @@
     async function run() {
       $('#pcgo', scr).remove();
       const list = pending(); const total = list.length;
-      if (!total) { log('<span class="ok">✓ rien à ranger — accueil déjà nickel 🐶</span>'); done(0, 0); return; }
+      if (!total) { log('<span class="ok">✓ rien à ranger — accueil déjà nickel 🐶</span>'); const d = dedupHome(); if (d) { log(`<span class="ok">✓ ${d} raccourci(s) en double retiré(s) 🧹</span>`); saveHome(); } done(0, 0, d); return; }
       cfg.autoTidy = true; saveCfg();
       log('<span class="cmd">&gt; flair --scan --tri-auto</span>');
       log(`renifle ${total} appli(s) dans « À trier »…`); await wait(400);
@@ -611,9 +625,12 @@
         await wait(Math.max(45, 150 - total * 2));
       }
       S.set('cats', overrides);
-      done(ranged, kept);
+      await wait(250);
+      const dups = dedupHome();
+      if (dups) { log(`<span class="cmd">&gt; doublons</span>`); log(`<span class="ok">✓ ${dups} raccourci(s) en double retiré(s) de l'accueil 🧹</span>`); saveHome(); }
+      done(ranged, kept, dups);
     }
-    function done(ranged, kept) {
+    function done(ranged, kept, dups) {
       log(`<span class="cmd">&gt; terminé</span>`);
       log(`<span class="ok">✓ ${ranged} appli(s) rangée(s)</span>${kept ? ` · <span class="warn">${kept} gardée(s) à trier</span>` : ''}`);
       renderAll();
