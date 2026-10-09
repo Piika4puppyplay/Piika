@@ -145,7 +145,7 @@ public class NicheActivity extends Activity {
                         .put("verrou", p.getBoolean("verrou", false)).put("verrouCadre", p.getBoolean("verrouCadre", true))
                         .put("verrouPattes", p.getBoolean("verrouPattes", true)).put("verrouChiot", p.getBoolean("verrouChiot", true))
                         .put("verrouEtoiles", p.getBoolean("verrouEtoiles", true)).put("verrouCharge", p.getBoolean("verrouCharge", true))
-                        .put("verrouForce", p.getInt("verrouForce", 1)).put("veille", p.getBoolean("veille", false)).put("veilleStyle", p.getString("veilleStyle", "verre")).put("veilleQuand", p.getInt("veilleQuand", 0)).put("veilleDuree", p.getInt("veilleDuree", 30)).put("veilleLum", p.getInt("veilleLum", 0)).put("a11y", PupNavA11y.I != null)
+                        .put("verrouForce", p.getInt("verrouForce", 1)).put("veille", p.getBoolean("veille", false)).put("siesteCharge", p.getBoolean("siesteCharge", false)).put("veilleStyle", p.getString("veilleStyle", "verre")).put("veilleQuand", p.getInt("veilleQuand", 0)).put("veilleDuree", p.getInt("veilleDuree", 30)).put("veilleLum", p.getInt("veilleLum", 0)).put("a11y", PupNavA11y.I != null)
                         .put("version", PupUpdate.current(NicheActivity.this)).toString();
             } catch (Exception e) { return "{}"; }
         }
@@ -200,7 +200,7 @@ public class NicheActivity extends Activity {
             try { WallpaperManager.getInstance(NicheActivity.this).clear(WallpaperManager.FLAG_LOCK); return true; }
             catch (Exception e) { return false; }
         }
-        @JavascriptInterface public void siestePreview() { ui.post(() -> startActivity(new Intent(NicheActivity.this, SiesteActivity.class))); }
+        @JavascriptInterface public void siestePreview() { ui.post(() -> PupVeille.show(NicheActivity.this, "/sieste.html", true)); }
         @JavascriptInterface public void dreamSettings() {
             ui.post(() -> {
                 try { startActivity(new Intent(Settings.ACTION_DREAM_SETTINGS)); }
@@ -208,7 +208,7 @@ public class NicheActivity extends Activity {
             });
         }
         @JavascriptInterface public void set(String k, boolean v) {
-            if (!k.matches("veille|siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge")) return;
+            if (!k.matches("veille|siesteCharge|siesteBright|sons|sonsNav|sonsClavier|sonsCharge|sonsVerrou|verrou|verrouCadre|verrouPattes|verrouChiot|verrouEtoiles|verrouCharge")) return;
             android.content.SharedPreferences.Editor e = Pelage.sp(NicheActivity.this).edit().putBoolean(k, v);
             if ("sons".equals(k)) e.putLong("ver", System.currentTimeMillis()); // les Pup-apps rechargent leurs sons
             e.commit();
@@ -230,7 +230,7 @@ public class NicheActivity extends Activity {
             return true;
         }
         @JavascriptInterface public void setStr(String k, String v) { if ("veilleStyle".equals(k) && v.matches("verre|os")) Pelage.sp(NicheActivity.this).edit().putString(k, v).commit(); }
-        @JavascriptInterface public void veillePreview() { ui.post(() -> PupVeille.show(NicheActivity.this, true)); }
+        @JavascriptInterface public void veillePreview() { ui.post(() -> PupVeille.show(NicheActivity.this, "/veille.html", true)); }
         /** Range le GIF de batterie puppy dans la Galerie (Images › PupAOD) pour l'Always On Display de Samsung. */
         @JavascriptInterface public String aodSave(String style) {
             if (!style.matches("verre|os")) return "";

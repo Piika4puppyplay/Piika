@@ -28,7 +28,7 @@ public class PupDream extends DreamService {
         int sec = Sieste.duree(this);
         if (sec > 0) {
             h.postDelayed(fade, Math.max(0, sec * 1000L - 2500));
-            h.postDelayed(this::finish, sec * 1000L); // fin de la sieste : Android éteint l'écran (veille normale)
+            h.postDelayed(() -> { if (!PupVeille.sleepNow()) { /* sans PupNav : on reste en noir total (OLED éteint) pour éviter la boucle */ } }, sec * 1000L);
         }
     }
     @Override public void onDreamingStopped() { h.removeCallbacksAndMessages(null); if (s != null) s.stop(); s = null; super.onDreamingStopped(); }

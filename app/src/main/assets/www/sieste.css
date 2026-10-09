@@ -53,7 +53,7 @@ body.sieste{--acc:#ff3fa4;--acc2:#29e6ff;--fc:hsl(60 100% 50%);background:#05020
 }
 
 /* sieste tamisée : on baisse aussi les néons (le noir OLED reste éteint) */
-body.lum0 #wrap{filter:brightness(.38) saturate(.85)}
+body.lum0 #wrap{filter:brightness(.5) saturate(.9)}
 body.lum0 .sky{opacity:.3}
 body.lum1 #wrap{filter:brightness(.62) saturate(.9)}
 body.lum1 .sky{opacity:.55}

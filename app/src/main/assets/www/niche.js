@@ -9,7 +9,7 @@
   const PEL = [['auto', 'Chacun son pelage', '#ff3fa4', '#29e6ff', '#0b0614'], ['rose', 'Néon Rose', '#ff3fa4', '#29e6ff', '#0b0614'], ['cyan', 'Laser Turquoise', '#29e6ff', '#ff3fa4', '#030b12'], ['violet', 'Violet Velours', '#9b5cff', '#29e6ff', '#0b0418'], ['cuir', 'Cuir & Rivets', '#ff3fa4', '#29e6ff', '#120a10'], ['or', 'Or Royal', '#ffb627', '#ff3fa4', '#0e0802'], ['vert', 'Vert Fluo', '#3dffb0', '#9b5cff', '#020e0a']]
     .map(([id, nom, acc, acc2, bg]) => ({ id, nom, acc, acc2, bg }));
   const N = window.Niche || {
-    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0 }),
+    info: () => JSON.stringify({ pelage: 'rose', pelages: PEL, lastBackup: Date.now() - 864e5 * 3, lastBackupName: 'niche_2026-10-06_21h14.puppy', live: false, liveId: 'aurore', siesteLum: 0, siesteDuree: 60, version: 24, sons: true, sonsVol: 60, sonsNav: true, sonsClavier: false, sonsCharge: true, sonsVerrou: false, silent: false, verrou: false, verrouCadre: true, verrouPattes: true, verrouChiot: true, verrouEtoiles: true, verrouCharge: true, verrouForce: 1, a11y: true, veille: false, siesteCharge: false, veilleStyle: 'verre', veilleQuand: 0, veilleDuree: 30, veilleLum: 0 }),
     pelage() {}, backup() { const st = ['Réglages des Pup-apps…', 'Fichiers de la niche…', 'Mémoire des pages (playlists, favoris…)…', 'Rangement dans Téléchargements…']; st.forEach((m, i) => setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'step', msg: m })), 500 * (i + 1))); setTimeout(() => NicheUI.on('backup', JSON.stringify({ st: 'done', name: 'niche_2026-10-09_02h10.puppy' })), 2600); },
     pickRestore() { setTimeout(() => NicheUI.on('restore', JSON.stringify({ st: 'ready', man: { date: Date.now() - 864e5, device: 'samsung SM-G986B', version: 23 } })), 500); }, cancelRestore() {}, restoreNow() {}, setStr() {}, veillePreview() {}, aodSave: (st) => 'pup_aod_' + st + '.gif', openAod() {}, lockToo: () => true, setInt() {}, decoPreview: () => true, openA11y() {}, wallpaper() {}, siestePreview() {}, dreamSettings() {}, set() {}, close() {},
   };
@@ -187,6 +187,9 @@
         <div class="nrow"><button class="ab green" data-a="backup" type="button" ${working ? 'disabled' : ''}>${ic('download', 'chrome', 'none')}${working ? 'Je creuse…' : 'Enterrer un os'}</button><button class="ab amber" data-a="restore" type="button" ${working ? 'disabled' : ''}>${ic('upload', 'chrome', 'none')}Déterrer un os</button></div>
       </section>`;
     renderWall();
+    $('#s-sch').innerHTML = `${row('siesteCharge', 'Sieste PuppyPhone en charge', 'Quand l\'écran s\'éteint pendant la charge, la sieste s\'affiche par-dessus le verrouillage One UI, puis rééteint l\'écran toute seule')}
+        <p class="hint">💡 One UI ne respecte pas la luminosité ni la durée de son propre « Écran de veille » : pour éviter la boucle, <b>désactive l'écran de veille Samsung</b> (bouton ci-dessous) et laisse PuppyPhone s'en occuper avec ce réglage. Comme un lecteur vidéo, la sieste impose sa luminosité. Il faut que <b>PupNav</b> soit activé dans l'accessibilité.</p>
+        ${!S.a11y ? `<div class="warnbox">⚠️ PupNav (accessibilité) n'est pas activé.<button class="ab small amber" data-a="a11y" type="button">Ouvrir l'accessibilité</button></div>` : ''}`;
     $('#s-lum').innerHTML = ['Très sombre', 'Tamisé', 'Lumineux'].map((l, i) => `<button type="button" data-lum="${i}" class="${(S.siesteLum || 0) === i ? 'on' : ''}">${l}</button>`).join('');
     $('#s-dur').innerHTML = [[15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [0, 'Jamais']].map(([v, l]) => `<button type="button" data-dur="${v}" class="${(S.siesteDuree == null ? 60 : S.siesteDuree) === v ? 'on' : ''}">${l}</button>`).join('');
   }
@@ -195,13 +198,12 @@
         <h2>${ic('battery', 'green')}La sieste du chiot<em>Charge</em></h2>
         <div class="siestprev"><iframe src="sieste.html?apercu=1" tabindex="-1" title="Aperçu de la sieste"></iframe></div>
         <p class="hint">Pendant la charge, ton chiot dort sur son coussin pendant que <b>l'horloge s'allume dans une batterie en verre</b> : rouge quand la gamelle est vide, elle vire au <b>vert</b> en se remplissant jusqu'à 100 %, puis le chiot se réveille avec son os. La scène glisse doucement toute seule pour ne jamais marquer l'écran.</p>
-        <ol class="howto"><li>Touche <b>Activer l'écran de veille</b> ci-dessous.</li><li>Choisis <b>« La sieste du chiot »</b> comme économiseur d'écran.</li><li>Règle « Quand démarrer » sur <b>Pendant la charge</b>.</li></ol>
-        <p class="hint">🔒 L'écran de verrouillage de One UI reste intact : la sieste s'affiche par-dessus et disparaît dès que tu touches l'écran.</p>
+        <div id="s-sch"></div>
         <div class="row"><span>Luminosité de la sieste<small>Très sombre par défaut : l'OLED éteint le noir, seuls les néons brillent doucement</small></span></div>
         <div class="seg" id="s-lum"></div>
         <div class="row"><span>Éteindre l'écran après<small>La sieste s'endort en fondu, puis le téléphone se met en veille comme d'habitude</small></span></div>
         <div class="seg" id="s-dur"></div>
-        <div class="nrow"><button class="ab c2" data-a="sieste" type="button">${ic('eye', 'chrome', 'none')}Voir la sieste</button><button class="ab green" data-a="dream" type="button">${ic('gear', 'chrome', 'none')}Activer l'écran de veille</button></div>
+        <div class="nrow"><button class="ab c2" data-a="sieste" type="button">${ic('eye', 'chrome', 'none')}Voir la sieste</button><button class="ab glass" data-a="dream" type="button">${ic('gear', 'chrome', 'none')}Écran de veille Samsung</button></div>
       </section>`;
   }
 

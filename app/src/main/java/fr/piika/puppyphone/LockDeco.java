@@ -64,7 +64,7 @@ final class LockDeco {
                 case Intent.ACTION_DREAMING_STARTED: dreaming = true; hide(); break;
                 case Intent.ACTION_DREAMING_STOPPED: dreaming = false; check(); break;
                 case Intent.ACTION_POWER_CONNECTED: charging = true; PupSons.play(ctx, "sonsCharge", "halete"); check(); break;
-                case Intent.ACTION_POWER_DISCONNECTED: charging = false; fullSaid = false; PupSons.play(ctx, "sonsCharge", "pouic"); check(); break;
+                case Intent.ACTION_POWER_DISCONNECTED: PupVeille.onUnplug(); charging = false; fullSaid = false; PupSons.play(ctx, "sonsCharge", "pouic"); check(); break;
                 case Intent.ACTION_BATTERY_CHANGED: battery(i); break;
                 default: check();
             }
@@ -110,7 +110,7 @@ final class LockDeco {
         else {
             boolean locked = false, on = false;
             try { locked = km.isKeyguardLocked(); on = pm.isInteractive(); } catch (Exception ignored) { }
-            want = enabled() && on && locked && !dreaming && !(charging && sp(ctx).getBoolean("verrouCharge", true));
+            want = enabled() && on && locked && !dreaming && !PupVeille.showing && !(charging && sp(ctx).getBoolean("verrouCharge", true));
         }
         if (want) show(); else hide();
         if (added) h.postDelayed(poll, preview ? 300 : 500);
