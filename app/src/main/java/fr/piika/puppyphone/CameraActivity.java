@@ -274,10 +274,52 @@ public class CameraActivity extends Activity {
         else openIfReady();
         voiceOn = sp.getBoolean("voiceOn", false);
         if (voiceOn && hasPerms()) ui.postDelayed(this::voiceStart, 1200);
+        startSpaceCounter();
+    }
+
+    // ---------------- compteur d'espace : temps de film restant + photos dispo (les deux caméras)
+    Runnable spaceTick;
+    void startSpaceCounter() {
+        stopSpaceCounter();
+        spaceTick = new Runnable() {
+            @Override public void run() { try { showSpace(); } catch (Exception ignored) { } ui.postDelayed(this, 4000); }
+        };
+        ui.post(spaceTick);
+    }
+    void stopSpaceCounter() { if (spaceTick != null) ui.removeCallbacks(spaceTick); spaceTick = null; }
+
+    /** Débit vidéo estimé (octets inclus audio) pour les réglages actuels — même formule que l'enregistrement. */
+    int estVideoBr() {
+        int w = videoSize != null ? videoSize.getWidth() : 1920, h = videoSize != null ? videoSize.getHeight() : 1080;
+        long px = (long) w * h; boolean hv = hevc || forceHevc; int br;
+        if (px >= 7680L * 4320) br = hv ? 80_000_000 : 100_000_000;
+        else if (px >= 3840L * 2160) br = videoFps >= 60 ? (hv ? 64_000_000 : 85_000_000) : (hv ? 40_000_000 : 56_000_000);
+        else br = videoFps >= 60 ? (hv ? 22_000_000 : 28_000_000) : (hv ? 14_000_000 : 17_000_000);
+        if (sp.getBoolean("maxbr", true)) br = Math.round(br * 1.25f);
+        if (ecoFactor < 1f) br = Math.round(br * ecoFactor);
+        return br;
+    }
+
+    void showSpace() {
+        long free;
+        try { android.os.StatFs sf = new android.os.StatFs(android.os.Environment.getExternalStorageDirectory().getPath()); free = sf.getAvailableBytes(); }
+        catch (Exception e) { return; }
+        long perSec = (estVideoBr() + 128_000L) / 8;                 // octets/seconde
+        long minutes = perSec > 0 ? free / perSec / 60 : 0;
+        long nPhotos = free / 4_500_000L;                            // ~4,5 Mo par photo (estimation)
+        double gb = free / 1073741824.0;
+        String txt = String.format(java.util.Locale.FRANCE, "💾 %.1f Go · ⏺ ~%d min · 📷 ~%d", gb, minutes, nPhotos);
+        String js = "(function(){var b=document.getElementById('spaceBadge');if(!b){b=document.createElement('div');b.id='spaceBadge';"
+                + "b.style.cssText='position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:999998;pointer-events:none;"
+                + "padding:5px 11px;border-radius:999px;font:600 11px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;"
+                + "background:rgba(10,6,20,.72);box-shadow:0 2px 8px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.18)';"
+                + "document.body.appendChild(b);}b.textContent=" + JSONObject.quote(txt) + ";})()";
+        runJs(js);
     }
 
     @Override
     protected void onPause() {
+        stopSpaceCounter();
         if (recording) stopRec();
         voiceStop();
         closeCam();
