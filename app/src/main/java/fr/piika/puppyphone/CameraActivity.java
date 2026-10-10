@@ -105,6 +105,12 @@ public class CameraActivity extends Activity {
     static final int REQ_PERM = 41;
     static final int TOPBAR_DP = 60;
 
+    // Crochets « éco » (valeurs par défaut = PupCamera normale, aucun changement de comportement).
+    // PupCaméra Éco (sous-classe) les change pour filmer très compressé quand l'espace est faible.
+    float ecoFactor = 1f;       // multiplie le débit vidéo (0.4 = ~40 % de la taille)
+    boolean forceHevc = false;  // force le H.265 (moitié moins lourd que le H.264)
+    boolean ecoNoTs = false;    // interdit le mode .ts (qui empêche le H.265)
+
     final Handler ui = new Handler(Looper.getMainLooper());
     HandlerThread bgT;
     Handler bg;
@@ -205,7 +211,7 @@ public class CameraActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return serve(r.getUrl()); }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return !HOST.equals(r.getUrl().getHost()); }
-            @Override public void onPageFinished(WebView v, String u) { pushLayout(); emitState(); emitThermal(); }
+            @Override public void onPageFinished(WebView v, String u) { pushLayout(); emitState(); emitThermal(); onCamReady(); }
         });
         web.setWebChromeClient(new WebChromeClient());
         web.addJavascriptInterface(new Bridge(), "Cam");
@@ -305,6 +311,9 @@ public class CameraActivity extends Activity {
     void emit(String ev, String data) {
         ui.post(() -> { if (web != null) web.evaluateJavascript("window.CamUI&&CamUI.on(" + JSONObject.quote(ev) + "," + JSONObject.quote(data == null ? "" : data) + ")", null); });
     }
+    /** Crochet appelé quand l'UI caméra est chargée (PupCaméra Éco s'en sert pour afficher son badge). */
+    void onCamReady() { }
+    void runJs(String js) { ui.post(() -> { if (web != null) web.evaluateJavascript(js, null); }); }
 
     void toast(String s) { ui.post(() -> Toast.makeText(this, s, Toast.LENGTH_SHORT).show()); }
 
@@ -1136,15 +1145,16 @@ public class CameraActivity extends Activity {
     void startRec() {
         if (dev == null || recording) return;
         try {
-            tsMode = "ts".equals(sp.getString("container", "mp4")) && !(videoCaptureIntent && captureOut != null) && Build.VERSION.SDK_INT >= 29;
-            // le TS (blindé) n'accepte que le H.264
-            boolean useHevc = !tsMode && hevc && encoderOk(MediaFormat.MIMETYPE_VIDEO_HEVC, videoSize, videoFps);
+            tsMode = !ecoNoTs && "ts".equals(sp.getString("container", "mp4")) && !(videoCaptureIntent && captureOut != null) && Build.VERSION.SDK_INT >= 29;
+            // le TS (blindé) n'accepte que le H.264 ; sinon on peut forcer le H.265 (éco)
+            boolean useHevc = !tsMode && (hevc || forceHevc) && encoderOk(MediaFormat.MIMETYPE_VIDEO_HEVC, videoSize, videoFps);
             long px = area(videoSize);
             int br;
             if (px >= 7680L * 4320) br = useHevc ? 80_000_000 : 100_000_000;
             else if (px >= 3840L * 2160) br = videoFps >= 60 ? (useHevc ? 64_000_000 : 85_000_000) : (useHevc ? 40_000_000 : 56_000_000);
             else br = videoFps >= 60 ? (useHevc ? 22_000_000 : 28_000_000) : (useHevc ? 14_000_000 : 17_000_000);
             if (sp.getBoolean("maxbr", true)) br = Math.round(br * 1.25f);
+            if (ecoFactor < 1f) br = (int) Math.max(2_000_000L, Math.round(br * ecoFactor)); // compression forte (espace faible)
 
             rec = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(this) : new MediaRecorder();
             rec.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);

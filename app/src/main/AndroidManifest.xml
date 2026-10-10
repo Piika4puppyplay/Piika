@@ -270,6 +270,25 @@
             </intent-filter>
         </activity>
 
+        <!-- PupCaméra Éco : caméra d'urgence « espace faible », H.265 forcé à débit réduit (fichiers ~2-3× plus petits). -->
+        <activity
+            android:name=".EcoCameraActivity"
+            android:label="PupCam Éco"
+            android:icon="@mipmap/ic_pupcameco"
+            android:roundIcon="@mipmap/ic_pupcameco"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.cameco"
+            android:screenOrientation="portrait"
+            android:theme="@style/PupNetTheme"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".CaptureActivity"
             android:label="PupCamera"
