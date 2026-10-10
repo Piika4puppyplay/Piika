@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PupZip Éco++</title>
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="pupzip.css">
+</head>
+<body class="pupzip wall-neon">
+<div class="bg" aria-hidden="true"><i class="beam b1"></i><i class="beam b2"></i><i class="beam b3"></i><div class="pawfloor"></div><div class="grain"></div></div>
+
+<main id="zp">
+  <!-- ===================== la presse ===================== -->
+  <section class="machine">
+    <div class="handle"><i></i></div>
+
+    <div class="plate">
+      <div class="brand"><b class="chrome">PUPZIP</b><em class="chrome c2">ÉCO++</em></div>
+      <div class="sub">PRESSE-COMPRESSEUR · GAGNE-PLACE 🐾</div>
+      <div class="led" id="led"><i></i><span id="ledtx">PRÊT</span></div>
+    </div>
+
+    <!-- hublot : manomètre + compteur avant/après -->
+    <div class="window">
+      <div class="gaugewrap">
+        <svg class="gauge" viewBox="0 0 200 120" aria-hidden="true">
+          <defs>
+            <radialGradient id="gface" cx=".5" cy="1" r="1.1"><stop offset="0" stop-color="#101827"/><stop offset=".6" stop-color="#0a0f1a"/><stop offset="1" stop-color="#05070d"/></radialGradient>
+            <linearGradient id="gglass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".45" stop-color="#fff" stop-opacity=".05"/><stop offset=".46" stop-color="#fff" stop-opacity="0"/></linearGradient>
+          </defs>
+          <rect x="2" y="2" width="196" height="116" rx="12" fill="url(#gface)" stroke="#000" stroke-width="2"/>
+          <g id="gticks" stroke="#4a3f66" stroke-width="1.6"></g>
+          <path id="garc" fill="none" stroke="#3dffb0" stroke-width="5" opacity=".9"/>
+          <text x="100" y="70" text-anchor="middle" font-family="Share Tech Mono, monospace" font-size="9" fill="#8a7fb0" letter-spacing="1.5">GAIN DE PLACE</text>
+          <text id="gpct" x="100" y="94" text-anchor="middle" font-family="Bungee, sans-serif" font-size="19" fill="#3dffb0">0%</text>
+          <line id="gneedle" x1="100" y1="110" x2="100" y2="34" stroke="#ff3fa4" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="100" cy="110" r="6" fill="#1b1622" stroke="#ff3fa4"/>
+          <rect x="2" y="2" width="196" height="116" rx="12" fill="url(#gglass)"/>
+        </svg>
+      </div>
+      <div class="readout">
+        <div class="counter"><small>AVANT</small><b id="cBefore">—</b></div>
+        <div class="arrow">➜</div>
+        <div class="counter after"><small>APRÈS</small><b id="cAfter">—</b></div>
+      </div>
+    </div>
+
+    <!-- sélecteur de source : interrupteurs physiques -->
+    <div class="field">
+      <label>SOURCE À COMPRESSER</label>
+      <div class="cats" id="cats">
+        <button class="sw on" data-cat="shots" type="button"><em>📸</em>Captures d'écran</button>
+        <button class="sw" data-cat="dl" type="button"><em>⬇️</em>Téléchargements</button>
+        <button class="sw" data-cat="all" type="button"><em>🖼️</em>Toutes les images</button>
+      </div>
+    </div>
+
+    <!-- curseur de qualité -->
+    <div class="field">
+      <label>NIVEAU DE COMPRESSION</label>
+      <div class="slide" id="qual">
+        <div class="rail">
+          <i class="nub" id="nub"></i>
+          <button data-q="85" type="button"><b>LÉGER</b><small>qualité max</small></button>
+          <button class="on" data-q="70" type="button"><b>FORT</b><small>recommandé</small></button>
+          <button data-q="50" type="button"><b>EXTRÊME</b><small>gain max</small></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- progression -->
+    <div class="prog" id="prog" hidden>
+      <div class="bar"><i id="barfill"></i></div>
+      <small id="progtx">…</small>
+    </div>
+
+    <!-- actions -->
+    <div class="acts">
+      <button class="btn scan" id="scan" type="button">🔍 ANALYSER</button>
+      <button class="btn go" id="go" type="button" hidden>🗜️ COMPRESSER</button>
+      <button class="btn stop" id="stop" type="button" hidden>■ ARRÊTER</button>
+    </div>
+
+    <div class="result" id="result" hidden></div>
+    <button class="btn del" id="del" type="button" hidden>🗑️ Supprimer les originaux compressés</button>
+  </section>
+
+  <div class="note">
+    🐾 <b>Rien n'est perdu.</b> Les copies compressées (WebP) sont rangées dans <b>Images/PupZip</b>.
+    Les originaux restent intacts — tu ne les supprimes qu'avec le bouton rouge, après confirmation du téléphone.
+  </div>
+
+  <!-- écran d'autorisation -->
+  <div class="access" id="access" hidden>
+    <div class="card">
+      <div class="ic" id="accic"></div>
+      <h2>Accès aux images</h2>
+      <p>PupZip a besoin de voir tes photos et captures pour les compresser. Il ne touche jamais aux originaux sans ton accord.</p>
+      <button class="btn go" id="accbtn" type="button">Autoriser l'accès</button>
+    </div>
+  </div>
+</main>
+
+<script src="../icons.js"></script>
+<script src="pupzip.js"></script>
+</body>
+</html>

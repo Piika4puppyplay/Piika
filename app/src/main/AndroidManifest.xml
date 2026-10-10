@@ -857,6 +857,26 @@
             </intent-filter>
         </activity>
 
+        <!-- PupZip Éco++ : presse-compresseur d'images (WebP), garde les originaux, libère de la place. -->
+        <activity
+            android:name=".PupZipActivity"
+            android:label="PupZip Éco++"
+            android:icon="@mipmap/ic_pupzip"
+            android:roundIcon="@mipmap/ic_pupzip"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.piika.puppyphone.pupzip"
+            android:theme="@style/PupNetTheme"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|smallestScreenSize|uiMode|density">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".DefisActivity"
             android:label="Piika"
