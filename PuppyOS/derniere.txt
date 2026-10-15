@@ -1,0 +1,4 @@
+version=0.3.0
+fichier=puppyos-0.3.0.pupupdate
+taille=7739264
+sha256=faf113668d6676179e243f046eda38360317fbc67a4a598556ca19d7348b2282
