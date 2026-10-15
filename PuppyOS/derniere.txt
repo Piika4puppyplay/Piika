@@ -1,4 +1,4 @@
-version=0.5.4
-fichier=puppyos-0.5.4.pupupdate
-taille=10383412
-sha256=aea1c5747b1543a0732c31175183f97ab3af7d687233b9ce7e0761704852d3c4
+version=0.5.5
+fichier=puppyos-0.5.5.pupupdate
+taille=13133255
+sha256=ff7a597fb0d3c2c3347c7356309efc00b6fc1f4d8a4d2d30015cc7a9a4b01436
