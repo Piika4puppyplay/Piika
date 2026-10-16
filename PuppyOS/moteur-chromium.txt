@@ -1,0 +1,6 @@
+nom=chromium
+version=141.0.7390.37
+fichier=moteur-chromium-141.0.7390.37.pupmoteur
+parties=3
+taille=115498164
+sha256=9ba304f4702058de787373e6d886d32a45560b983cd3c4071abca76789422ddf
