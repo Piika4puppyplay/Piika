@@ -1,4 +1,4 @@
-version=0.18.5
-fichier=puppyos-0.18.5.pupupdate
-taille=56685271
-sha256=c6b8958be8733ff5e8cd1f5e04f0aecd04f21b07044f7b2773b8df968e7accb6
+version=0.18.7
+fichier=puppyos-0.18.7.pupupdate
+taille=56915904
+sha256=c6d2939d94e51202c3c16a46a125a6761ab114d61c92b58d02f6c25c754ee83d
