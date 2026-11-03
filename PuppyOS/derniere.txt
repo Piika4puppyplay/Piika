@@ -1,4 +1,4 @@
-version=0.18.16
-fichier=puppyos-0.18.16.pupupdate
-taille=62354956
-sha256=0c7a67e42f85b3ffa71ee88ec2447a4c80a28b59ac2d28072b4ce26c2a027f28
+version=0.18.17
+fichier=puppyos-0.18.17.pupupdate
+taille=62433604
+sha256=c19056be09117d5f4b305457f98c20a0b3c7f3668ec14d5fa33171c8df20e47f
