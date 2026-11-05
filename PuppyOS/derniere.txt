@@ -1,4 +1,4 @@
-version=0.19.2
-fichier=puppyos-0.19.2.pupupdate
-taille=66366531
-sha256=0561ab723b184853ae5e598745b0803dc7ce5f00df6ed2976f346d23de1545f9
+version=0.19.3
+fichier=puppyos-0.19.3.pupupdate
+taille=66372890
+sha256=3fda9f0c4b7fe9a451e1e8f58602ed43f8e4bcd70ade8eadd6d23b75cb740192
