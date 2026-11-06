@@ -644,6 +644,63 @@ pub extern "C" fn pupdate_chien_dormant_reveil(menace: c_int, signal_signe_valid
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Le 5e chien « Scrap-Dog » : douane des entrées non fiables (douane.rs).
+// ---------------------------------------------------------------------------
+
+/// Examine une entrée non fiable avant de la remettre à un chien C. `taille`,
+/// `cumul` : octets. `profondeur`, `nb_entrees` : bornes du lot. `type_connu` :
+/// 1 si on sait interpréter ce type. Retour : 1 = passer (dans les bornes),
+/// 0 = rejeter (hors bornes ou type inconnu) — rejet AVANT tout traitement C.
+#[no_mangle]
+pub extern "C" fn pupdate_douane_examiner(
+    taille: u64,
+    cumul: u64,
+    profondeur: u32,
+    nb_entrees: u32,
+    type_connu: c_int,
+) -> c_int {
+    if crate::douane::peut_passer(taille, cumul, profondeur, nb_entrees, type_connu != 0) {
+        1
+    } else {
+        0
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Journal d'intervention vérifiable du chien dormant (chien_dormant.rs).
+// ---------------------------------------------------------------------------
+
+/// Construit l'entrée de journal d'un événement du chien dormant et remplit ses
+/// octets canoniques (à authentifier par HMAC côté C). `menace` : 0/1/2.
+/// `signal_signe_valide` : 1/0. `out4` : tampon de 4 octets (peut être nul).
+/// Retour : 1 = éveil tracé, 0 = resté scellé (tracé seulement si menace grave).
+///
+/// # Safety
+/// Si `out4` n'est pas nul, il pointe vers au moins 4 octets inscriptibles.
+#[no_mangle]
+pub unsafe extern "C" fn pupdate_chien_dormant_journaliser(
+    menace: c_int,
+    signal_signe_valide: c_int,
+    out4: *mut u8,
+) -> c_int {
+    use crate::chien_dormant::{journaliser, octets_a_authentifier, Issue, Menace};
+    let m = match menace {
+        0 => Menace::Aucune,
+        1 => Menace::Ordinaire,
+        _ => Menace::Grave,
+    };
+    let e = journaliser(m, signal_signe_valide != 0);
+    if !out4.is_null() {
+        let octets = octets_a_authentifier(&e);
+        core::ptr::copy_nonoverlapping(octets.as_ptr(), out4, 4);
+    }
+    match e.issue {
+        Issue::Eveille => 1,
+        Issue::Dormi => 0,
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {
