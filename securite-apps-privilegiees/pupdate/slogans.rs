@@ -14,6 +14,8 @@ Aucun composant ne sera repare sans verification de son integrite.",
     "Le petit chiot infirmier veille sur vos composants privilegies.",
     "PuppyOS ne fait pas confiance a son createur. La console ne fait pas \
 confiance a PuppyOS. Et PuppyOS ne fait pas confiance a sa console.",
+    "La console ne prescrit jamais a l'aveugle. Elle verifie, elle \
+diagnostique, puis elle soigne.",
 ];
 
 /// Nombre de slogans.
