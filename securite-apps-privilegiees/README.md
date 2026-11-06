@@ -16,7 +16,7 @@ openat2, abandon de privilèges, TPM, memfd). C'est le même modèle que le Medi
 Center Rust : un cœur testé relié par un pont C ABI.
 
 > ⚠️ **État : squelettes compilés et testés, NON câblés au démarrage.** Tout
-> compile et se lie proprement, et le cœur Rust passe **105/105 tests**. Mais
+> compile et se lie proprement, et le cœur Rust passe **132/132 tests**. Mais
 > le TPM, le seccomp, `openat2`, `memfd`+`fexecve` et l'install réel ne sont
 > **validables qu'en VM** sur la machine de Piika (QEMU/VirtualBox + swtpm).
 > Rien n'est branché au boot ni à `puppy-autorite` tant que la VM n'a pas
@@ -160,11 +160,40 @@ silence.
 
 ---
 
+## 6. Montage sécurisé des lecteurs chiffrés — `montage_securise.rs`
+
+> « Un bon mot de passe n'ouvre pas la porte. Il ouvre le sas. »
+
+Socle **commun** (demande Piika 06/11) au déchiffrement multi-OS, à
+l'explorateur et au mode live. Deux idées pures et testées ici ; le C fera
+l'ouverture dm-crypt, l'analyse Honey-Dog et le montage réel.
+
+- **Anti-brute-force SANS destruction.** On ne supprime **jamais** les données
+  après X essais ratés (ce ne sont pas forcément nos disques — effacer serait
+  une catastrophe). À la place, un **chrono évolutif** : chaque échec allonge le
+  délai avant le prochain essai (`0, 1, 2, 4, 8…` secondes, plafonné à **1 h**,
+  sans débordement). Le dictionnaire et le brute-force deviennent impraticables,
+  rien n'est détruit, le propriétaire n'est jamais enfermé dehors.
+- **Jamais de montage à l'aveugle.** Un bon mot de passe n'entraîne **pas** un
+  montage immédiat : il ouvre un **sas Honey-Dog** qui impose une analyse.
+  Refus de l'analyse → lecteur **non monté**, motif donné, et on dit la vérité :
+  le code **était** bon (on ne ment pas). Analyse qui trouve du dangereux → non
+  monté (motif). Analyse propre + acceptée → on monte.
+
+Module **pur** : aucune E/S, aucun privilège, aucune horloge (le délai est
+calculé, c'est l'appelant qui attend), jamais de panique. 7 tests.
+
+> C'est la **fondation** du déchiffrement multi-OS, de l'explorateur Rust et du
+> mode live à venir. L'ouverture dm-crypt réelle et le vrai moteur Honey-Dog
+> sont du C privilégié : **à valider en VM**.
+
+---
+
 ## Contenu du dossier
 
 | Chemin | Rôle |
 |---|---|
-| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `ffi` (pont C ABI), `moteur`, `pupdate` |
+| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `montage_securise`, `ffi` (pont C ABI), `moteur`, `pupdate` |
 | `c/paquets-autorite.c` | Installateur `.puppy` confiné (privilégié) |
 | `c/puppy-lanceur.c` | Lanceur « refus pur » des apps chiffrées (memfd+fexecve) |
 | `c/puprecovery.c` | Console de secours dans l'OS (réinstalle par copie signée + épinglée) |
@@ -187,7 +216,7 @@ Sans Cargo (comme le reste de l'OS), bibliothèque statique + shim C :
 # objets crypto depuis libpuppy (crypto.c, monocypher.c, monocypher-ed25519.c)
 rustc --edition 2021 --test pupdate/pupdate.rs \
       -C link-arg=crypto.o -C link-arg=monocypher.o -C link-arg=mced.o -o pupdate-test
-./pupdate-test     # 125 passed
+./pupdate-test     # 132 passed
 # bibliothèque statique reliée aux binaires C :
 rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=pic \
       -C opt-level=2 pupdate/pupdate.rs -o libpupdate.a
@@ -209,6 +238,9 @@ rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=p
 - [ ] **filet de secours** : enchaînement console → ISO → réinstallation signée
       quand chaque couche échoue (jamais de dégradation silencieuse)
 - [ ] brancher l'appel `coffre-apps rotation` dans `puppy-maj`
+- [ ] **montage sécurisé** : chrono anti-brute-force réel sur une invite de
+      déchiffrement, ouverture dm-crypt, sas Honey-Dog (analyse réelle) avant tout
+      montage, fenêtre « code bon / code mauvais » + motif de non-montage
 - [ ] UI de réparation + câblage de l'icône
 
 Rien n'est câblé, publié ni installé sur du matériel sans accord explicite.
