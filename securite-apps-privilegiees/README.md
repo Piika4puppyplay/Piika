@@ -111,6 +111,22 @@ ne lit que ses copies dorées (chemins **fixes**) et n'écrit que le dossier iso
 des deux apps. Même durcissement que l'installateur (seccomp, prison en dur de
 deux entrées, aucun chemin calculé depuis un argument).
 
+**Durcissement surface d'attaque (06/11).** L'empreinte épinglée est vérifiée
+par un simple hachage **avant tout parsing structurel** du paquet : le parseur
+de signature et l'extracteur (en C) ne reçoivent jamais des octets qui ne valent
+pas déjà l'épingle connue-bonne — une copie dorée altérée meurt sur une
+comparaison à temps constant, sans qu'un seul octet de structure ne soit
+interprété (phase Rust testée `verdict_avant_parsing`). Le hachage lui-même est
+borné (jamais de fichier démesuré). La décision/vérification reste en Rust sûr
+(pas de débordement) ; le C ne garde que les appels système obligatoires — un
+rewrite complet en Rust n'est donc pas nécessaire.
+
+**Mode audit (lecture seule) :** `puprecovery verifier[-tout]` rejoue la même
+vérification (signature + épingle) **sans rien réécrire**, pour revérifier à la
+demande (ou au démarrage, une fois câblé) que les copies dorées restent
+authentiques et intègres — on ne fait pas confiance à un paquet au seul motif
+qu'il a déjà été installé.
+
 ---
 
 ## Contenu du dossier

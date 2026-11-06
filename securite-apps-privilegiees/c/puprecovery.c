@@ -39,6 +39,20 @@
  * même parfaitement signé mais différent de l'épingle est REFUSÉ. C'est
  * l'« antivirus interne » : on ne croit pas une signature sur parole.
  *
+ * RÉDUCTION DE LA SURFACE D'ATTAQUE (durcissement Piika 06/11) : l'empreinte
+ * épinglée est vérifiée par un simple hachage AVANT tout parsing structurel du
+ * paquet. Le parseur de signature et l'extracteur (en C) ne reçoivent donc
+ * JAMAIS des octets qui ne valent pas déjà l'épingle connue-bonne : une copie
+ * dorée altérée meurt sur une comparaison de hachage à temps constant, sans
+ * qu'un seul octet de structure ne soit interprété. Le hachage lui-même est
+ * borné (jamais de fichier démesuré). La décision/vérification reste en Rust
+ * sûr (pas de débordement) ; le C ne garde que les appels système obligatoires.
+ *
+ * MODE AUDIT (« verifier ») : la même vérification, SANS rien réécrire, pour
+ * revérifier à la demande (ou au démarrage) que les copies dorées sont toujours
+ * authentiques et intègres — on ne fait pas confiance à un paquet au seul motif
+ * qu'il a déjà été installé.
+ *
  * CLOISONNEMENT (privilège dédié « puprecovery_updateur », réalisé ici par la
  * muselière) : comme paquets-autorite — PR_SET_NO_NEW_PRIVS, limites, aucun
  * groupe, seccomp « tout est tué sauf la liste blanche » (ni exec, ni réseau,
@@ -47,8 +61,10 @@
  * isolé des deux apps (chemins FIXES). Aucun chemin n'est calculé à partir d'un
  * argument : la « prison » est une table en dur de deux entrées.
  *
- *   puprecovery reparer      <paquets-autorite|puppy-maj>
+ *   puprecovery reparer       <paquets-autorite|puppy-maj>
  *   puprecovery reparer-tout
+ *   puprecovery verifier      <paquets-autorite|puppy-maj>   (audit, lecture seule)
+ *   puprecovery verifier-tout
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -78,10 +94,20 @@
 #include <unistd.h>
 
 /* ---- pont vers le cerveau Rust (secours.rs / slogans.rs via libpupdate.a) ---- */
+/* Pré-verdict AVANT tout parsing (épingle + bornes + anti-retour, PAS la
+ * signature) : refuse une copie dorée altérée avant de la confier au parseur. */
+extern int pupdate_secours_pre_analyser(const char *id, const uint8_t *empreinte,
+                                        uint32_t generation, uint64_t taille);
+/* Juge final : revérifie tout, signature Ed25519 comprise. */
 extern int pupdate_secours_analyser(const char *id, int signature_valide, const uint8_t *empreinte,
                                     uint32_t generation, uint64_t taille);
 extern unsigned pupdate_slogans_nombre(void);
 extern int pupdate_slogan(unsigned i, char *out, size_t cap);
+
+/* Borne dure sur la taille d'une copie dorée qu'on accepte de HACHER : on ne
+ * lit jamais un fichier démesuré (anti-bombe sur la console elle-même). Doit
+ * valoir la limite de jail.rs (Limites::DEFAUT.taille_fichier_max = 256 Mio). */
+#define DORE_TAILLE_MAX (256ull * 1024 * 1024)
 
 /* Bandeau : un slogan du dico qui tourne (choisi au hasard). Décor, sans effet
  * sur la sécurité. */
@@ -167,7 +193,11 @@ static void verrouiller_seccomp(void)
 }
 
 /* --------------------------- outils ---------------------------------- */
-/* SHA-256 du fichier entier (le condensat comparé à l'épingle). 0 = OK. */
+/* SHA-256 du fichier entier (le condensat comparé à l'épingle).
+ *   0  = OK ;  -1 = illisible ;  -2 = démesuré (dépasse DORE_TAILLE_MAX).
+ * On interrompt la lecture dès que la borne dure est franchie : on ne hache
+ * jamais un fichier géant (une copie dorée altérée ne peut pas nous faire
+ * tourner sur des gigaoctets). */
 static int empreinte_fichier(const char *chemin, uint8_t out[32], uint64_t *taille)
 {
     int fd = open(chemin, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
@@ -179,8 +209,9 @@ static int empreinte_fichier(const char *chemin, uint8_t out[32], uint64_t *tail
         ssize_t k = read(fd, buf, sizeof buf);
         if (k < 0) { if (errno == EINTR) continue; close(fd); return -1; }
         if (k == 0) break;
-        sha256_ajouter(&c, buf, (size_t)k);
         n += (uint64_t)k;
+        if (n > DORE_TAILLE_MAX) { close(fd); return -2; }
+        sha256_ajouter(&c, buf, (size_t)k);
     }
     close(fd);
     sha256_fin(&c, out);
@@ -199,32 +230,52 @@ static uint32_t lire_generation(const char *chemin)
     return g;
 }
 
-/* --------------------------- réparation ------------------------------ */
-static void reparer_une(const app_critique *a)
+/* --------------------------- vérification ---------------------------- */
+/* Vérifie une copie dorée SANS rien écrire. Ordre DURCI : l'empreinte épinglée
+ * est contrôlée AVANT tout parsing structurel du paquet, puis la signature.
+ *   0  = bonne, réinstallable ;  >0 = code de refus ;  -1 = illisible.
+ * `motif` reçoit un texte court (peut être NULL). C'est l'« antivirus interne »
+ * de la console : la même vérif sert à réparer ET à auditer (mode verifier). */
+static int verifier_une(const app_critique *a, char *motif, size_t motsize)
 {
-    /* 1. la copie dorée doit être signée VALIDE (nécessaire, pas suffisant) */
-    signature_paquet sig;
-    char err[160] = "";
-    memset(&sig, 0, sizeof sig);
+    /* 1. empreinte réelle + taille, par simple hachage en flux (AUCUN parseur),
+     *    avec borne dure anti-fichier-géant. */
+    uint8_t emp[32]; uint64_t taille = 0;
+    int e = empreinte_fichier(a->copie_doree, emp, &taille);
+    if (e == -2) { if (motif) snprintf(motif, motsize, "copie dorée démesurée"); return 3; }
+    if (e != 0)  { if (motif) snprintf(motif, motsize, "copie dorée illisible");  return -1; }
+    uint32_t generation = lire_generation(a->gen_doree);
+
+    /* 2. PRÉ-VERDICT (secours.rs) : épingle + bornes + anti-retour, AVANT de
+     *    laisser le moindre parseur toucher ces octets. Un doré altéré meurt ici,
+     *    sans jamais être confié au parseur de signature ni à l'extracteur. */
+    int pre = pupdate_secours_pre_analyser(a->id, emp, generation, taille);
+    if (pre != 0) { if (motif) snprintf(motif, motsize, "refus avant parsing (motif %d)", pre); return pre; }
+
+    /* 3. SEULEMENT maintenant : parser la signature (sur des octets déjà épinglés). */
+    signature_paquet sig; char err[160] = ""; memset(&sig, 0, sizeof sig);
     int sig_ok = paquet_lire_signature(a->copie_doree, &sig, err, sizeof err) == 0
                  && sig.etat == SIGNATURE_VALIDE;
 
-    /* 2. empreinte réelle de la copie dorée (comparée à l'épingle côté Rust) */
-    uint8_t emp[32]; uint64_t taille = 0;
-    if (empreinte_fichier(a->copie_doree, emp, &taille) != 0)
-        fin(4, "copie dorée illisible");
-    uint32_t generation = lire_generation(a->gen_doree);
-
-    /* 3. DÉCISION (secours.rs) : signature + épingle + anti-retour + bornes */
+    /* 4. JUGE FINAL (secours.rs) : revérifie tout, signature Ed25519 comprise. */
     int rc = pupdate_secours_analyser(a->id, sig_ok ? 1 : 0, emp, generation, taille);
-    if (rc != 0) {
-        char d[96]; snprintf(d, sizeof d, "copie dorée refusée (motif %d)", rc);
-        securite_noter("SECOURS", "REFUSE", GRAVITE_ALERTE, a->id, "%s", d);
-        fin(2, d);
+    if (rc != 0) { if (motif) snprintf(motif, motsize, "copie dorée refusée (motif %d)", rc); return rc; }
+    return 0;
+}
+
+/* --------------------------- réparation ------------------------------ */
+static void reparer_une(const app_critique *a)
+{
+    char d[96] = "";
+    int v = verifier_une(a, d, sizeof d);
+    if (v != 0) {
+        securite_noter("SECOURS", "REFUSE", GRAVITE_ALERTE, a->id, "%s", d[0] ? d : "copie dorée refusée");
+        fin(v == -1 ? 4 : 2, d[0] ? d : "copie dorée refusée");
     }
 
-    /* 4. réinstallation : extraction A/B de la copie dorée dans le dossier isolé.
+    /* réinstallation : extraction A/B de la copie dorée dans le dossier isolé.
      * paquet_extraire porte déjà le mur anti-bombe par entrée. */
+    char err[160] = "";
     creer_dossiers(a->destination, 0755);
     char stag[1024], prec[1024];
     if ((size_t)snprintf(stag, sizeof stag, "%s.part", a->destination) >= sizeof stag) fin(4, "chemin trop long");
@@ -256,6 +307,26 @@ static const app_critique *trouver(const char *id)
     return NULL;
 }
 
+/* --------------------------- audit ----------------------------------- */
+/* Vérifie une copie dorée SANS rien réparer (lecture seule). Affiche l'état et
+ * renvoie 0 si bonne, sinon non nul. C'est la re-vérification « au repos » : on
+ * ne fait jamais confiance à un paquet sous prétexte qu'il a déjà été installé,
+ * on revérifie signature + épingle à la demande (ou au démarrage, une fois
+ * câblé). N'écrit rien, donc ne peut rien casser. */
+static int verifier_rapport(const app_critique *a)
+{
+    char d[96] = "";
+    int v = verifier_une(a, d, sizeof d);
+    if (v == 0) {
+        dprintf(1, "✓ %s : copie dorée signée + épinglée, intègre\n", a->id);
+        securite_noter("SECOURS", "AUDIT_OK", GRAVITE_INFO, a->id, "copie dorée vérifiée (signature + épingle)");
+        return 0;
+    }
+    dprintf(1, "✗ %s : %s\n", a->id, d[0] ? d : "copie dorée refusée");
+    securite_noter("SECOURS", "AUDIT_ALERTE", GRAVITE_ALERTE, a->id, "%s", d[0] ? d : "copie dorée refusée");
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     /* on se muselle AVANT tout */
@@ -264,7 +335,20 @@ int main(int argc, char **argv)
 
     bandeau(); /* un slogan du dico qui tourne */
 
-    if (argc < 2) fin(4, "usage: puprecovery reparer <id> | reparer-tout");
+    if (argc < 2) fin(4, "usage: puprecovery reparer <id> | reparer-tout | verifier <id> | verifier-tout");
+
+    /* audit lecture seule : revérifie signature + épingle, ne répare rien */
+    if (!strcmp(argv[1], "verifier-tout")) {
+        int ko = 0;
+        for (int i = 0; i < NAPPS; i++) ko |= verifier_rapport(&APPS[i]);
+        _exit(ko ? 2 : 0);
+    }
+    if (!strcmp(argv[1], "verifier")) {
+        if (argc < 3) fin(4, "verifier: identifiant manquant");
+        const app_critique *a = trouver(argv[2]);
+        if (!a) fin(2, "identifiant inconnu : la console ne connaît que ses deux apps");
+        _exit(verifier_rapport(a) ? 2 : 0);
+    }
 
     if (!strcmp(argv[1], "reparer-tout")) {
         for (int i = 0; i < NAPPS; i++) reparer_une(&APPS[i]);
