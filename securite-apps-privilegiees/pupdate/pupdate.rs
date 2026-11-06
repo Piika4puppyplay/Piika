@@ -13,8 +13,10 @@
 #![allow(dead_code)]
 
 pub mod apps;
+pub mod clavier_securise;
 pub mod coffre;
 pub mod dechiffrement;
+pub mod explorateur;
 pub mod ffi;
 pub mod format;
 pub mod installateur;

@@ -527,6 +527,67 @@ pub unsafe extern "C" fn pupdate_dechiffrement_ouverture(
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Clavier ultra-protégé pendant la saisie des mots de passe (clavier_securise.rs).
+// ---------------------------------------------------------------------------
+
+/// Décide d'une frappe pendant la saisie protégée. `source` :
+///   0 = clavier initial approuvé ; 1 = périphérique branché à chaud ;
+///   2 = événement synthétique (injection logicielle) ; 3 = entrée réseau ;
+///   autre = provenance inconnue. Retour : 1 = accepter, 0 = rejeter.
+#[no_mangle]
+pub extern "C" fn pupdate_clavier_accepter(source: c_int) -> c_int {
+    use crate::clavier_securise::{accepter, Source};
+    let src = match source {
+        0 => Source::ClavierInitialApprouve,
+        1 => Source::PeripheriqueChaudBranche,
+        2 => Source::EvenementSynthetique,
+        3 => Source::EntreeReseau,
+        _ => Source::Inconnue,
+    };
+    if accepter(src) { 1 } else { 0 }
+}
+
+// ---------------------------------------------------------------------------
+//  Autorités de l'explorateur + vidage RAM (explorateur.rs).
+// ---------------------------------------------------------------------------
+
+/// L'explorateur a-t-il le droit de ce pouvoir ? `pouvoir` :
+///   0 = lire ; 1 = écrire sur support approuvé ; 2 = demander un montage ;
+///   3 = réseau ; 4 = exécuter du code ; 5 = privilège ; 6 = ptrace ;
+///   7 = montage direct. Retour : 1 = autorisé, 0 = interdit. Seuls 0,1,2 → 1.
+#[no_mangle]
+pub extern "C" fn pupdate_explorateur_autorise(pouvoir: c_int) -> c_int {
+    use crate::explorateur::{autorise, Pouvoir};
+    let p = match pouvoir {
+        0 => Pouvoir::LireFichiers,
+        1 => Pouvoir::EcrireSupportApprouve,
+        2 => Pouvoir::DemanderMontage,
+        3 => Pouvoir::Reseau,
+        4 => Pouvoir::ExecuterCode,
+        5 => Pouvoir::Privilege,
+        6 => Pouvoir::Ptrace,
+        7 => Pouvoir::MontageDirect,
+        _ => return 0,
+    };
+    if autorise(p) { 1 } else { 0 }
+}
+
+/// Faut-il effacer la clé d'un volume déchiffré sur cet événement ? `evenement` :
+///   0 = volume ouvert ; 1 = volume démonté ; 2 = explorateur fermé.
+/// Retour : 1 = effacer (zéroïser), 0 = laisser. Vrai pour 1 et 2.
+#[no_mangle]
+pub extern "C" fn pupdate_explorateur_doit_effacer_cle(evenement: c_int) -> c_int {
+    use crate::explorateur::{doit_effacer_cle, Evenement};
+    let ev = match evenement {
+        0 => Evenement::VolumeOuvert,
+        1 => Evenement::VolumeDemonte,
+        2 => Evenement::ExplorateurFerme,
+        _ => return 1, // par prudence : inconnu → on efface
+    };
+    if doit_effacer_cle(ev) { 1 } else { 0 }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {
