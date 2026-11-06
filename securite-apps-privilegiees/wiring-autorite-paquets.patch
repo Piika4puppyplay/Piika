@@ -1,0 +1,533 @@
+diff --git a/Makefile b/Makefile
+index dedf977..c36e4a7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -13,9 +13,9 @@
+ #
+ #  Variables : CODE=… (code de déchiffrement des images de test)
+ # =====================================================================
+-VERSION      ?= 0.16.0
+-MAJ_USB      ?= 0.16.1
+-MAJ_INTERNET ?= 0.16.2
++VERSION      ?= 0.17.7
++MAJ_USB      ?= 0.17.1
++MAJ_INTERNET ?= 0.17.2
+ CODE         ?= ouaf1234
+ # Adresse publique des mises à jour (dépôt GitHub de Dylan) ; pour tester en
+ # local : make images SERVEUR=http://10.0.2.2:8000
+@@ -93,8 +93,9 @@ sans_racine_test = @if grep -q "Racine de TEST" $(BIN)/puppy-maj $(BIN)/puppy-bu
+ 
+ PROGRAMMES := puppy-deverrouille puppy-coffre puppy-init puppy-stockage \
+               puppy-reseau puppy-maj puppy-bureau puppy-verrou puppy-audit \
+-              puppy-autorite puppy-session puppy-bac puppy-flair \
+-              puppy-secours puppy-terrier puppy-niche-migrer
++              puppy-autorite paquets-autorite puppy-lanceur puprecovery coffre-apps puppy-session puppy-bac puppy-flair \
++              puppy-secours puppy-terrier puppy-niche-migrer puppy-sante \
++              puppy-ecran
+ 
+ .PHONY: publier exemples all programmes noyau initramfs images maj qemu serveur propre iso qemu-iso
+ all: programmes
+@@ -120,7 +121,42 @@ $(BIN)/puppy-deverrouille: system/security/puppy-deverrouille.c $(SECOURS) $(SEC
+ $(BIN)/puppy-verrou:       system/security/puppy-verrou.c $(SECURITE) $(SCELLEMENT) $(ASSISTANT) $(LIBPUPPY) $(ENTETES) ; $(lier)
+ $(BIN)/puppy-autorite:     system/security/puppy-autorite.c system/security/plantages.c system/security/flair/flair-autorite.c system/security/deuxieme-code-autorite.c system/terrier/terrier-autorite.c system/terrier/terrier-autorite.h $(SECURITE) $(SCELLEMENT) $(ASSISTANT) $(LIBPUPPY) $(ENTETES)   ; $(lier)
+ $(BIN)/puppy-session:      system/security/puppy-session.c $(ASSISTANT) $(LIBPUPPY) $(ENTETES)    ; $(lier)
++# 0.20 : l'autorité CONFINÉE des paquets .puppy. Cerveau en Rust (décision,
++# testé, system/pupdate/) compilé en bibliothèque statique ; squelette
++# privilégié en C (appels système : seccomp, openat2, abandon de privilèges).
++PUPDATE_A := $(B)/pupdate/libpupdate.a
++$(PUPDATE_A): $(wildcard system/pupdate/*.rs)
++	@mkdir -p $(dir $@)
++	@echo "  RUSTC libpupdate.a (cerveau installateur confiné)"
++	@rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=pic -C opt-level=2 -o $@ system/pupdate/pupdate.rs
++$(BIN)/paquets-autorite: system/security/paquets-autorite.c $(PUPDATE_A) $(LIBPUPPY) $(ENTETES)
++	@mkdir -p $(dir $@)
++	@echo "  CC    paquets-autorite (confiné, cerveau Rust)"
++	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.c,$^) $(PUPDATE_A) $(LDLIBS)
++# 0.20 : lanceur des applications privilégiées CHIFFRÉES au repos (coffre
++# .pupcoffre). Cœur crypto en Rust (coffre.rs, testé) ; glue privilégiée en C
++# (secret TPM, memfd+fexecve). SQUELETTE À VALIDER EN VM — compilé mais PAS
++# encore câblé au démarrage ni dans puppy-autorite.
++$(BIN)/puppy-lanceur: system/security/puppy-lanceur.c $(PUPDATE_A) $(SCELLEMENT) $(SECURITE) $(LIBPUPPY) $(ENTETES)
++	@mkdir -p $(dir $@)
++	@echo "  CC    puppy-lanceur (coffre, cerveau Rust) [squelette, non câblé]"
++	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.c,$^) $(PUPDATE_A) $(LDLIBS)
++# 0.20 : console de secours des deux apps critiques. Décision en Rust testé
++# (secours.rs : signature + empreinte épinglée + anti-retour) ; glue privilégiée
++# en C (seccomp, prison fixe à 2 apps, zéro clé). SQUELETTE À VALIDER EN VM.
++$(BIN)/puprecovery: system/security/puprecovery.c $(PUPDATE_A) $(LIBPUPPY) $(ENTETES)
++	@mkdir -p $(dir $@)
++	@echo "  CC    puprecovery (console de secours, cerveau Rust) [squelette, non câblé]"
++	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.c,$^) $(PUPDATE_A) $(LDLIBS)
++# 0.20 : rotation / scellement au repos des 2 apps privilégiées (coffre .pupcoffre).
++# Crypto dans le cœur Rust testé (coffre.rs) ; ici secret TPM + getrandom + pose
++# atomique. SQUELETTE À VALIDER EN VM (appel depuis puppy-maj à brancher en VM).
++$(BIN)/coffre-apps: system/security/coffre-apps.c $(PUPDATE_A) $(SCELLEMENT) $(SECURITE) $(LIBPUPPY) $(ENTETES)
++	@mkdir -p $(dir $@)
++	@echo "  CC    coffre-apps (rotation coffre, cerveau Rust) [squelette, non câblé]"
++	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(filter %.c,$^) $(PUPDATE_A) $(LDLIBS)
+ $(BIN)/puppy-audit:        system/security/puppy-audit.c system/security/audit-scellement.c $(SECURITE) $(SCELLEMENT) $(LIBPUPPY) $(ENTETES)        ; $(lier)
++$(BIN)/puppy-sante:        system/security/puppy-sante.c $(SECURITE) $(LIBPUPPY) $(ENTETES)        ; $(lier)
+ $(BIN)/puppy-bac:          system/security/puppy-bac.c system/security/bac-veilleur.c system/security/bac-instantane.c system/security/bac-reseau.c $(LIBPUPPY) $(ENTETES) ; $(lier)
+ # 0.11 Honey-Dog « Flair » : analyse des téléchargements, avec le moteur YARA
+ # (libs/libyara, YARA 4.5.8, BSD-3) compilé à part, sans dépendance.
+@@ -135,6 +171,9 @@ $(BIN)/puppy-flair:        system/security/puppy-flair.c $(FLAIR) $(B)/libyara/l
+ $(BIN)/puppy-secours:      system/secours/puppy-secours.c $(POINTS) $(LIBHAL) $(LIBPUPPY) $(ENTETES)          ; $(lier)
+ $(BIN)/puppy-coffre:       system/security/puppy-coffre.c $(SECURITE) $(LIBPUPPY) $(ENTETES)       ; $(lier)
+ $(BIN)/puppy-init:         system/core/puppy-init.c $(POINTS) $(LIBHAL) $(LIBPUPPY) $(ENTETES)                          ; $(lier)
++# 0.19 : écrans système plein cadre (extinction / redémarrage, puis démarrage).
++# Programme séparé — on garde PID 1 (puppy-init) sans les décodeurs d'images.
++$(BIN)/puppy-ecran:        system/demarrage/puppy-ecran.c $(LIBHAL) $(LIBGFX) $(LIBPUPPY) $(ENTETES)                   ; $(lier)
+ $(BIN)/puppy-stockage:     system/core/puppy-stockage.c $(SECURITE) $(LIBPUPPY) $(ENTETES)          ; $(lier)
+ $(BIN)/puppy-reseau:       system/core/puppy-reseau.c $(LIBHAL) $(LIBPUPPY) $(ENTETES)              ; $(lier)
+ $(BIN)/puppy-maj:          system/update/puppy-maj.c $(MAJ) $(SECURITE) $(SCELLEMENT) $(LIBPUPPY) $(ENTETES)                  ; $(lier)
+@@ -179,7 +218,7 @@ EX := $(B)/exemples
+ # signe l'exemple s'il y a la clé des paquets (sinon il reste non signé)
+ signer_paquet = @if [ -f "$(CLE_PAQUETS)" ]; then $(SIGNER) paquet "$(CLE_PAQUETS)" $@; \
+ 	else echo "⚠️  $@ NON signé : clé $(CLE_PAQUETS) introuvable"; fi
+-exemples: $(EX)/Bonjour.puppy $(EX)/Nuit.puptheme $(EX)/Curseurs.puppy $(EX)/Bonbon.puppycone $(EX)/Sidebar.puppy $(EX)/MediaCenter.puppy $(EX)/Navigateur.puppy
++exemples: $(EX)/Bonjour.puppy $(EX)/Nuit.puptheme $(EX)/Curseurs.puppy $(EX)/Bonbon.puppycone $(EX)/Sidebar.puppy $(EX)/MediaCenter.puppy $(EX)/MediaRust.puppy $(EX)/Navigateur.puppy $(EX)/TestPlein.puppy $(EX)/PuppyWatch.puppy
+ $(EX)/curseurs/bin/curseurs: exemples/curseurs/curseurs.c $(LIBFENETRE) $(THEMES) $(LIBPUPPY) $(LIBGFX) $(ENTETES) boot/table-lignes.py ; $(lier_programme)
+ $(EX)/Curseurs.puppy: $(EX)/curseurs/bin/curseurs exemples/curseurs/puppy.info $(BIN)/puppy-maj $(SIGNER)
+ 	cp exemples/curseurs/puppy.info $(EX)/curseurs/
+@@ -187,11 +226,26 @@ $(EX)/Curseurs.puppy: $(EX)/curseurs/bin/curseurs exemples/curseurs/puppy.info $
+ 	$(signer_paquet)
+ $(EX)/bonjour/bin/bonjour: exemples/bonjour/bonjour.c $(LIBFENETRE) $(THEMES) $(LIBPUPPY) $(LIBGFX) $(ENTETES) boot/table-lignes.py ; $(lier_programme)
+ $(EX)/outils/icone: exemples/bonjour/icone.c $(LIBGFX) $(LIBPUPPY) $(ENTETES) ; $(lier)
++
++$(EX)/puppywatch/bin/puppywatch: exemples/puppywatch/puppywatch.c $(LIBFENETRE) $(THEMES) $(LIBPUPPY) $(LIBGFX) $(ENTETES) boot/table-lignes.py ; $(lier_programme)
++$(EX)/outils/icone-puppywatch: exemples/puppywatch/icone.c $(LIBGFX) $(LIBPUPPY) $(ENTETES) ; $(lier)
++$(EX)/PuppyWatch.puppy: $(EX)/puppywatch/bin/puppywatch $(EX)/outils/icone-puppywatch exemples/puppywatch/puppy.info $(BIN)/puppy-maj $(SIGNER)
++	cp exemples/puppywatch/puppy.info $(EX)/puppywatch/
++	$(EX)/outils/icone-puppywatch $(EX)/puppywatch/icone.ppm
++	$(BIN)/puppy-maj creer $(EX)/puppywatch 0.3 $@
++	$(signer_paquet)
+ $(EX)/Bonjour.puppy: $(EX)/bonjour/bin/bonjour $(EX)/outils/icone exemples/bonjour/puppy.info $(BIN)/puppy-maj $(SIGNER)
+ 	cp exemples/bonjour/puppy.info $(EX)/bonjour/
+ 	$(EX)/outils/icone $(EX)/bonjour/icone.ppm
+ 	$(BIN)/puppy-maj creer $(EX)/bonjour 1.0 $@
+ 	$(signer_paquet)
++# Test plein écran (0.17.7) : sonde minimale, dit si le bureau ferme les fenêtres plein écran par erreur
++$(EX)/test-plein/bin/test-plein: exemples/test-plein/test-plein.c $(LIBFENETRE) $(LIBPUPPY) $(LIBGFX) $(ENTETES) boot/table-lignes.py ; $(lier_programme)
++$(EX)/TestPlein.puppy: $(EX)/test-plein/bin/test-plein exemples/test-plein/puppy.info $(BIN)/puppy-maj $(SIGNER)
++	cp exemples/test-plein/puppy.info $(EX)/test-plein/
++	$(EX)/test-plein/bin/test-plein --icone $(EX)/test-plein/icone.ppm
++	$(BIN)/puppy-maj creer $(EX)/test-plein 1.0 $@
++	$(signer_paquet)
+ $(EX)/sidebar/bin/sidebar: $(wildcard exemples/sidebar/*.c) exemples/sidebar/sidebar.h $(LIBFENETRE) $(THEMES) $(LIBPUPPY) $(LIBGFX) $(ENTETES) boot/table-lignes.py ; $(lier_programme)
+ $(EX)/Sidebar.puppy: $(EX)/sidebar/bin/sidebar exemples/sidebar/puppy.info $(BIN)/puppy-maj $(SIGNER)
+ 	cp exemples/sidebar/puppy.info $(EX)/sidebar/
+@@ -206,7 +260,28 @@ $(EX)/MediaCenter.puppy: $(EX)/mediacenter/bin/mediacenter exemples/mediacenter/
+ 	$(EX)/mediacenter/bin/mediacenter --icone $(EX)/mediacenter/icone.ppm
+ 	rm -rf $(EX)/mediacenter/demo
+ 	$(EX)/mediacenter/bin/mediacenter --demo $(EX)/mediacenter/demo
+-	$(BIN)/puppy-maj creer $(EX)/mediacenter 2.1.0 $@
++	$(BIN)/puppy-maj creer $(EX)/mediacenter 2.1.1 $@
++	$(signer_paquet)
++# Media Center (nouveau moteur), écrit en Rust (0.18) — cohabite avec l'ancien
++# (C) le temps de la transition. La bibliothèque statique Rust se lie comme
++# libyara.a : le C pilote le lien durci statique-pie, Rust est un .a de plus.
++# NB : hors de $(EX) pour que puppy-maj ne l'embarque pas dans le .puppy
++MC_RS_A := $(B)/mediacenter-rs/libmediacenter_rs.a
++MC_RS_SRCS := $(wildcard exemples/mediacenter-rs/*.rs)
++$(MC_RS_A): $(MC_RS_SRCS)
++	@mkdir -p $(dir $@)
++	@echo "  RUSTC libmediacenter_rs.a"
++	@rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=pic -C opt-level=2 -o $@ exemples/mediacenter-rs/mediacenter.rs
++$(EX)/mediacenter-rs/bin/media-rust: exemples/mediacenter-rs/shim.c $(MC_RS_A) $(THEMES) $(LIBFENETRE) $(LIBPUPPY) $(LIBGFX) $(LIBSON) $(ENTETES) boot/table-lignes.py
++	@mkdir -p $(dir $@)
++	@echo "  CC    media-rust (Rust + table des lignes)"
++	@$(CC) $(CFLAGS) -g1 -fno-omit-frame-pointer -ffunction-sections $(LDFLAGS) -Wl,--gc-sections -o $@ $(filter %.c,$^) $(MC_RS_A) $(LDLIBS)
++	@python3 boot/table-lignes.py $@ $@.lignes
++	@objcopy --strip-debug $@
++$(EX)/MediaRust.puppy: $(EX)/mediacenter-rs/bin/media-rust exemples/mediacenter-rs/puppy.info $(BIN)/puppy-maj $(SIGNER)
++	cp exemples/mediacenter-rs/puppy.info $(EX)/mediacenter-rs/
++	$(EX)/mediacenter-rs/bin/media-rust --icone $(EX)/mediacenter-rs/icone.ppm
++	$(BIN)/puppy-maj creer $(EX)/mediacenter-rs 0.1 $@
+ 	$(signer_paquet)
+ # Navigateur (0.10) : le programme seul ; le moteur Chromium est à part (make moteur)
+ NAVIGATEUR := $(wildcard exemples/navigateur/*.c) $(wildcard exemples/navigateur/*.h)
+diff --git a/libs/libpuppy/paquet.c b/libs/libpuppy/paquet.c
+index d0b690a..1237cf3 100644
+--- a/libs/libpuppy/paquet.c
++++ b/libs/libpuppy/paquet.c
+@@ -16,6 +16,57 @@
+ #define FIN     "PUPFIN!!"
+ #define ERR(...) do { if (err) snprintf(err, nerr, __VA_ARGS__); } while (0)
+ 
++/* --- Mur anti-bombe (défense en profondeur) -------------------------------
++ * L'autorité de décision confinée (paquets-autorite) interroge le cerveau Rust
++ * (jail::verifier_*) comme garde FAISANT AUTORITÉ. Ici, dans l'extracteur
++ * générique de libpuppy — appelé par tous les binaires, privilégiés ou non —,
++ * on dresse un second mur en C qui REPRODUIT à l'identique les bornes de
++ * system/pupdate/jail.rs (Limites::DEFAUT). Deux murs indépendants : « même
++ * PuppyOS doit se méfier de PuppyOS ». Toute modification de ces valeurs doit
++ * rester synchronisée avec jail.rs. */
++#define BOMBE_TAILLE_TOTALE_MAX  (512ull * 1024 * 1024) /* somme décompressée   */
++#define BOMBE_FICHIERS_MAX       20000u                 /* nombre d'entrées     */
++#define BOMBE_FICHIER_MAX        (256ull * 1024 * 1024) /* une entrée           */
++#define BOMBE_PROFONDEUR_MAX     32u                    /* segments de chemin   */
++#define BOMBE_CHEMIN_OCTETS_MAX  255u                   /* longueur du chemin   */
++#define BOMBE_RATIO_MAX          200ull                 /* décompressé/compressé*/
++#define BOMBE_RATIO_PLANCHER     (16ull * 1024)         /* seuil d'armement     */
++
++/* Profondeur d'un chemin relatif = nombre de segments non vides. */
++static unsigned profondeur_chemin(const char *p)
++{
++    unsigned n = 0;
++    for (const char *s = p; *s;) {
++        const char *f = strchr(s, '/');
++        size_t l = f ? (size_t)(f - s) : strlen(s);
++        if (l) n++;
++        if (!f) break;
++        s = f + 1;
++    }
++    return n;
++}
++
++/* Bornes d'UNE entrée (chemin + taille décompressée). 0 = acceptable. */
++static int bombe_entree_ok(const char *rel, uint64_t taille)
++{
++    size_t l = strlen(rel);
++    if (l == 0 || l > BOMBE_CHEMIN_OCTETS_MAX) return 0;
++    unsigned prof = profondeur_chemin(rel);
++    if (prof == 0 || prof > BOMBE_PROFONDEUR_MAX) return 0;
++    if (taille > BOMBE_FICHIER_MAX) return 0;
++    return 1;
++}
++
++/* Bornes de CUMUL (nb d'entrées, total décompressé, taille du .puppy). 0 = ok. */
++static int bombe_cumul_ok(uint32_t nb, uint64_t total, uint64_t compressee)
++{
++    if (nb > BOMBE_FICHIERS_MAX) return 0;
++    if (total > BOMBE_TAILLE_TOTALE_MAX) return 0;
++    if (compressee > 0 && total / (compressee ? compressee : 1) > BOMBE_RATIO_MAX
++        && total > BOMBE_RATIO_PLANCHER) return 0;
++    return 1;
++}
++
+ static void le32(uint8_t *p, uint32_t v) { for (int i = 0; i < 4; i++) p[i] = v >> (8 * i); }
+ static void le64(uint8_t *p, uint64_t v) { for (int i = 0; i < 8; i++) p[i] = v >> (8 * i); }
+ static uint32_t lit32(const uint8_t *p) { uint32_t v = 0; for (int i = 3; i >= 0; i--) v = v << 8 | p[i]; return v; }
+@@ -145,8 +196,16 @@ int paquet_extraire(const char *chemin, const char *dest, char *err, size_t nerr
+     uint8_t ent[48];
+     if (lire_tout(fd, ent, 48) < 0 || memcmp(ent, MAGIQUE, 8)) { close(fd); ERR("format inconnu"); return -1; }
+     uint32_t n = lit32(ent + 44);
++    /* mur anti-bombe : nombre d'entrées déclaré, avant toute écriture */
++    if (!bombe_cumul_ok(n, 0, (uint64_t)st.st_size)) {
++        close(fd); ERR("paquet refusé : trop d'entrées (%u)", n);
++        securite_noter("PAQUET", "REFUSE", GRAVITE_ATTENTION, chemin,
++                       "nombre d'entrées hors bornes : .puppy-bombe suspectée, refusé");
++        return -1;
++    }
+     if (creer_dossiers(dest, 0755) < 0) { close(fd); ERR("impossible de créer %s", dest); return -1; }
+     static uint8_t buf[65536];
++    uint64_t total_decompresse = 0;
+     for (uint32_t i = 0; i < n; i++) {
+         uint8_t h[3];
+         if (lire_tout(fd, h, 3) < 0) goto abime;
+@@ -160,6 +219,26 @@ int paquet_extraire(const char *chemin, const char *dest, char *err, size_t nerr
+         uint32_t mode = lit32(mt) & 0777;
+         uint64_t taille = lit64(mt + 4);
+         if (!chemin_sur(rel)) { close(fd); ERR("chemin dangereux refusé : %s", rel); return -1; }
++        /* mur anti-bombe, par entrée : chemin borné, profondeur bornée, taille bornée */
++        if (!bombe_entree_ok(rel, taille)) {
++            close(fd); ERR("entrée refusée (bornes dépassées) : %s", rel);
++            securite_noter("PAQUET", "REFUSE", GRAVITE_ATTENTION, chemin,
++                           "entrée hors bornes (taille/profondeur/chemin) : .puppy-bombe suspectée, refusée");
++            return -1;
++        }
++        if (h[0] == 1 || h[0] == 3) {
++            /* total décompressé cumulé (contenu de fichier ou cible de lien) */
++            if (total_decompresse + taille < total_decompresse) { /* débordement */
++                close(fd); ERR("paquet refusé : taille cumulée aberrante"); return -1;
++            }
++            total_decompresse += taille;
++            if (!bombe_cumul_ok(n, total_decompresse, (uint64_t)st.st_size)) {
++                close(fd); ERR("paquet refusé : taille décompressée hors bornes (bombe)");
++                securite_noter("PAQUET", "REFUSE", GRAVITE_ATTENTION, chemin,
++                               "taille décompressée/ratio hors bornes : .puppy-bombe suspectée, refusé");
++                return -1;
++            }
++        }
+         char complet[1500];
+         if ((size_t)snprintf(complet, sizeof complet, "%s/%s", dest, rel) >= sizeof complet) {
+             close(fd); ERR("chemin trop long : %s", rel); return -1;
+diff --git a/system/security/puppy-autorite.c b/system/security/puppy-autorite.c
+index 49e281f..affca62 100644
+--- a/system/security/puppy-autorite.c
++++ b/system/security/puppy-autorite.c
+@@ -259,17 +259,10 @@ static void point_avant(const char *raison)
+ }
+ 
+ /* ------------------------------ paquets ------------------------------- */
+-/* Tout fichier installé est lisible par tous, modifiable par root seul. */
+-static int normaliser(const char *c, const struct stat *st, int type, struct FTW *f)
+-{
+-    (void)f;
+-    if (type == FTW_SL) return 0;
+-    lchown(c, 0, 0);
+-    if (S_ISDIR(st->st_mode)) chmod(c, 0755);
+-    else if (S_ISREG(st->st_mode)) chmod(c, (st->st_mode & 0111) ? 0755 : 0644);
+-    return 0;
+-}
+-
++/* 0.20 : la pose sur disque et la normalisation des droits sont faites par
++ * l'autorité CONFINÉE paquets-autorite (seccomp + openat2, ne peut écrire que
++ * sous les dossiers d'apps). Le gros gardien demande le mot de passe puis
++ * délègue ; voir poser_confine(). */
+ static const char *racine_genre(int genre) { return genre == 2 ? PUPPY_ICONES : genre ? PUPPY_THEMES : PUPPY_PROGRAMMES; }
+ static const char *extension_genre(int genre)
+ {
+@@ -289,6 +282,62 @@ static void preparer_donnees(const char *id, unsigned uid, char *out, size_t n)
+     }
+ }
+ 
++/* 0.20 : exécute l'autorité CONFINÉE paquets-autorite et renvoie son code
++ * (AUT_OK / AUT_REFUSE / AUT_ERREUR). Sa ligne de sortie va dans `msg`. Un
++ * processus tué (seccomp) compte comme un échec. */
++static int poser_confine(const char *mode, int genre, const char *id, const char *paquet, int systeme,
++                         char *msg, size_t nmsg)
++{
++    char g[4], sys[4];
++    snprintf(g, sizeof g, "%d", genre);
++    snprintf(sys, sizeof sys, "%d", systeme);
++    int p[2];
++    if (pipe2(p, O_CLOEXEC) < 0) return AUT_ERREUR;
++    pid_t pid = fork();
++    if (pid == 0) {
++        int nul = open("/dev/null", O_RDONLY);
++        if (nul >= 0) dup2(nul, 0);
++        dup2(p[1], 1);
++        int log = open(PUPPY_RUN "/autorite.log", O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0600);
++        if (log >= 0) dup2(log, 2);
++        signal(SIGCHLD, SIG_DFL);
++        signal(SIGPIPE, SIG_DFL);
++        clearenv();
++        char *argv[8];
++        int n = 0;
++        argv[n++] = "paquets-autorite";
++        argv[n++] = (char *)mode;
++        argv[n++] = g;
++        argv[n++] = (char *)id;
++        if (paquet) {
++            argv[n++] = (char *)paquet;
++            argv[n++] = sys;
++        }
++        argv[n] = NULL;
++        execv(PUPPY_ACTUEL "/bin/paquets-autorite", argv);
++        _exit(127);
++    }
++    close(p[1]);
++    if (pid < 0) { close(p[0]); return AUT_ERREUR; }
++    char buf[256];
++    size_t k = 0;
++    ssize_t r;
++    while (k < sizeof buf - 1 && (r = read(p[0], buf + k, sizeof buf - 1 - k)) > 0) k += (size_t)r;
++    buf[k] = 0;
++    close(p[0]);
++    char *nl = strchr(buf, '\n');
++    if (nl) *nl = 0;
++    if (msg && nmsg) snprintf(msg, nmsg, "%s", buf);
++    int statut = 0;
++    while (waitpid(pid, &statut, 0) < 0)
++        if (errno != EINTR) return AUT_ERREUR;
++    if (WIFEXITED(statut)) {
++        int code = WEXITSTATUS(statut);
++        return code == 0 ? AUT_OK : code == 2 ? AUT_REFUSE : AUT_ERREUR;
++    }
++    return AUT_ERREUR;
++}
++
+ static void installer(int s, int fd, const char *nom_fichier)
+ {
+     static int compteur;
+@@ -329,8 +378,8 @@ static void installer(int s, int fd, const char *nom_fichier)
+             genre = -1;
+         }
+     }
+-    unlink(copie);
+     if (genre < 0) {
++        unlink(copie);
+         supprimer_arbre(temp);
+         repondre(s, AUT_ERREUR, -1, "%s", e[0] ? e : "Paquet illisible.");
+         return;
+@@ -347,6 +396,7 @@ static void installer(int s, int fd, const char *nom_fichier)
+     }
+     int a = autoriser(action, "Installer un paquet ?", texte, 0, qui, sizeof qui);
+     if (a != AUT_OK) {
++        unlink(copie);
+         supprimer_arbre(temp);
+         repondre(s, a, -1, a == AUT_ANNULE ? "Installation annulée." : "Installation refusée : il faut le mot de passe d'un admin.");
+         return;
+@@ -354,29 +404,25 @@ static void installer(int s, int fd, const char *nom_fichier)
+     char avant[160];
+     snprintf(avant, sizeof avant, "Avant l'installation de %.60s %.20s", info.nom, info.version);
+     point_avant(avant);
+-    char cible[400];
+-    snprintf(cible, sizeof cible, "%s/%s", chemin_systeme(racine_genre(genre)), info.id);
+-    creer_dossiers(chemin_systeme(racine_genre(genre)), 0755);
+-    supprimer_arbre(cible);
+-    nftw(temp, normaliser, 16, FTW_PHYS);
+-    if (deplacer_arbre(temp, cible) < 0) {
+-        supprimer_arbre(temp);
+-        repondre(s, AUT_ERREUR, -1, "L'installation a échoué (espace disque ?).");
++    /* 0.20 : la POSE est faite par l'autorité CONFINÉE paquets-autorite — elle
++     * re-vérifie signature + anti-bombe et pose en A/B atomique, et ne peut
++     * écrire que sous les dossiers d'apps. Le gros gardien ne touche plus
++     * /system/programmes lui-même : il a demandé le mot de passe, il délègue. */
++    supprimer_arbre(temp);              /* l'extraction de lecture ne sert plus */
++    char msg[256] = "";
++    int rc = poser_confine("installer", genre, info.id, copie, 0, msg, sizeof msg);
++    unlink(copie);
++    if (rc != AUT_OK) {
++        repondre(s, rc, -1, "%s", msg[0] ? msg : "L'installation a échoué.");
+         return;
+     }
+-    paquet_marquer(cible, &sig);
+     if (genre == 0) {
+         unsigned uid = programme_uid(info.id, 1);
+         char d[400];
+         if (uid) preparer_donnees(info.id, uid, d, sizeof d);
+     }
+-    journal("autorite", "%s %s %s installé (autorisé par %s)", info.type, info.id, info.version, qui);
+-    if (signe)
+-        securite_noter("PAQUET", "INSTALLE", GRAVITE_INFO, info.id, "%s %s installé, signé par %s (autorisé par %s)",
+-                       info.type, info.version, sig.editeur, qui);
+-    else
+-        securite_noter("PAQUET", "INSTALLE", GRAVITE_ATTENTION, info.id,
+-                       "%s %s installé SANS signature (autorisé par %s)", info.type, info.version, qui);
++    journal("autorite", "%s %s %s installé par l'autorité confinée (autorisé par %s)", info.type, info.id,
++            info.version, qui);
+     repondre(s, AUT_OK, -1, "%s %s %s", info.type, info.id, info.version);
+ }
+ 
+@@ -395,8 +441,10 @@ static void desinstaller(int s, const char *genre_t, const char *id)
+     snprintf(texte, sizeof texte, "« %s » va être retiré du système.", id);
+     int a = autoriser(action, "Désinstaller ?", texte, 0, qui, sizeof qui);
+     if (a != AUT_OK) { repondre(s, a, -1, "Désinstallation refusée."); return; }
+-    if (supprimer_arbre(cible) < 0) { repondre(s, AUT_ERREUR, -1, "Suppression impossible."); return; }
+-    securite_noter("PAQUET", "RETIRE", GRAVITE_INFO, id, "%s désinstallé (autorisé par %s)", genre_t, qui);
++    char msg[256] = "";
++    int rc = poser_confine("desinstaller", genre, id, NULL, 0, msg, sizeof msg);
++    if (rc != AUT_OK) { repondre(s, rc, -1, "%s", msg[0] ? msg : "Suppression impossible."); return; }
++    securite_noter("PAQUET", "RETIRE", GRAVITE_INFO, id, "%s désinstallé par l'autorité confinée (autorisé par %s)", genre_t, qui);
+     repondre(s, AUT_OK, -1, "%s désinstallé", id);
+ }
+ 
+@@ -540,6 +588,25 @@ static void audit(int s)
+     close(fd);
+ }
+ 
++/* 0.18.14 (PuppyWatch) : santé SMART d'un disque. Lecture seule, sans secret,
++ * donc SANS fenêtre de mot de passe : le système la consulte en arrière-plan
++ * à chaque démarrage, et le Moniteur l'affiche sans friction. arg0 = nom du
++ * disque ("" = tous). */
++static void sante(int s, const char *disque)
++{
++    char nom[64];
++    snprintf(nom, sizeof nom, "%s", disque ? disque : "");
++    /* Un seul argument, et seulement des caractères de nom de disque : pas de
++     * chemin, pas d'option injectée. */
++    for (char *p = nom; *p; p++)
++        if (!((*p >= 'a' && *p <= 'z') || (*p >= '0' && *p <= '9'))) { nom[0] = 0; break; }
++    char *argv[] = { "puppy-sante", "--machine", nom[0] ? nom : NULL, NULL };
++    int fd = lancer_outil(PUPPY_ACTUEL "/bin/puppy-sante", argv);
++    if (fd < 0) { repondre(s, AUT_ERREUR, -1, "puppy-sante ne démarre pas."); return; }
++    repondre(s, AUT_OK, fd, "santé lue");
++    close(fd);
++}
++
+ static void lire_journal(int s)
+ {
+     char qui[COMPTE_NOM];
+@@ -588,17 +655,37 @@ static int option_appli_valide(const char *o)
+            strlen(c) < 400 && !strpbrk(c, "\n\r") && lstat(c, &st) == 0 && S_ISREG(st.st_mode) && st.st_size < 4096;
+ }
+ 
++/* 0.18.12 : « --ouvrir=<chemin> » ouvre un fichier d'une gamelle dans le
++ * programme qui lui est associé. On n'autorise que : un chemin réel sous les
++ * gamelles (pas de ../), sans retour à la ligne, d'une taille raisonnable, et
++ * dont l'extension est bien déclarée par ce programme (puppy.info ouvre=). Le
++ * programme a déjà accès aux gamelles dans son bac à sable : on ne lui donne
++ * donc aucun pouvoir en plus, on lui désigne juste quel fichier ouvrir. */
++static int option_ouvrir_valide(const char *o, const programme_info *p)
++{
++    if (strncmp(o, "--ouvrir=", 9)) return 0;
++    const char *c = o + 9;
++    struct stat st;
++    if (strncmp(c, PUPPY_GAMELLES "/", strlen(PUPPY_GAMELLES) + 1)) return 0;
++    if (strstr(c, "/../") || strpbrk(c, "\n\r") || strlen(c) >= 400) return 0;
++    if (lstat(c, &st) != 0 || !S_ISREG(st.st_mode)) return 0;
++    const char *pt = strrchr(c, '.');
++    if (!pt || !pt[1]) return 0;
++    return programme_ouvre_extension(p, pt + 1);
++}
++
+ static void lancer(int s, const char *id, const char *option)
+ {
+-    /* deux options connues, pour le Navigateur seulement : le lecteur
+-     * Streaming (0.10) et, 0.12.2, une application web : « --appli=<chemin> »
+-     * d'un raccourci .pupweb rangé sur une gamelle */
+-    if (option[0] && (strcmp(id, "navigateur") || (strcmp(option, "--streaming") && !option_appli_valide(option)))) {
+-        repondre(s, AUT_ERREUR, -1, "Option refusée.");
+-        return;
+-    }
+     programme_info p;
+     if (!programme_id_valide(id) || programme_trouver(id, &p) < 0) { repondre(s, AUT_ERREUR, -1, "Programme introuvable."); return; }
++    /* Options connues : pour le Navigateur, le lecteur Streaming (0.10) et une
++     * application web « --appli=<chemin> » (0.12.2) ; pour tout programme qui
++     * la déclare, « --ouvrir=<chemin> » un fichier d'une gamelle (0.18.12). */
++    if (option[0]) {
++        int ok = (!strcmp(id, "navigateur") && (!strcmp(option, "--streaming") || option_appli_valide(option)))
++                 || option_ouvrir_valide(option, &p);
++        if (!ok) { repondre(s, AUT_ERREUR, -1, "Option refusée."); return; }
++    }
+     unsigned uid = programme_uid(id, 1);
+     if (!uid) { repondre(s, AUT_ERREUR, -1, "Aucun uid libre pour ce programme."); return; }
+     char exe[512], donnees[400];
+@@ -696,6 +783,22 @@ static int est_le_mediacenter(const struct ucred *cr)
+     return !strcmp(exe, PUPPY_PROGRAMMES "/mediacenter/bin/mediacenter");
+ }
+ 
++/* 0.18.15 (PuppyWatch) : l'application de santé des disques (son uid, son
++ * exécutable installé) a le droit de demander AUT_SANTE, comme le Navigateur
++ * pour son moteur. C'est une lecture seule, sans secret ; aucun autre .puppy
++ * n'est autorisé (le bureau l'est toujours). */
++static int est_la_puppywatch(const struct ucred *cr)
++{
++    unsigned uid = programme_uid("puppywatch", 0);
++    if (!uid || cr->uid != uid) return 0;
++    char lien[64], exe[512];
++    snprintf(lien, sizeof lien, "/proc/%d/exe", (int)cr->pid);
++    ssize_t l = readlink(lien, exe, sizeof exe - 1);
++    if (l <= 0) return 0;
++    exe[l] = 0;
++    return !strcmp(exe, PUPPY_PROGRAMMES "/puppywatch/bin/puppywatch");
++}
++
+ /* 0.11 : au plus BACS_MAX boîtes à la fois (un Navigateur qui en lancerait
+  * sans fin saturerait la machine) */
+ #define BACS_MAX 4
+@@ -1245,6 +1348,14 @@ static void traiter(int s)
+         if (fd >= 0) close(fd);
+         return;
+     }
++    /* 0.18.15 : PuppyWatch (application signée, son exécutable installé) peut
++     * lire la santé des disques — lecture seule, sans secret. */
++    if (d.type == AUT_SANTE && a_session && est_la_puppywatch(&cr)) {
++        if (!argument_sur(d.arg[0])) { repondre(s, AUT_ERREUR, -1, "Demande mal formée."); if (fd >= 0) close(fd); return; }
++        sante(s, d.arg[0]);
++        if (fd >= 0) close(fd);
++        return;
++    }
+     if (!est_le_bureau(&cr)) {
+         /* au plus une ligne par minute et par uid dans le journal de sécurité */
+         static unsigned dernier_uid;
+@@ -1281,6 +1392,7 @@ static void traiter(int s)
+     case AUT_DESINSTALLER: desinstaller(s, d.arg[0], d.arg[1]); break;
+     case AUT_MAJ:          mise_a_jour(s, d.arg[0], d.arg[1]); break;
+     case AUT_AUDIT:        audit(s); break;
++    case AUT_SANTE:        sante(s, d.arg[0]); break;
+     case AUT_JOURNAL:      lire_journal(s); break;
+     case AUT_USB:          usb(s, d.arg[0], d.arg[1], d.arg[2]); break;
+     case AUT_ETEINDRE:
