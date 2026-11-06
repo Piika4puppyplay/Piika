@@ -317,6 +317,33 @@ pub unsafe extern "C" fn pupdate_secours_analyser(
     }
 }
 
+/// Pré-décision AVANT tout parsing du paquet : ne regarde que l'identifiant, la
+/// taille, l'empreinte (vs épingle) et la génération ; PAS la signature (qui
+/// exige de parser le paquet). 0 = « peut parser + vérifier la signature »,
+/// sinon motif (jamais 4 SignatureInvalide ici). Sert à refuser une copie dorée
+/// altérée AVANT de la confier au parseur C (réduction de surface d'attaque).
+/// `pupdate_secours_analyser` reste le juge final (il revérifie tout).
+///
+/// # Safety
+/// `id` chaîne C valide ; `empreinte` ≥ 32 o.
+#[no_mangle]
+pub unsafe extern "C" fn pupdate_secours_pre_analyser(
+    id: *const c_char,
+    empreinte: *const u8,
+    generation: u32,
+    taille: u64,
+) -> c_int {
+    let (Some(idv), false) = (lire_id(id), empreinte.is_null()) else {
+        return 8;
+    };
+    let mut emp = [0u8; 32];
+    core::ptr::copy_nonoverlapping(empreinte, emp.as_mut_ptr(), 32);
+    match secours::verdict_avant_parsing_id(idv, &emp, generation, taille) {
+        Verdict::Reinstaller => 0,
+        Verdict::Refuser(m) => code_secours(m),
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {
@@ -464,5 +491,21 @@ mod tests {
         // app connue, signée mais empreinte ≠ épingle (zéro par défaut) -> 5
         let vraie = [0x42u8; 32];
         assert_eq!(unsafe { pupdate_secours_analyser(pa.as_ptr(), 1, vraie.as_ptr(), 1, 10) }, 5);
+    }
+
+    #[test]
+    fn secours_pre_analyser_via_ffi() {
+        let emp = [0u8; 32];
+        // id hors des deux apps -> 1 (IdInconnu), sans jamais parser
+        let id = CString::new("navigateur").unwrap();
+        assert_eq!(unsafe { pupdate_secours_pre_analyser(id.as_ptr(), emp.as_ptr(), 1, 10) }, 1);
+        // app connue, empreinte ≠ épingle (zéro par défaut) -> 5, AVANT tout parsing
+        let pa = CString::new("paquets-autorite").unwrap();
+        let vraie = [0x42u8; 32];
+        assert_eq!(unsafe { pupdate_secours_pre_analyser(pa.as_ptr(), vraie.as_ptr(), 1, 10) }, 5);
+        // taille nulle -> 2 (Vide)
+        assert_eq!(unsafe { pupdate_secours_pre_analyser(pa.as_ptr(), emp.as_ptr(), 1, 0) }, 2);
+        // empreinte nulle = argument nul -> 8
+        assert_eq!(unsafe { pupdate_secours_pre_analyser(pa.as_ptr(), core::ptr::null(), 1, 10) }, 8);
     }
 }

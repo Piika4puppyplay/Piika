@@ -125,6 +125,54 @@ pub fn analyser_id(id: &str, signature_valide: bool, empreinte: &[u8; 32], gener
     }
 }
 
+/// Verdict de la phase AVANT tout parsing structurel du paquet .puppy.
+///
+/// Durcissement « surface d'attaque du recovery » (Piika 06/11) : le parseur de
+/// paquets (en C) ne doit JAMAIS toucher des octets qui ne valent pas déjà
+/// l'épingle connue-bonne. Cette phase ne regarde QUE des données SÛRES, sans
+/// parseur : identifiant, taille, empreinte SHA-256 (calculée en flux par un
+/// simple hachage) et génération (lue dans un petit fichier `.gen` à part). La
+/// signature n'est PAS encore regardée (elle exige de parser le paquet).
+///
+/// Un fichier doré altéré est ainsi rejeté par une comparaison de hachage à
+/// temps constant, AVANT le moindre octet de parsing structurel. La signature
+/// reste vérifiée ensuite, et `analyser` demeure le juge final (il revalide
+/// tout, signature comprise) : ceci est une barrière EN PLUS, pas à la place.
+///
+/// `Reinstaller` signifie seulement « peut passer au parsing + vérif
+/// signature », jamais « réinstalle sans vérifier la signature ».
+pub fn verdict_avant_parsing(
+    app: &AppDoree,
+    empreinte: &[u8; 32],
+    generation: u32,
+    taille: u64,
+) -> Verdict {
+    if taille == 0 {
+        return Verdict::Refuser(MotifRefus::Vide);
+    }
+    let lim = jail::Limites::DEFAUT;
+    if taille > lim.taille_fichier_max {
+        return Verdict::Refuser(MotifRefus::Bombe(RefusBombe::FichierTropGros));
+    }
+    // on ne fait pas confiance au créateur : le contenu DOIT valoir l'épingle,
+    // et on le vérifie AVANT de parser quoi que ce soit.
+    if !egal_constant(empreinte, &app.empreinte_epinglee) {
+        return Verdict::Refuser(MotifRefus::EmpreinteNonConforme);
+    }
+    if generation < app.generation_min {
+        return Verdict::Refuser(MotifRefus::RetourArriere);
+    }
+    Verdict::Reinstaller
+}
+
+/// Pré-verdict par identifiant (refuse tout id hors des deux apps).
+pub fn verdict_avant_parsing_id(id: &str, empreinte: &[u8; 32], generation: u32, taille: u64) -> Verdict {
+    match app_epinglee(id) {
+        Some(app) => verdict_avant_parsing(app, empreinte, generation, taille),
+        None => Verdict::Refuser(MotifRefus::IdInconnu),
+    }
+}
+
 // ===========================================================================
 //                                AUTOTESTS
 // ===========================================================================
@@ -194,5 +242,65 @@ mod tests {
         // est refusé tant que la vraie épingle n'est pas scellée au build.
         let pa = app_epinglee("paquets-autorite").unwrap();
         assert_eq!(analyser(pa, true, &[0x99; 32], 1, 10_000), Verdict::Refuser(MotifRefus::EmpreinteNonConforme));
+    }
+
+    // ---- phase AVANT parsing (durcissement surface d'attaque) ----
+
+    #[test]
+    fn avant_parsing_laisse_passer_si_epingle_ok() {
+        // empreinte = épingle, taille et génération correctes -> peut parser
+        let a = app(0xAB, 3);
+        assert_eq!(verdict_avant_parsing(&a, &[0xAB; 32], 5, 10_000), Verdict::Reinstaller);
+    }
+
+    #[test]
+    fn avant_parsing_refuse_hors_epingle_sans_parser() {
+        // le cœur : un doré altéré (≠ épingle) est rejeté AVANT tout parsing,
+        // sans que la signature n'ait même besoin d'être regardée.
+        let a = app(0xAB, 1);
+        assert_eq!(
+            verdict_avant_parsing(&a, &[0xCD; 32], 3, 10_000),
+            Verdict::Refuser(MotifRefus::EmpreinteNonConforme)
+        );
+    }
+
+    #[test]
+    fn avant_parsing_refuse_vide_et_trop_gros() {
+        let a = app(0xAB, 1);
+        assert_eq!(verdict_avant_parsing(&a, &[0xAB; 32], 3, 0), Verdict::Refuser(MotifRefus::Vide));
+        let gros = jail::Limites::DEFAUT.taille_fichier_max + 1;
+        assert_eq!(
+            verdict_avant_parsing(&a, &[0xAB; 32], 3, gros),
+            Verdict::Refuser(MotifRefus::Bombe(RefusBombe::FichierTropGros))
+        );
+    }
+
+    #[test]
+    fn avant_parsing_refuse_retour_arriere() {
+        let a = app(0xAB, 5);
+        assert_eq!(
+            verdict_avant_parsing(&a, &[0xAB; 32], 4, 10_000),
+            Verdict::Refuser(MotifRefus::RetourArriere)
+        );
+    }
+
+    #[test]
+    fn avant_parsing_id_inconnu_refuse() {
+        assert_eq!(
+            verdict_avant_parsing_id("navigateur", &[0u8; 32], 1, 10),
+            Verdict::Refuser(MotifRefus::IdInconnu)
+        );
+    }
+
+    #[test]
+    fn avant_parsing_puis_analyser_meme_decision() {
+        // cohérence : si le pré-verdict laisse passer et la signature est bonne,
+        // le juge final (analyser) réinstalle ; si le pré-verdict refuse sur
+        // l'épingle, analyser refuse aussi sur l'épingle (barrière redondante).
+        let a = app(0xAB, 2);
+        assert_eq!(verdict_avant_parsing(&a, &[0xAB; 32], 3, 500), Verdict::Reinstaller);
+        assert_eq!(analyser(&a, true, &[0xAB; 32], 3, 500), Verdict::Reinstaller);
+        assert_eq!(verdict_avant_parsing(&a, &[0x11; 32], 3, 500), Verdict::Refuser(MotifRefus::EmpreinteNonConforme));
+        assert_eq!(analyser(&a, true, &[0x11; 32], 3, 500), Verdict::Refuser(MotifRefus::EmpreinteNonConforme));
     }
 }
