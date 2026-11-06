@@ -1,0 +1,12 @@
+# Menu de puppy-GRUB — à poser sur l'ESP en \EFI\PUPPYOS\grub.conf
+# delai  : secondes avant le démarrage automatique (-1 ou absent = pas d'auto)
+# defaut : index de l'entrée présélectionnée (0 = la première)
+delai=5
+defaut=0
+
+titre=PuppyOS
+fichier=\EFI\PUPPYOS\puppyos.efi
+
+# Exemple d'entrée dualboot (décommenter si Windows est présent) :
+# titre=Windows
+# fichier=\EFI\Microsoft\Boot\bootmgfw.efi
