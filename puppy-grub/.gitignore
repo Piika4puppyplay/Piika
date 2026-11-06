@@ -1,0 +1,4 @@
+build/
+*.efi
+*.img
+vars.fd
