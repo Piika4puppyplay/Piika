@@ -417,6 +417,63 @@ pub unsafe extern "C" fn pupdate_secours_filet_libelle(couche: c_int, out: *mut 
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Montage sécurisé des lecteurs chiffrés (montage_securise.rs). Socle commun au
+//  déchiffrement multi-OS / explorateur / live. Jamais de destruction, jamais de
+//  montage à l'aveugle.
+// ---------------------------------------------------------------------------
+
+/// Délai (secondes) à imposer avant le prochain essai, après `echecs` ratés.
+#[no_mangle]
+pub extern "C" fn pupdate_montage_delai(echecs: u32) -> u32 {
+    crate::montage_securise::delai_apres_echecs(echecs)
+}
+
+/// Après la saisie d'un mot de passe. `code_bon` : 1 si le code ouvre le volume.
+/// `echecs_avant` : échecs consécutifs déjà subis. Retour :
+///   0 = bon code, ATTENDRE L'ANALYSE (sas Honey-Dog, pas de montage à l'aveugle) ;
+///   1 = code incorrect — `*out_essais` et `*out_delai_s` sont remplis (chrono
+///       évolutif), AUCUNE donnée n'est touchée.
+///
+/// # Safety
+/// `out_essais` et `out_delai_s` non nuls et inscriptibles.
+#[no_mangle]
+pub unsafe extern "C" fn pupdate_montage_apres_saisie(
+    code_bon: c_int,
+    echecs_avant: u32,
+    out_essais: *mut u32,
+    out_delai_s: *mut u32,
+) -> c_int {
+    use crate::montage_securise::{apres_saisie, Decision};
+    match apres_saisie(code_bon != 0, echecs_avant) {
+        Decision::AttendreAnalyse => 0,
+        Decision::CodeIncorrect { essais, delai_s } => {
+            if !out_essais.is_null() {
+                *out_essais = essais;
+            }
+            if !out_delai_s.is_null() {
+                *out_delai_s = delai_s;
+            }
+            1
+        }
+    }
+}
+
+/// Verdict du sas Honey-Dog (le code est déjà bon à ce stade). `analyse_acceptee`
+/// et `propre` : 1/0. Retour :
+///   0 = MONTER (analyse acceptée et propre) ;
+///   1 = NON monté — analyse refusée (le code était pourtant bon, on le dit) ;
+///   2 = NON monté — l'analyse a trouvé du dangereux.
+#[no_mangle]
+pub extern "C" fn pupdate_montage_apres_analyse(analyse_acceptee: c_int, propre: c_int) -> c_int {
+    use crate::montage_securise::{apres_analyse, Montage};
+    match apres_analyse(analyse_acceptee != 0, propre != 0) {
+        Montage::Monter => 0,
+        Montage::NonMonteRefusAnalyse { .. } => 1,
+        Montage::NonMonteDanger { .. } => 2,
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {

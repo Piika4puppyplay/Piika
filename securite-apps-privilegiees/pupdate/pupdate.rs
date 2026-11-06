@@ -18,6 +18,7 @@ pub mod ffi;
 pub mod format;
 pub mod installateur;
 pub mod jail;
+pub mod montage_securise;
 pub mod moteur;
 pub mod registre;
 pub mod secours;
