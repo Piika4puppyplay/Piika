@@ -71,14 +71,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/random.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
-/* ---- pont vers le cerveau Rust (secours.rs via libpupdate.a) ---- */
+/* ---- pont vers le cerveau Rust (secours.rs / slogans.rs via libpupdate.a) ---- */
 extern int pupdate_secours_analyser(const char *id, int signature_valide, const uint8_t *empreinte,
                                     uint32_t generation, uint64_t taille);
+extern unsigned pupdate_slogans_nombre(void);
+extern int pupdate_slogan(unsigned i, char *out, size_t cap);
+
+/* Bandeau : un slogan du dico qui tourne (choisi au hasard). Décor, sans effet
+ * sur la sécurité. */
+static void bandeau(void)
+{
+    unsigned n = pupdate_slogans_nombre();
+    if (!n) return;
+    unsigned char r = 0;
+    if (getrandom(&r, 1, 0) != 1) r = 0;
+    char s[256];
+    if (pupdate_slogan(r % n, s, sizeof s) > 0)
+        dprintf(2, "🐾 %s\n", s);
+}
 
 /* --------- table EN DUR des deux (et seules) apps réparables --------- */
 /* Rien n'est calculé à partir d'un argument : on compare l'identifiant reçu à
@@ -245,6 +261,8 @@ int main(int argc, char **argv)
     /* on se muselle AVANT tout */
     durcir();
     verrouiller_seccomp();
+
+    bandeau(); /* un slogan du dico qui tourne */
 
     if (argc < 2) fin(4, "usage: puprecovery reparer <id> | reparer-tout");
 

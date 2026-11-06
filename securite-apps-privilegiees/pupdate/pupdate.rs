@@ -21,6 +21,7 @@ pub mod jail;
 pub mod moteur;
 pub mod registre;
 pub mod secours;
+pub mod slogans;
 pub mod verif;
 
 // ---- point d'entrée appelé par le shim C (phase ultérieure : UI/outil) ----

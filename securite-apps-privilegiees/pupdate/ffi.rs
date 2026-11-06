@@ -317,6 +317,28 @@ pub unsafe extern "C" fn pupdate_secours_analyser(
     }
 }
 
+/// Nombre de slogans du dico qui tourne.
+#[no_mangle]
+pub extern "C" fn pupdate_slogans_nombre() -> u32 {
+    crate::slogans::nombre() as u32
+}
+
+/// Écrit le slogan d'index `i` (en rotation) dans `out`/`cap` (+ NUL).
+/// Renvoie la longueur écrite (sans le NUL), ou -1 si le tampon est trop petit
+/// ou nul.
+///
+/// # Safety
+/// `out` doit pointer sur au moins `cap` octets inscriptibles.
+#[no_mangle]
+pub unsafe extern "C" fn pupdate_slogan(i: u32, out: *mut c_char, cap: usize) -> c_int {
+    let s = crate::slogans::slogan(i as usize);
+    if ecrire(out, cap, s) {
+        s.len() as c_int
+    } else {
+        -1
+    }
+}
+
 // codes stables de RefusBombe pour le C (1..=7)
 fn code_bombe(r: jail::RefusBombe) -> c_int {
     use jail::RefusBombe::*;
