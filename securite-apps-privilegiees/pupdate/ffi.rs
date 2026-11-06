@@ -474,6 +474,59 @@ pub extern "C" fn pupdate_montage_apres_analyse(analyse_acceptee: c_int, propre:
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Déchiffrement multi-OS (dechiffrement.rs) : que sait-on ouvrir, et comment ?
+//  Honnête sur nos limites, zéro brute-force, OS voisin jamais abîmé.
+// ---------------------------------------------------------------------------
+
+/// Classe le `fs` détecté (chaîne C UTF-8 de `inspection.c`) et décide
+/// l'ouverture possible. `puppyos`/`bitlocker`/`filevault` : 1/0. Retour :
+///   0 = par mot de passe (→ sas `montage_securise`), lecture/écriture ;
+///   1 = en clair, lecture/écriture (échange amovible FAT/exFAT) ;
+///   2 = en clair, LECTURE SEULE (OS voisin NTFS/ext/APFS/ISO : jamais abîmé) ;
+///   3 = clé de récupération fournisseur requise (BitLocker/FileVault), aucune
+///       tentative de force — `*out_fournisseur` reçoit 1=Microsoft, 2=Apple ;
+///   4 = non montable (swap) ;
+///   5 = non supporté (chiffré inconnu, format non reconnu).
+///
+/// # Safety
+/// `fs` est un pointeur C valide terminé par `\0` (UTF-8). `out_fournisseur`
+/// peut être nul ; sinon il est inscriptible.
+#[no_mangle]
+pub unsafe extern "C" fn pupdate_dechiffrement_ouverture(
+    fs: *const c_char,
+    puppyos: c_int,
+    bitlocker: c_int,
+    filevault: c_int,
+    out_fournisseur: *mut c_int,
+) -> c_int {
+    use crate::dechiffrement::{classer, ouverture, Ouverture};
+    if fs.is_null() {
+        return 5;
+    }
+    let s = match core::ffi::CStr::from_ptr(fs).to_str() {
+        Ok(s) => s,
+        Err(_) => return 5,
+    };
+    let f = classer(s, puppyos != 0, bitlocker != 0, filevault != 0);
+    if !out_fournisseur.is_null() {
+        *out_fournisseur = 0;
+    }
+    match ouverture(f) {
+        Ouverture::MotDePasse { .. } => 0,
+        Ouverture::SansChiffrement { ecriture: true } => 1,
+        Ouverture::SansChiffrement { ecriture: false } => 2,
+        Ouverture::CleRecuperation { fournisseur, .. } => {
+            if !out_fournisseur.is_null() {
+                *out_fournisseur = if fournisseur == "Apple" { 2 } else { 1 };
+            }
+            3
+        }
+        Ouverture::NonMontable { .. } => 4,
+        Ouverture::NonSupporte { .. } => 5,
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {

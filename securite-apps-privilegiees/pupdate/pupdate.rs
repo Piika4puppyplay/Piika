@@ -14,6 +14,7 @@
 
 pub mod apps;
 pub mod coffre;
+pub mod dechiffrement;
 pub mod ffi;
 pub mod format;
 pub mod installateur;

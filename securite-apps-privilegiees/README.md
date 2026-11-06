@@ -16,7 +16,7 @@ openat2, abandon de privilèges, TPM, memfd). C'est le même modèle que le Medi
 Center Rust : un cœur testé relié par un pont C ABI.
 
 > ⚠️ **État : squelettes compilés et testés, NON câblés au démarrage.** Tout
-> compile et se lie proprement, et le cœur Rust passe **132/132 tests**. Mais
+> compile et se lie proprement, et le cœur Rust passe **141/141 tests**. Mais
 > le TPM, le seccomp, `openat2`, `memfd`+`fexecve` et l'install réel ne sont
 > **validables qu'en VM** sur la machine de Piika (QEMU/VirtualBox + swtpm).
 > Rien n'est branché au boot ni à `puppy-autorite` tant que la VM n'a pas
@@ -189,11 +189,42 @@ calculé, c'est l'appelant qui attend), jamais de panique. 7 tests.
 
 ---
 
+## 7. Déchiffrement multi-OS — `dechiffrement.rs`
+
+> « On n'ouvre que ce qu'on sait vraiment ouvrir, et on n'abîme jamais l'OS d'à
+> côté. »
+
+Demande Piika (06/11) : ouvrir des volumes Windows / Mac / Linux + clés USB /
+cartes / téléphone, **uniquement** avec le bon mot de passe, **sans** jamais
+brute-forcer, casser ni forcer quoi que ce soit. Ce module est le **cerveau**
+(pur, testé) qui, à partir du système de fichiers détecté en **lecture seule**
+par `inspection.c`, décide ce qu'on peut honnêtement offrir :
+
+| Format | Ouverture |
+|---|---|
+| Notre volume / LUKS | **par mot de passe** → sas `montage_securise`, lecture/écriture |
+| FAT / exFAT (échange amovible) | en clair, lecture/écriture |
+| NTFS / ext / APFS en clair, ISO | en clair, **lecture seule** (OS voisin jamais abîmé) |
+| NTFS **BitLocker** | **clé de récupération Microsoft** obligatoire, zéro force |
+| APFS **FileVault** | **clé de récupération Apple** obligatoire, zéro force |
+| swap | rien à monter |
+| chiffré d'un format inconnu | **non supporté** — on le dit franchement |
+
+Trois principes : **honnêteté sur nos limites** (BitLocker/FileVault ne se
+contournent pas — il faut la clé du fournisseur, et c'est tant mieux) ; **zéro
+brute-force** (un volume à mot de passe passe par le chrono évolutif + Honey-Dog
+du module 6 ; un volume verrouillé fournisseur n'est **jamais** attaqué, on
+réclame la clé) ; **on n'abîme pas l'OS voisin** (un système de fichiers
+étranger est offert en lecture seule par défaut). Module pur, 9 tests. Le C fait
+l'ouverture dm-crypt réelle et le montage : **à valider en VM**.
+
+---
+
 ## Contenu du dossier
 
 | Chemin | Rôle |
 |---|---|
-| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `montage_securise`, `ffi` (pont C ABI), `moteur`, `pupdate` |
+| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `montage_securise`, `dechiffrement`, `ffi` (pont C ABI), `moteur`, `pupdate` |
 | `c/paquets-autorite.c` | Installateur `.puppy` confiné (privilégié) |
 | `c/puppy-lanceur.c` | Lanceur « refus pur » des apps chiffrées (memfd+fexecve) |
 | `c/puprecovery.c` | Console de secours dans l'OS (réinstalle par copie signée + épinglée) |
@@ -216,7 +247,7 @@ Sans Cargo (comme le reste de l'OS), bibliothèque statique + shim C :
 # objets crypto depuis libpuppy (crypto.c, monocypher.c, monocypher-ed25519.c)
 rustc --edition 2021 --test pupdate/pupdate.rs \
       -C link-arg=crypto.o -C link-arg=monocypher.o -C link-arg=mced.o -o pupdate-test
-./pupdate-test     # 132 passed
+./pupdate-test     # 141 passed
 # bibliothèque statique reliée aux binaires C :
 rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=pic \
       -C opt-level=2 pupdate/pupdate.rs -o libpupdate.a
@@ -241,6 +272,10 @@ rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=p
 - [ ] **montage sécurisé** : chrono anti-brute-force réel sur une invite de
       déchiffrement, ouverture dm-crypt, sas Honey-Dog (analyse réelle) avant tout
       montage, fenêtre « code bon / code mauvais » + motif de non-montage
+- [ ] **déchiffrement multi-OS** : brancher `dechiffrement` sur la détection
+      `inspection.c` (sous-détection BitLocker/FileVault par signature), ouverture
+      dm-crypt des volumes à mot de passe, montage lecture seule des OS voisins,
+      invite de clé de récupération pour BitLocker/FileVault (aucune tentative)
 - [ ] UI de réparation + câblage de l'icône
 
 Rien n'est câblé, publié ni installé sur du matériel sans accord explicite.
