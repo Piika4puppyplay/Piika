@@ -129,16 +129,49 @@ qu'il a déjà été installé.
 
 ---
 
+## 5. Recovery embarqué dans l'ISO — `puprecovery-iso`
+
+> « La console ne prescrit jamais à l'aveugle. Elle vérifie, elle diagnostique,
+> puis elle soigne. »
+
+Booté **depuis l'ISO** (sans démarrer l'OS installé), il détecte une
+installation PuppyOS par l'inspecteur **lecture seule** (`inspection.c` : lit
+tables et signatures, aucun montage), puis — c'est le cerveau Rust testé
+`secours_iso.rs` qui décide — répare les deux apps privilégiées depuis une copie
+dorée **signée + épinglée** embarquée dans l'ISO (même vérification que la
+console : empreinte épinglée **avant tout parsing**).
+
+Règles dures : **jamais de format automatique** ; installation chiffrée → le
+**mot de passe** de déchiffrement est **obligatoire** avant de toucher quoi que
+ce soit (aucune clé stockée, c'est la phrase de l'utilisateur qui ouvre le
+volume → réparation **sans perte de données**) ; on ne touche jamais un disque
+qui n'est pas visiblement PuppyOS.
+
+**Filet de secours** (`secours_filet.rs`) : les couches s'empilent, de la plus
+riche à la plus fiable — console dans l'OS → recovery de l'ISO → réinstallation
+propre depuis l'ISO signée → (plancher) intervention manuelle annoncée. Quand
+une couche échoue, on descend d'un cran ; on ne dégrade jamais la sécurité en
+silence.
+
+> **Squelette.** La détection (lecture seule) et la décision (Rust) tournent déjà
+> — `puprecovery-iso detecter <disque>` fait un dry-run qui n'écrit rien.
+> L'ouverture dm-crypt (mot de passe), le montage et la pose A/B touchent un vrai
+> disque et une vraie puce : **à valider en VM**, non câblés dans l'ISO.
+
+---
+
 ## Contenu du dossier
 
 | Chemin | Rôle |
 |---|---|
-| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `ffi` (pont C ABI), `moteur`, `pupdate` |
+| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `ffi` (pont C ABI), `moteur`, `pupdate` |
 | `c/paquets-autorite.c` | Installateur `.puppy` confiné (privilégié) |
 | `c/puppy-lanceur.c` | Lanceur « refus pur » des apps chiffrées (memfd+fexecve) |
-| `c/puprecovery.c` | Console de secours (réinstalle par copie signée + épinglée) |
+| `c/puprecovery.c` | Console de secours dans l'OS (réinstalle par copie signée + épinglée) |
+| `c/puprecovery-iso.c` | Recovery embarqué dans l'ISO (répare sans démarrer l'OS) |
 | `c/coffre-apps.c` | Rotation / scellement des coffres `.pupcoffre` |
 | `wiring-autorite-paquets.patch` | Modifs des fichiers existants : `libpuppy/paquet.c` (anti-bombe), `security/puppy-autorite.c` (câblage + retrait du doublon), `Makefile` |
+| `wiring-puprecovery-iso.makefile` | Règle Makefile du recovery ISO (près de `puppy-installateur`) |
 | `tests/test_bombe.c` | Test ciblé de l'anti-bombe de l'extracteur (5/5) |
 | `ressources/` | Icône maison de la console (chiot infirmier + seringue) |
 
@@ -154,7 +187,7 @@ Sans Cargo (comme le reste de l'OS), bibliothèque statique + shim C :
 # objets crypto depuis libpuppy (crypto.c, monocypher.c, monocypher-ed25519.c)
 rustc --edition 2021 --test pupdate/pupdate.rs \
       -C link-arg=crypto.o -C link-arg=monocypher.o -C link-arg=mced.o -o pupdate-test
-./pupdate-test     # 105 passed
+./pupdate-test     # 125 passed
 # bibliothèque statique reliée aux binaires C :
 rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=pic \
       -C opt-level=2 pupdate/pupdate.rs -o libpupdate.a
@@ -170,6 +203,11 @@ rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=p
       **interruption pendant la réparation** (la pose A/B atomique doit garantir
       « soit l'ancienne, soit la neuve, jamais un demi-état »)
 - [ ] renseigner les **vraies empreintes épinglées** des copies dorées (au build)
+- [ ] **recovery ISO** : détection d'une install depuis l'ISO, ouverture dm-crypt
+      par mot de passe (aucune clé stockée), réparation des 2 apps **sans démarrer
+      l'OS**, réinstallation **sans format** (données préservées)
+- [ ] **filet de secours** : enchaînement console → ISO → réinstallation signée
+      quand chaque couche échoue (jamais de dégradation silencieuse)
 - [ ] brancher l'appel `coffre-apps rotation` dans `puppy-maj`
 - [ ] UI de réparation + câblage de l'icône
 

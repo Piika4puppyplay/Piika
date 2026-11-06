@@ -21,6 +21,8 @@ pub mod jail;
 pub mod moteur;
 pub mod registre;
 pub mod secours;
+pub mod secours_filet;
+pub mod secours_iso;
 pub mod slogans;
 pub mod verif;
 

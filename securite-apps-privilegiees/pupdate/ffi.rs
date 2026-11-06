@@ -344,6 +344,79 @@ pub unsafe extern "C" fn pupdate_secours_pre_analyser(
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Recovery embarqué dans l'ISO (secours_iso.rs). Le C (ISO) fait l'inspection
+//  lecture seule puis demande ICI la décision. Entrées : 1/0. Retour :
+//    0 RienDetecte ; 1 MotDePasseRequis ; 2 ReparerApps ;
+//    3 ProposerReinstallSansFormat.
+// ---------------------------------------------------------------------------
+#[no_mangle]
+pub extern "C" fn pupdate_secours_iso_decider(
+    puppyos_detecte: c_int,
+    chiffre: c_int,
+    montable: c_int,
+    apps_presentes: c_int,
+) -> c_int {
+    use crate::secours_iso::{decider, ActionIso, EtatInstall};
+    let e = EtatInstall {
+        puppyos_detecte: puppyos_detecte != 0,
+        chiffre: chiffre != 0,
+        montable: montable != 0,
+        apps_presentes: apps_presentes != 0,
+    };
+    match decider(&e) {
+        ActionIso::RienDetecte => 0,
+        ActionIso::MotDePasseRequis => 1,
+        ActionIso::ReparerApps => 2,
+        ActionIso::ProposerReinstallSansFormat => 3,
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Filet de secours étagé (secours_filet.rs). Couches : 0 ConsoleDansOS ;
+//  1 RecoveryIso ; 2 ReinstallSignee ; 3 PlusDeFilet. `couche_suivante` descend
+//  d'un cran si la couche actuelle a échoué, sinon reste. Entrée/sortie = ces
+//  codes ; une couche inconnue est traitée comme le plancher (3).
+// ---------------------------------------------------------------------------
+fn couche_depuis(code: c_int) -> crate::secours_filet::Couche {
+    use crate::secours_filet::Couche::*;
+    match code {
+        0 => ConsoleDansOS,
+        1 => RecoveryIso,
+        2 => ReinstallSignee,
+        _ => PlusDeFilet,
+    }
+}
+fn code_couche(c: crate::secours_filet::Couche) -> c_int {
+    use crate::secours_filet::Couche::*;
+    match c {
+        ConsoleDansOS => 0,
+        RecoveryIso => 1,
+        ReinstallSignee => 2,
+        PlusDeFilet => 3,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn pupdate_secours_filet_suivante(couche: c_int, a_echoue: c_int) -> c_int {
+    code_couche(crate::secours_filet::couche_suivante(couche_depuis(couche), a_echoue != 0))
+}
+
+/// Libellé humain d'une couche du filet dans `out`/`cap` (+ NUL). Longueur
+/// écrite, ou -1 si le tampon est trop petit/nul.
+///
+/// # Safety
+/// `out` doit pointer sur au moins `cap` octets inscriptibles.
+#[no_mangle]
+pub unsafe extern "C" fn pupdate_secours_filet_libelle(couche: c_int, out: *mut c_char, cap: usize) -> c_int {
+    let s = couche_depuis(couche).libelle();
+    if ecrire(out, cap, s) {
+        s.len() as c_int
+    } else {
+        -1
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {
