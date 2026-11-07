@@ -17,6 +17,10 @@
 //! Module PUR : aucune E/S, aucun privilège, jamais de panique.
 #![allow(dead_code)]
 
+/// Noms du 5e chien (choix Piika : « pas glamour », les deux lui vont). Rôle de
+/// douanier des entrées non fiables. Libellés d'affichage côté UI/aide.
+pub const NOMS: [&str; 2] = ["Scrap-Dog", "Trash-Dog"];
+
 /// Bornes du poste de douane (identiques à l'anti-bombe de `libpuppy/paquet.c`).
 pub const TAILLE_MAX: u64 = 256 * 1024 * 1024; // 256 Mio par entrée
 pub const CUMUL_MAX: u64 = 512 * 1024 * 1024; // 512 Mio cumulés

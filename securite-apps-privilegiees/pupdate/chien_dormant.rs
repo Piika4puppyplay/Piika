@@ -16,6 +16,12 @@
 //! déchiffrement (coffre TPM existant), applique la posture et re-scelle.
 #![allow(dead_code)]
 
+/// Nom de code interne du 4e chien (choix Piika). Présent et identifiable dans
+/// les sources, mais jamais exposé dans l'interface, l'aide, ni annoncé : dans
+/// l'UI son libellé reste « Inconnu ? ». Barghest = le molosse noir légendaire
+/// des landes, aux yeux de braise, dont on ne sait s'il existe encore.
+pub const NOM_CODE: &str = "Barghest";
+
 /// Niveau de menace constaté par la sécurité normale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Menace {
