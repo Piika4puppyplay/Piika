@@ -1,0 +1,7 @@
+type=programme
+id=puppyhelp
+nom=PuppyHelp
+version=0.1
+auteur=PuppyOS
+description=Le centre d'aide de PuppyOS : a quoi sert chaque chose, comment l'utiliser, et quoi faire en cas de souci.
+executable=bin/puppyhelp
