@@ -353,6 +353,43 @@ le gros chantier app à suivre. On ne touche pas à puppy-rescu.
 
 ---
 
+## 14. Passerelle d'aide + fenêtre de secours indépendante — `c/aide-passerelle.c`
+
+> « L'aide peut disparaître ; le bureau, lui, sait toujours quoi en dire. »
+
+Premier morceau d'UI posé sur le cœur §13, côté **bureau** (donc présent même
+quand le paquet PuppyHelp est absent). Deux garanties de Piika, incarnées en C :
+
+- **un seul point d'entrée** pour tous les raccourcis d'aide des apps système :
+  `aide_ouvrir_page("categorie/page")`. Il détecte l'état de PuppyHelp
+  (installé / désactivé / exécutable manquant…), **appelle le cœur testé**
+  `pupdate_aide_raccourci`, puis ouvre la bonne page **ou** la fenêtre de
+  secours. Il **ne bloque jamais** l'appli appelante : l'appel retourne tout de
+  suite ;
+- **la fenêtre de secours « Centre d'aide indisponible » est indépendante** :
+  tout son texte et son dessin vivent dans le bureau, elle ne charge aucun
+  morceau de PuppyHelp, donc elle s'affiche même si le paquet est retiré ou
+  abîmé. Elle redit que **les applications continuent de fonctionner**, puis la
+  marche à suivre (vérifier l'installation du paquet · son état dans le
+  gestionnaire · réinstaller depuis une source authentifiée · consulter les
+  journaux) et un bouton vers le gestionnaire d'applications.
+
+Détection honnête : le bureau constate sans privilège la présence du paquet, un
+marqueur de désactivation, un exécutable manquant ; la péremption (catalogue) et
+l'intégrité signée (manifeste) sont jugées ailleurs — quand elles surviennent,
+le cœur les traite de la même façon (secours). L'icône est provisoire (celle
+d'« À propos ») : l'icône dédiée et les illustrations arriveront avec le `.puppy`
+et resteront **remplaçables**.
+
+Intégration : `wiring-aide-passerelle.makefile` (le bureau lie `libpupdate.a` ;
+entrée « Centre d'aide » dans le menu Aide de la barre). Compile et se lie
+proprement dans `puppy-bureau` ; symbole `pupdate_aide_raccourci` lié. À valider
+en VM avec PuppyHelp tour à tour installé, désactivé et retiré. Les 3 habillages
+rétro, les catégories, la recherche et le « Où suis-je ? » restent le gros
+chantier de l'app `.puppy` elle-même, à suivre.
+
+---
+
 ## Contenu du dossier
 
 | Chemin | Rôle |
@@ -363,8 +400,10 @@ le gros chantier app à suivre. On ne touche pas à puppy-rescu.
 | `c/puprecovery.c` | Console de secours dans l'OS (réinstalle par copie signée + épinglée) |
 | `c/puprecovery-iso.c` | Recovery embarqué dans l'ISO (répare sans démarrer l'OS) |
 | `c/coffre-apps.c` | Rotation / scellement des coffres `.pupcoffre` |
+| `c/aide-passerelle.c` + `.h` | Passerelle d'aide + fenêtre de secours indépendante (bureau, `desktop/shell/`) |
 | `wiring-autorite-paquets.patch` | Modifs des fichiers existants : `libpuppy/paquet.c` (anti-bombe), `security/puppy-autorite.c` (câblage + retrait du doublon), `Makefile` |
 | `wiring-puprecovery-iso.makefile` | Règle Makefile du recovery ISO (près de `puppy-installateur`) |
+| `wiring-aide-passerelle.makefile` | Lien de `libpupdate.a` au bureau + entrée « Centre d'aide » du menu Aide |
 | `tests/test_bombe.c` | Test ciblé de l'anti-bombe de l'extracteur (5/5) |
 | `ressources/` | Icône maison de la console (chiot infirmier + seringue) |
 
