@@ -16,7 +16,7 @@ openat2, abandon de privilèges, TPM, memfd). C'est le même modèle que le Medi
 Center Rust : un cœur testé relié par un pont C ABI.
 
 > ⚠️ **État : squelettes compilés et testés, NON câblés au démarrage.** Tout
-> compile et se lie proprement, et le cœur Rust passe **166/166 tests**. Mais
+> compile et se lie proprement, et le cœur Rust passe **183/183 tests**. Mais
 > le TPM, le seccomp, `openat2`, `memfd`+`fexecve` et l'install réel ne sont
 > **validables qu'en VM** sur la machine de Piika (QEMU/VirtualBox + swtpm).
 > Rien n'est branché au boot ni à `puppy-autorite` tant que la VM n'a pas
@@ -299,7 +299,57 @@ et deux garanties invariables : **ne détruit jamais les données**, **n'enferme
 jamais le propriétaire dehors**. Il n'a **aucun pouvoir** que la sécurité normale
 n'a pas (sinon ce serait lui la cible). Danger éliminé → il se **re-scelle** et
 efface ses secrets d'éveil. Qu'il fasse ramer à fond : c'est le prix du dernier
-rempart. Non affiché dans l'OS. Module pur, 6 tests.
+rempart. Non affiché dans l'OS, aucun réveil manuel possible. Module pur.
+
+**Journal d'intervention vérifiable** (demande Piika) : le dernier rempart n'agit
+jamais en silence. Chaque événement **grave** laisse une entrée — éveil réel
+**comme** tentative de faux réveil refusée (forensic : quelqu'un a essayé sans
+signature) — avec des octets canoniques stables à authentifier par HMAC côté C,
+pour un journal **infalsifiable, vérifiable après coup**. Les menaces anodines ne
+le polluent pas. Module pur, 10 tests.
+
+## 12. Le 5e chien « Scrap-Dog » : douane des entrées non fiables — `douane.rs`
+
+> « Rust avale le danger ; le C agit sur du propre. »
+
+Le poste de douane par lequel passe **toute entrée non fiable** (fichier ouvert,
+catalogue, paquet, en-tête de déchiffrement, métadonnées) avant qu'un chien C ne
+la touche. Décide (pur, testé), à partir des bornes déclarées, s'il la **remet au
+C** ou la **rejette avant tout traitement** : un **type inconnu ne passe jamais**
+(on ne remet au C que ce qu'on sait borner), et toute borne dépassée (256 Mio par
+entrée, 512 Mio cumulés sans débordement, profondeur 32, 20 000 entrées — les
+mêmes que l'anti-bombe de l'extracteur) est refusée. C'est **là** que vivent les
+buffer-overflows : Rust les absorbe, le C ne reçoit que du borné. Module pur, 6 tests.
+
+Noms de code internes figés (choix Piika) : le 4e chien = **Barghest** (présent et
+identifiable dans les sources, mais jamais exposé dans l'UI ni l'aide — libellé
+« Inconnu ? ») ; le 5e chien = **Scrap-Dog / Trash-Dog**.
+
+## 13. Centre d'aide PuppyHelp — cœur logique de sûreté — `aide.rs`
+
+> « L'aide est facultative : aucune app système n'en dépend. »
+
+Le Centre d'aide est une app `.puppy` système **à part**, **facultative**, non
+monolithique, supprimable/désactivable/réinstallable. Ce module garantit (pur,
+testé) les comportements qui ne doivent **jamais** casser — l'UI rétro
+skeuomorphe (Win98/XP, habillages, « Où suis-je ? », recherche, adaptatif) se
+construit par-dessus :
+
+- **un raccourci ne bloque jamais l'appli appelante** : aide non opérationnelle
+  (désinstallée, désactivée, obsolète, corrompue, indisponible) ou identifiant de
+  page invalide → **fenêtre de secours**, l'appli continue ;
+- **la fenêtre de secours est indépendante** du centre d'aide (sinon elle ne
+  pourrait pas s'afficher quand il est HS) ;
+- **le choix de l'utilisateur n'est jamais écrasé** : une app supprimée ou
+  désactivée n'est **jamais** réinstallée/réactivée de force, même très ancienne ;
+  préinstallation sur système neuf et MAJ forcée si obsolète **seulement** si
+  active ;
+- **non monolithique** : une page absente ou abîmée donne une erreur **isolée**,
+  le reste de l'aide reste debout.
+
+Module pur, 7 tests. Pont C ABI : `pupdate_aide_raccourci`, `pupdate_aide_politique_maj`.
+L'UI, l'index de recherche, les fiches par catégorie et le « Où suis-je ? » sont
+le gros chantier app à suivre. On ne touche pas à puppy-rescu.
 
 ---
 
@@ -307,7 +357,7 @@ rempart. Non affiché dans l'OS. Module pur, 6 tests.
 
 | Chemin | Rôle |
 |---|---|
-| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `montage_securise`, `dechiffrement`, `clavier_securise`, `explorateur`, `honeydog`, `chien_dormant`, `ffi` (pont C ABI), `moteur`, `pupdate` |
+| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `montage_securise`, `dechiffrement`, `clavier_securise`, `explorateur`, `honeydog`, `chien_dormant`, `douane`, `aide`, `ffi` (pont C ABI), `moteur`, `pupdate` |
 | `c/paquets-autorite.c` | Installateur `.puppy` confiné (privilégié) |
 | `c/puppy-lanceur.c` | Lanceur « refus pur » des apps chiffrées (memfd+fexecve) |
 | `c/puprecovery.c` | Console de secours dans l'OS (réinstalle par copie signée + épinglée) |
@@ -330,7 +380,7 @@ Sans Cargo (comme le reste de l'OS), bibliothèque statique + shim C :
 # objets crypto depuis libpuppy (crypto.c, monocypher.c, monocypher-ed25519.c)
 rustc --edition 2021 --test pupdate/pupdate.rs \
       -C link-arg=crypto.o -C link-arg=monocypher.o -C link-arg=mced.o -o pupdate-test
-./pupdate-test     # 166 passed
+./pupdate-test     # 183 passed
 # bibliothèque statique reliée aux binaires C :
 rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=pic \
       -C opt-level=2 pupdate/pupdate.rs -o libpupdate.a

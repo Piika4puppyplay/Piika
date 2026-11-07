@@ -644,6 +644,110 @@ pub extern "C" fn pupdate_chien_dormant_reveil(menace: c_int, signal_signe_valid
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Le 5e chien « Scrap-Dog » : douane des entrées non fiables (douane.rs).
+// ---------------------------------------------------------------------------
+
+/// Examine une entrée non fiable avant de la remettre à un chien C. `taille`,
+/// `cumul` : octets. `profondeur`, `nb_entrees` : bornes du lot. `type_connu` :
+/// 1 si on sait interpréter ce type. Retour : 1 = passer (dans les bornes),
+/// 0 = rejeter (hors bornes ou type inconnu) — rejet AVANT tout traitement C.
+#[no_mangle]
+pub extern "C" fn pupdate_douane_examiner(
+    taille: u64,
+    cumul: u64,
+    profondeur: u32,
+    nb_entrees: u32,
+    type_connu: c_int,
+) -> c_int {
+    if crate::douane::peut_passer(taille, cumul, profondeur, nb_entrees, type_connu != 0) {
+        1
+    } else {
+        0
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Journal d'intervention vérifiable du chien dormant (chien_dormant.rs).
+// ---------------------------------------------------------------------------
+
+/// Construit l'entrée de journal d'un événement du chien dormant et remplit ses
+/// octets canoniques (à authentifier par HMAC côté C). `menace` : 0/1/2.
+/// `signal_signe_valide` : 1/0. `out4` : tampon de 4 octets (peut être nul).
+/// Retour : 1 = éveil tracé, 0 = resté scellé (tracé seulement si menace grave).
+///
+/// # Safety
+/// Si `out4` n'est pas nul, il pointe vers au moins 4 octets inscriptibles.
+#[no_mangle]
+pub unsafe extern "C" fn pupdate_chien_dormant_journaliser(
+    menace: c_int,
+    signal_signe_valide: c_int,
+    out4: *mut u8,
+) -> c_int {
+    use crate::chien_dormant::{journaliser, octets_a_authentifier, Issue, Menace};
+    let m = match menace {
+        0 => Menace::Aucune,
+        1 => Menace::Ordinaire,
+        _ => Menace::Grave,
+    };
+    let e = journaliser(m, signal_signe_valide != 0);
+    if !out4.is_null() {
+        let octets = octets_a_authentifier(&e);
+        core::ptr::copy_nonoverlapping(octets.as_ptr(), out4, 4);
+    }
+    match e.issue {
+        Issue::Eveille => 1,
+        Issue::Dormi => 0,
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Centre d'aide PuppyHelp (aide.rs) : disponibilité, secours, politique MAJ.
+// ---------------------------------------------------------------------------
+
+/// Résout un raccourci d'aide depuis une app. `etat` : 0=opérationnel,
+/// 1=désinstallé, 2=désactivé, 3=obsolète, 4=corrompu, autre=indisponible.
+/// `page_id_valide` : 1/0. Retour : 1 = ouvrir la page ; 0 = afficher le secours
+/// (ne bloque JAMAIS l'appli appelante).
+#[no_mangle]
+pub extern "C" fn pupdate_aide_raccourci(etat: c_int, page_id_valide: c_int) -> c_int {
+    use crate::aide::{resoudre_raccourci, EtatAide, ResolutionRaccourci};
+    let e = match etat {
+        0 => EtatAide::Operationnel,
+        1 => EtatAide::Desinstalle,
+        2 => EtatAide::Desactive,
+        3 => EtatAide::Obsolete,
+        4 => EtatAide::Corrompu,
+        _ => EtatAide::Indisponible,
+    };
+    match resoudre_raccourci(e, page_id_valide != 0) {
+        ResolutionRaccourci::OuvrirPage => 1,
+        ResolutionRaccourci::AfficherSecours { .. } => 0,
+    }
+}
+
+/// Politique de MAJ/préinstallation d'une app facultative. `etat_install` :
+/// 0=jamais installé, 1=installé actif, 2=supprimé par l'utilisateur,
+/// 3=désactivé par l'utilisateur. `obsolete` : 1/0. Retour :
+///   0 = préinstaller ; 1 = forcer la MAJ ; 2 = rien à faire ;
+///   3 = respecter le choix utilisateur (ne jamais réinstaller de force).
+#[no_mangle]
+pub extern "C" fn pupdate_aide_politique_maj(etat_install: c_int, obsolete: c_int) -> c_int {
+    use crate::aide::{politique_maj, EtatInstallation, PolitiqueMaj};
+    let e = match etat_install {
+        0 => EtatInstallation::JamaisInstalle,
+        1 => EtatInstallation::InstalleActif,
+        2 => EtatInstallation::SupprimeParUtilisateur,
+        _ => EtatInstallation::DesactiveParUtilisateur,
+    };
+    match politique_maj(e, obsolete != 0) {
+        PolitiqueMaj::Preinstaller => 0,
+        PolitiqueMaj::ForcerMaj => 1,
+        PolitiqueMaj::RienAFaire => 2,
+        PolitiqueMaj::RespecterChoix => 3,
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {

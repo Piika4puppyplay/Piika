@@ -16,6 +16,12 @@
 //! déchiffrement (coffre TPM existant), applique la posture et re-scelle.
 #![allow(dead_code)]
 
+/// Nom de code interne du 4e chien (choix Piika). Présent et identifiable dans
+/// les sources, mais jamais exposé dans l'interface, l'aide, ni annoncé : dans
+/// l'UI son libellé reste « Inconnu ? ». Barghest = le molosse noir légendaire
+/// des landes, aux yeux de braise, dont on ne sait s'il existe encore.
+pub const NOM_CODE: &str = "Barghest";
+
 /// Niveau de menace constaté par la sécurité normale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Menace {
@@ -125,6 +131,76 @@ pub fn eveil_sans_degats(menace: Menace, signal_signe_valide: bool) -> bool {
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Journal d'intervention VÉRIFIABLE (demande Piika : « son propre journal
+//  d'intervention, vérifiable après coup »). Le dernier rempart n'agit jamais
+//  en silence : chaque événement grave laisse une trace authentifiable.
+// ---------------------------------------------------------------------------
+
+/// Ce qu'a donné un événement du chien dormant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Issue {
+    /// Il est resté scellé (a dormi).
+    Dormi,
+    /// Il s'est éveillé et a pris la posture de défense.
+    Eveille,
+}
+
+/// Une entrée du journal d'intervention. Append-only côté C ; ce qui compte est
+/// qu'elle dise exactement ce qui s'est passé, pour une vérification après coup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JournalEntree {
+    /// Niveau de menace au moment de l'événement.
+    pub menace: Menace,
+    /// Le signal d'alerte était-il authentifié (signé) ?
+    pub signal_signe: bool,
+    /// Issue : a dormi ou s'est éveillé.
+    pub issue: Issue,
+    /// La posture de défense a-t-elle été prise (vrai seulement si éveillé) ?
+    pub posture_prise: bool,
+}
+
+/// Construit l'entrée de journal correspondant à un événement. Reflète
+/// fidèlement la décision de `decider_reveil` — y compris un **faux réveil
+/// refusé** (menace grave + signal non signé), car une tentative d'éveil ratée
+/// mérite elle aussi une trace.
+pub fn journaliser(menace: Menace, signal_signe_valide: bool) -> JournalEntree {
+    let eveille = matches!(decider_reveil(menace, signal_signe_valide), Reveil::Eveil { .. });
+    JournalEntree {
+        menace,
+        signal_signe: signal_signe_valide,
+        issue: if eveille { Issue::Eveille } else { Issue::Dormi },
+        posture_prise: eveille,
+    }
+}
+
+/// Faut-il écrire une entrée de journal pour cet événement ? OUI dès que la
+/// menace est grave (éveil réel OU tentative d'éveil refusée) : jamais
+/// d'intervention ni de tentative en silence. Les menaces anodines ne polluent
+/// pas le journal.
+pub fn doit_journaliser(menace: Menace) -> bool {
+    matches!(menace, Menace::Grave)
+}
+
+/// Octets canoniques de l'entrée, à authentifier (HMAC côté C avec le secret
+/// machine) pour rendre le journal **infalsifiable**. Ordre fixe et stable :
+/// menace, signal signé, issue, posture.
+pub fn octets_a_authentifier(e: &JournalEntree) -> [u8; 4] {
+    [
+        match e.menace {
+            Menace::Aucune => 0,
+            Menace::Ordinaire => 1,
+            Menace::Grave => 2,
+        },
+        e.signal_signe as u8,
+        match e.issue {
+            Issue::Dormi => 0,
+            Issue::Eveille => 1,
+        },
+        e.posture_prise as u8,
+    ]
+}
+
 // ===========================================================================
 //                                AUTOTESTS
 // ===========================================================================
@@ -184,5 +260,39 @@ mod tests {
         assert!(f.re_sceller);
         assert!(f.zeroiser_secrets_eveil);
         assert!(f.retablir_apres_reauth);
+    }
+
+    #[test]
+    fn journal_reflete_un_eveil_reel() {
+        let e = journaliser(Menace::Grave, true);
+        assert_eq!(e.issue, Issue::Eveille);
+        assert!(e.posture_prise);
+        assert!(e.signal_signe);
+    }
+
+    #[test]
+    fn journal_trace_une_tentative_de_faux_reveil() {
+        // menace grave mais signal non signé : il reste scellé, MAIS la tentative
+        // est tracée (forensic : quelqu'un a essayé de le réveiller sans signature)
+        let e = journaliser(Menace::Grave, false);
+        assert_eq!(e.issue, Issue::Dormi);
+        assert!(!e.posture_prise);
+        assert!(doit_journaliser(Menace::Grave));
+    }
+
+    #[test]
+    fn les_menaces_anodines_ne_polluent_pas_le_journal() {
+        assert!(!doit_journaliser(Menace::Aucune));
+        assert!(!doit_journaliser(Menace::Ordinaire));
+    }
+
+    #[test]
+    fn octets_a_authentifier_stables_et_distincts() {
+        let eveil = journaliser(Menace::Grave, true);
+        let refus = journaliser(Menace::Grave, false);
+        // déterministe
+        assert_eq!(octets_a_authentifier(&eveil), octets_a_authentifier(&eveil));
+        // un éveil et une tentative refusée ne produisent pas les mêmes octets
+        assert_ne!(octets_a_authentifier(&eveil), octets_a_authentifier(&refus));
     }
 }
