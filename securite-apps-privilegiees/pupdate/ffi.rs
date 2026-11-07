@@ -588,6 +588,62 @@ pub extern "C" fn pupdate_explorateur_doit_effacer_cle(evenement: c_int) -> c_in
     if doit_effacer_cle(ev) { 1 } else { 0 }
 }
 
+// ---------------------------------------------------------------------------
+//  Verdict des chiens de garde (honeydog.rs) : quarantaine / suppression.
+// ---------------------------------------------------------------------------
+
+/// Verdict sur un fichier trouvé par un chien. `gravite` : 0=propre, 1=suspect,
+/// 2=dangereux. `volume_inscriptible` : 1 si on peut écrire sur le volume.
+/// `accord_suppression` : 1 si le propriétaire a explicitement demandé la
+/// suppression de ce fichier. Retour :
+///   0 = autoriser (propre) ;
+///   1 = quarantaine SUR le disque (bloqué, non effacé) ;
+///   2 = quarantaine HORS disque (volume en lecture seule : bloqué sous PuppyOS,
+///       rien écrit sur ce disque) ;
+///   3 = supprimer (seulement accord explicite + volume inscriptible).
+/// Jamais 3 sans accord explicite.
+#[no_mangle]
+pub extern "C" fn pupdate_honeydog_verdict(
+    gravite: c_int,
+    volume_inscriptible: c_int,
+    accord_suppression: c_int,
+) -> c_int {
+    use crate::honeydog::{verdict_fichier, ActionFichier, Gravite};
+    let g = match gravite {
+        0 => Gravite::Propre,
+        1 => Gravite::Suspect,
+        _ => Gravite::Dangereux,
+    };
+    match verdict_fichier(g, volume_inscriptible != 0, accord_suppression != 0) {
+        ActionFichier::Autoriser => 0,
+        ActionFichier::Quarantaine { sur_disque: true, .. } => 1,
+        ActionFichier::Quarantaine { sur_disque: false, .. } => 2,
+        ActionFichier::Supprimer { .. } => 3,
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Dernier rempart dormant (chien_dormant.rs) : éveil / posture / re-scellement.
+// ---------------------------------------------------------------------------
+
+/// Décide l'éveil du chien dormant. `menace` : 0=aucune, 1=ordinaire, 2=grave.
+/// `signal_signe_valide` : 1 si le signal d'alerte est authentifié. Retour :
+///   0 = reste scellé ; 1 = s'éveille (posture de défense verrouillée).
+/// Ne vaut 1 que pour menace=2 ET signal valide.
+#[no_mangle]
+pub extern "C" fn pupdate_chien_dormant_reveil(menace: c_int, signal_signe_valide: c_int) -> c_int {
+    use crate::chien_dormant::{decider_reveil, Menace, Reveil};
+    let m = match menace {
+        0 => Menace::Aucune,
+        1 => Menace::Ordinaire,
+        _ => Menace::Grave,
+    };
+    match decider_reveil(m, signal_signe_valide != 0) {
+        Reveil::ResteScelle { .. } => 0,
+        Reveil::Eveil { .. } => 1,
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {

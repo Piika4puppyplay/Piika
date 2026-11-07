@@ -13,11 +13,13 @@
 #![allow(dead_code)]
 
 pub mod apps;
+pub mod chien_dormant;
 pub mod clavier_securise;
 pub mod coffre;
 pub mod dechiffrement;
 pub mod explorateur;
 pub mod ffi;
+pub mod honeydog;
 pub mod format;
 pub mod installateur;
 pub mod jail;
