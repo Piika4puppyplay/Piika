@@ -385,8 +385,47 @@ Intégration : `wiring-aide-passerelle.makefile` (le bureau lie `libpupdate.a` ;
 entrée « Centre d'aide » dans le menu Aide de la barre). Compile et se lie
 proprement dans `puppy-bureau` ; symbole `pupdate_aide_raccourci` lié. À valider
 en VM avec PuppyHelp tour à tour installé, désactivé et retiré. Les 3 habillages
-rétro, les catégories, la recherche et le « Où suis-je ? » restent le gros
-chantier de l'app `.puppy` elle-même, à suivre.
+rétro, les catégories, la recherche et le « Où suis-je ? » sont l'objet du §15.
+
+---
+
+## 15. L'application PuppyHelp — `.puppy` système à part — `app-puppyhelp/puppyhelp.c`
+
+> « Le centre d'aide peut tomber tout seul sans rien emporter avec lui. »
+
+La coquille v0.1 de l'app, posée sur la libfenetre (`pf.h`) comme les autres
+`.puppy`. C'est une **application système facultative** : aucune autre app n'en
+dépend, elle est supprimable / désactivable / réinstallable, et le cœur §13
+garantit qu'elle n'est **jamais réimposée** si l'utilisateur l'a retirée.
+
+- **Non monolithique** : le contenu est un ensemble de fiches par catégorie
+  (Découvrir · Utiliser · Sécurité, les chiens · Installation · Dépannage ·
+  Confidentialité · Glossaire). Une fiche vide ou absente ne fait **pas** tomber
+  l'app : l'erreur reste **isolée** dans le volet de droite, le reste navigue.
+- **3 habillages rétro** choisis dans les **Paramètres** de l'app : classique
+  Win98, icônes XP, Help&Support XP. Le choix est **persisté** (`puppyhelp.conf`,
+  clé `habillage`) et **relu au démarrage quel que soit le chemin d'ouverture** —
+  on rouvre toujours sur le thème réglé par l'utilisateur (demande de Piika).
+- **Recherche interne** (champ dans l'en-tête, volet de résultats) et bouton
+  **« Où suis-je ? »** qui mappe un contexte vers la fiche qui explique l'écran
+  courant. Mise en page **adaptative** (large / étroit : le volet gauche se replie
+  en une liste repliable).
+- **Ouverture directe** : `--page=catégorie/fiche` (les raccourcis d'aide des
+  apps y arriveront) et `--contexte=<clé>` (le « Où suis-je ? »).
+
+La fiche « Inconnu ? » de la catégorie sécurité reste **volontairement
+énigmatique** : elle ne nomme rien et ne confirme rien. Icône et illustrations
+par chien **provisoires** et **remplaçables** (Piika enverra ses images).
+
+Intégration : `wiring-puppyhelp-app.makefile` (cible `.puppy` + accroche à
+`exemples:`). Compile et s'empaquette proprement ; paquet **non signé en
+conteneur** (clé absente, attendu). À valider en VM : paquet installé /
+désactivé / retiré, et **persistance de l'habillage** d'une session à l'autre.
+
+Reste (chantier à suivre, hors de cette revue) : rendu réellement distinct des
+3 habillages au pixel, index de recherche + traductions indépendants, câblage
+des raccourcis d'aide sur toutes les apps système (bouton grisé si l'aide est HS,
+mais toujours une voie vers le secours), icône dédiée, finitions tablette/tél.
 
 ---
 
@@ -401,9 +440,11 @@ chantier de l'app `.puppy` elle-même, à suivre.
 | `c/puprecovery-iso.c` | Recovery embarqué dans l'ISO (répare sans démarrer l'OS) |
 | `c/coffre-apps.c` | Rotation / scellement des coffres `.pupcoffre` |
 | `c/aide-passerelle.c` + `.h` | Passerelle d'aide + fenêtre de secours indépendante (bureau, `desktop/shell/`) |
+| `app-puppyhelp/puppyhelp.c` + `puppy.info` | L'app `.puppy` PuppyHelp (coquille v0.1 : 7 catégories, 3 habillages persistés, recherche, « Où suis-je ? », adaptatif) |
 | `wiring-autorite-paquets.patch` | Modifs des fichiers existants : `libpuppy/paquet.c` (anti-bombe), `security/puppy-autorite.c` (câblage + retrait du doublon), `Makefile` |
 | `wiring-puprecovery-iso.makefile` | Règle Makefile du recovery ISO (près de `puppy-installateur`) |
 | `wiring-aide-passerelle.makefile` | Lien de `libpupdate.a` au bureau + entrée « Centre d'aide » du menu Aide |
+| `wiring-puppyhelp-app.makefile` | Cible d'empaquetage `$(EX)/PuppyHelp.puppy` + accroche à `exemples:` |
 | `tests/test_bombe.c` | Test ciblé de l'anti-bombe de l'extracteur (5/5) |
 | `ressources/` | Icône maison de la console (chiot infirmier + seringue) |
 
@@ -455,5 +496,8 @@ rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=p
       packs d'icônes), seccomp sur la liste blanche minimale, `crypto_wipe` des
       clés au démontage et à la fermeture (vidage RAM vérifié)
 - [ ] UI de réparation + câblage de l'icône
+- [ ] **PuppyHelp.puppy** : paquet installé / désactivé / retiré (non monolithique :
+      une fiche cassée reste isolée) + **persistance de l'habillage** rouvert sur
+      le bon thème quel que soit le chemin d'ouverture (`--page=…`, menu Aide, etc.)
 
 Rien n'est câblé, publié ni installé sur du matériel sans accord explicite.
