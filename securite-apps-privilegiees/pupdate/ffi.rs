@@ -527,6 +527,123 @@ pub unsafe extern "C" fn pupdate_dechiffrement_ouverture(
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Clavier ultra-protégé pendant la saisie des mots de passe (clavier_securise.rs).
+// ---------------------------------------------------------------------------
+
+/// Décide d'une frappe pendant la saisie protégée. `source` :
+///   0 = clavier initial approuvé ; 1 = périphérique branché à chaud ;
+///   2 = événement synthétique (injection logicielle) ; 3 = entrée réseau ;
+///   autre = provenance inconnue. Retour : 1 = accepter, 0 = rejeter.
+#[no_mangle]
+pub extern "C" fn pupdate_clavier_accepter(source: c_int) -> c_int {
+    use crate::clavier_securise::{accepter, Source};
+    let src = match source {
+        0 => Source::ClavierInitialApprouve,
+        1 => Source::PeripheriqueChaudBranche,
+        2 => Source::EvenementSynthetique,
+        3 => Source::EntreeReseau,
+        _ => Source::Inconnue,
+    };
+    if accepter(src) { 1 } else { 0 }
+}
+
+// ---------------------------------------------------------------------------
+//  Autorités de l'explorateur + vidage RAM (explorateur.rs).
+// ---------------------------------------------------------------------------
+
+/// L'explorateur a-t-il le droit de ce pouvoir ? `pouvoir` :
+///   0 = lire ; 1 = écrire sur support approuvé ; 2 = demander un montage ;
+///   3 = réseau ; 4 = exécuter du code ; 5 = privilège ; 6 = ptrace ;
+///   7 = montage direct. Retour : 1 = autorisé, 0 = interdit. Seuls 0,1,2 → 1.
+#[no_mangle]
+pub extern "C" fn pupdate_explorateur_autorise(pouvoir: c_int) -> c_int {
+    use crate::explorateur::{autorise, Pouvoir};
+    let p = match pouvoir {
+        0 => Pouvoir::LireFichiers,
+        1 => Pouvoir::EcrireSupportApprouve,
+        2 => Pouvoir::DemanderMontage,
+        3 => Pouvoir::Reseau,
+        4 => Pouvoir::ExecuterCode,
+        5 => Pouvoir::Privilege,
+        6 => Pouvoir::Ptrace,
+        7 => Pouvoir::MontageDirect,
+        _ => return 0,
+    };
+    if autorise(p) { 1 } else { 0 }
+}
+
+/// Faut-il effacer la clé d'un volume déchiffré sur cet événement ? `evenement` :
+///   0 = volume ouvert ; 1 = volume démonté ; 2 = explorateur fermé.
+/// Retour : 1 = effacer (zéroïser), 0 = laisser. Vrai pour 1 et 2.
+#[no_mangle]
+pub extern "C" fn pupdate_explorateur_doit_effacer_cle(evenement: c_int) -> c_int {
+    use crate::explorateur::{doit_effacer_cle, Evenement};
+    let ev = match evenement {
+        0 => Evenement::VolumeOuvert,
+        1 => Evenement::VolumeDemonte,
+        2 => Evenement::ExplorateurFerme,
+        _ => return 1, // par prudence : inconnu → on efface
+    };
+    if doit_effacer_cle(ev) { 1 } else { 0 }
+}
+
+// ---------------------------------------------------------------------------
+//  Verdict des chiens de garde (honeydog.rs) : quarantaine / suppression.
+// ---------------------------------------------------------------------------
+
+/// Verdict sur un fichier trouvé par un chien. `gravite` : 0=propre, 1=suspect,
+/// 2=dangereux. `volume_inscriptible` : 1 si on peut écrire sur le volume.
+/// `accord_suppression` : 1 si le propriétaire a explicitement demandé la
+/// suppression de ce fichier. Retour :
+///   0 = autoriser (propre) ;
+///   1 = quarantaine SUR le disque (bloqué, non effacé) ;
+///   2 = quarantaine HORS disque (volume en lecture seule : bloqué sous PuppyOS,
+///       rien écrit sur ce disque) ;
+///   3 = supprimer (seulement accord explicite + volume inscriptible).
+/// Jamais 3 sans accord explicite.
+#[no_mangle]
+pub extern "C" fn pupdate_honeydog_verdict(
+    gravite: c_int,
+    volume_inscriptible: c_int,
+    accord_suppression: c_int,
+) -> c_int {
+    use crate::honeydog::{verdict_fichier, ActionFichier, Gravite};
+    let g = match gravite {
+        0 => Gravite::Propre,
+        1 => Gravite::Suspect,
+        _ => Gravite::Dangereux,
+    };
+    match verdict_fichier(g, volume_inscriptible != 0, accord_suppression != 0) {
+        ActionFichier::Autoriser => 0,
+        ActionFichier::Quarantaine { sur_disque: true, .. } => 1,
+        ActionFichier::Quarantaine { sur_disque: false, .. } => 2,
+        ActionFichier::Supprimer { .. } => 3,
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Dernier rempart dormant (chien_dormant.rs) : éveil / posture / re-scellement.
+// ---------------------------------------------------------------------------
+
+/// Décide l'éveil du chien dormant. `menace` : 0=aucune, 1=ordinaire, 2=grave.
+/// `signal_signe_valide` : 1 si le signal d'alerte est authentifié. Retour :
+///   0 = reste scellé ; 1 = s'éveille (posture de défense verrouillée).
+/// Ne vaut 1 que pour menace=2 ET signal valide.
+#[no_mangle]
+pub extern "C" fn pupdate_chien_dormant_reveil(menace: c_int, signal_signe_valide: c_int) -> c_int {
+    use crate::chien_dormant::{decider_reveil, Menace, Reveil};
+    let m = match menace {
+        0 => Menace::Aucune,
+        1 => Menace::Ordinaire,
+        _ => Menace::Grave,
+    };
+    match decider_reveil(m, signal_signe_valide != 0) {
+        Reveil::ResteScelle { .. } => 0,
+        Reveil::Eveil { .. } => 1,
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {

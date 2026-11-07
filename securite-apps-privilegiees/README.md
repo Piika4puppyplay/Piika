@@ -16,7 +16,7 @@ openat2, abandon de privilèges, TPM, memfd). C'est le même modèle que le Medi
 Center Rust : un cœur testé relié par un pont C ABI.
 
 > ⚠️ **État : squelettes compilés et testés, NON câblés au démarrage.** Tout
-> compile et se lie proprement, et le cœur Rust passe **141/141 tests**. Mais
+> compile et se lie proprement, et le cœur Rust passe **166/166 tests**. Mais
 > le TPM, le seccomp, `openat2`, `memfd`+`fexecve` et l'install réel ne sont
 > **validables qu'en VM** sur la machine de Piika (QEMU/VirtualBox + swtpm).
 > Rien n'est branché au boot ni à `puppy-autorite` tant que la VM n'a pas
@@ -220,11 +220,94 @@ l'ouverture dm-crypt réelle et le montage : **à valider en VM**.
 
 ---
 
+## 8. Clavier ultra-protégé pendant la saisie des mots de passe — `clavier_securise.rs`
+
+> « Une frappe de confiance, ou rien. »
+
+Demande Piika (06/11) : pendant la saisie d'un mot de passe (session,
+déverrouillage, et désormais les invites de déchiffrement de l'explorateur), le
+clavier est protégé de la **falsification** et du **piratage**, **local** comme
+**réseau**. Ce module décide (pur, testé) :
+
+- **une seule source de confiance** : au démarrage de la saisie, on fige les
+  claviers physiques déjà présents et approuvés ; pendant la saisie, on
+  n'accepte **que** leurs frappes ;
+- **tout le reste est rejeté**, avec motif : événement synthétique (injection
+  logicielle — anti-piratage **local**), entrée réseau/distante (KVM, prise de
+  contrôle — anti-piratage **réseau**), périphérique branché **à chaud** pendant
+  la saisie (BadUSB, keylogger déguisé en clavier — anti-**falsification**) ;
+- **rien ne fuit** : à l'ouverture, capture exclusive + écho coupé +
+  journalisation coupée ; à la fermeture/annulation, le tampon du mot de passe
+  est **effacé** (zéroïsation) et la capture rendue.
+
+Module pur, 7 tests. Le C applique (capture `EVIOCGRAB`, `crypto_wipe`) : **à
+valider en VM**.
+
+## 9. Autorités de l'explorateur + vidage RAM — `explorateur.rs`
+
+> « L'explorateur voit les fichiers, jamais les clés une seconde de trop. »
+
+Demande Piika (06/11) : explorateur réécrit en **Rust**, séparé du système (app
+`.puppy` signée, comme le Media Center Rust), thèmes + packs d'icônes futurs,
+**autorités bridées au maximum**, **vidage RAM à la fermeture** pour que les
+clés des volumes déchiffrés (disques, clés, cartes, téléphones) ne fuitent pas.
+Ce module décide (pur, testé) :
+
+- **autorités minimales** — liste blanche la plus courte possible : lire des
+  fichiers, écrire sur un support **approuvé**, **demander** un montage (qui
+  passe par le sas `montage_securise` ; l'explorateur ne monte jamais lui-même).
+  **Interdits** : réseau, exécution de code, privilège, `ptrace`, montage direct ;
+- **vidage RAM** — une clé déchiffrée ne survit jamais à sa fenêtre : elle est
+  effacée au **démontage** du volume comme à la **fermeture** de l'explorateur,
+  avec les tampons sensibles, et les volumes ouverts sont démontés proprement.
+
+La sûreté mémoire (anti buffer-overflow) vient du langage : tout est borné, pas
+d'`unsafe`. Module pur, 6 tests. L'UI de l'explorateur et le `.puppy` signé
+restent à construire ; le C applique seccomp + `crypto_wipe` : **à valider en VM**.
+
+## 10. Verdict des chiens de garde — `honeydog.rs`
+
+> « Il ne te supprime rien sans ton avis. »
+
+Les chiens (flair/antivirus, bac, etc.) sont le cœur de la sécurité. Quand l'un
+trouve un fichier à problème, ce cœur commun (pur, testé) décide — jamais de
+suppression automatique :
+
+- **quarantaine par défaut** : le fichier est **bloqué** sous PuppyOS mais **pas
+  effacé** du lecteur (réversible) ;
+- **suppression seulement sur accord explicite** du propriétaire **et** volume
+  inscriptible ; sinon quarantaine. « Supprimer, c'est éradiquer » → jamais sans
+  ton avis ;
+- **OS voisin en lecture seule** : on ne peut rien écrire → on *ne pas expose* le
+  fichier et on note son chemin, sans toucher ce disque ;
+- **humeur purement cosmétique** : énervé, fatigué ou calme, le chien protège
+  exactement pareil. Garanti par le type (le verdict ne prend pas l'humeur en
+  entrée) et par `protege_toujours`.
+
+Module pur, 6 tests. Le C fournit le chemin exact + l'explication et applique.
+
+## 11. Le 4e chien : dernier rempart dormant — `chien_dormant.rs`
+
+> « Il ne s'éveille jamais pour rien. »
+
+Un chien **chiffré** (scellé dans le coffre TPM existant) qui dort et ne s'éveille
+que sur une menace **grave ET un signal signé** (un faux réveil provoqué par un
+attaquant est donc impossible). Sa posture (pur, testé) est **tout défensif,
+rien de destructif** : couper le réseau, forcer la lecture seule, quarantaine
+agressive, re-sceller les apps privilégiées, exiger la ré-auth du propriétaire —
+et deux garanties invariables : **ne détruit jamais les données**, **n'enferme
+jamais le propriétaire dehors**. Il n'a **aucun pouvoir** que la sécurité normale
+n'a pas (sinon ce serait lui la cible). Danger éliminé → il se **re-scelle** et
+efface ses secrets d'éveil. Qu'il fasse ramer à fond : c'est le prix du dernier
+rempart. Non affiché dans l'OS. Module pur, 6 tests.
+
+---
+
 ## Contenu du dossier
 
 | Chemin | Rôle |
 |---|---|
-| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `montage_securise`, `dechiffrement`, `ffi` (pont C ABI), `moteur`, `pupdate` |
+| `pupdate/` | Cœur **Rust** (crate `pupdate`) : `jail`, `installateur`, `apps`, `registre`, `verif`, `format`, `coffre`, `secours`, `secours_iso`, `secours_filet`, `montage_securise`, `dechiffrement`, `clavier_securise`, `explorateur`, `honeydog`, `chien_dormant`, `ffi` (pont C ABI), `moteur`, `pupdate` |
 | `c/paquets-autorite.c` | Installateur `.puppy` confiné (privilégié) |
 | `c/puppy-lanceur.c` | Lanceur « refus pur » des apps chiffrées (memfd+fexecve) |
 | `c/puprecovery.c` | Console de secours dans l'OS (réinstalle par copie signée + épinglée) |
@@ -247,7 +330,7 @@ Sans Cargo (comme le reste de l'OS), bibliothèque statique + shim C :
 # objets crypto depuis libpuppy (crypto.c, monocypher.c, monocypher-ed25519.c)
 rustc --edition 2021 --test pupdate/pupdate.rs \
       -C link-arg=crypto.o -C link-arg=monocypher.o -C link-arg=mced.o -o pupdate-test
-./pupdate-test     # 141 passed
+./pupdate-test     # 166 passed
 # bibliothèque statique reliée aux binaires C :
 rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=pic \
       -C opt-level=2 pupdate/pupdate.rs -o libpupdate.a
@@ -276,6 +359,12 @@ rustc --edition 2021 --crate-type=staticlib -C panic=abort -C relocation-model=p
       `inspection.c` (sous-détection BitLocker/FileVault par signature), ouverture
       dm-crypt des volumes à mot de passe, montage lecture seule des OS voisins,
       invite de clé de récupération pour BitLocker/FileVault (aucune tentative)
+- [ ] **clavier protégé** : capture exclusive réelle (`EVIOCGRAB`), rejet des
+      événements synthétiques / réseau / périphériques à chaud, écho coupé,
+      effacement du tampon du mot de passe à la fermeture
+- [ ] **explorateur** : construire l'app `.puppy` signée en Rust (UI, thèmes,
+      packs d'icônes), seccomp sur la liste blanche minimale, `crypto_wipe` des
+      clés au démontage et à la fermeture (vidage RAM vérifié)
 - [ ] UI de réparation + câblage de l'icône
 
 Rien n'est câblé, publié ni installé sur du matériel sans accord explicite.
