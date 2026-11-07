@@ -12,6 +12,7 @@
 //! registre d'un parc d'exemple. Aucun dépôt n'est contacté, rien n'est publié.
 #![allow(dead_code)]
 
+pub mod aide;
 pub mod apps;
 pub mod chien_dormant;
 pub mod clavier_securise;

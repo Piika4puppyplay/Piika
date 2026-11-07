@@ -701,6 +701,53 @@ pub unsafe extern "C" fn pupdate_chien_dormant_journaliser(
     }
 }
 
+// ---------------------------------------------------------------------------
+//  Centre d'aide PuppyHelp (aide.rs) : disponibilité, secours, politique MAJ.
+// ---------------------------------------------------------------------------
+
+/// Résout un raccourci d'aide depuis une app. `etat` : 0=opérationnel,
+/// 1=désinstallé, 2=désactivé, 3=obsolète, 4=corrompu, autre=indisponible.
+/// `page_id_valide` : 1/0. Retour : 1 = ouvrir la page ; 0 = afficher le secours
+/// (ne bloque JAMAIS l'appli appelante).
+#[no_mangle]
+pub extern "C" fn pupdate_aide_raccourci(etat: c_int, page_id_valide: c_int) -> c_int {
+    use crate::aide::{resoudre_raccourci, EtatAide, ResolutionRaccourci};
+    let e = match etat {
+        0 => EtatAide::Operationnel,
+        1 => EtatAide::Desinstalle,
+        2 => EtatAide::Desactive,
+        3 => EtatAide::Obsolete,
+        4 => EtatAide::Corrompu,
+        _ => EtatAide::Indisponible,
+    };
+    match resoudre_raccourci(e, page_id_valide != 0) {
+        ResolutionRaccourci::OuvrirPage => 1,
+        ResolutionRaccourci::AfficherSecours { .. } => 0,
+    }
+}
+
+/// Politique de MAJ/préinstallation d'une app facultative. `etat_install` :
+/// 0=jamais installé, 1=installé actif, 2=supprimé par l'utilisateur,
+/// 3=désactivé par l'utilisateur. `obsolete` : 1/0. Retour :
+///   0 = préinstaller ; 1 = forcer la MAJ ; 2 = rien à faire ;
+///   3 = respecter le choix utilisateur (ne jamais réinstaller de force).
+#[no_mangle]
+pub extern "C" fn pupdate_aide_politique_maj(etat_install: c_int, obsolete: c_int) -> c_int {
+    use crate::aide::{politique_maj, EtatInstallation, PolitiqueMaj};
+    let e = match etat_install {
+        0 => EtatInstallation::JamaisInstalle,
+        1 => EtatInstallation::InstalleActif,
+        2 => EtatInstallation::SupprimeParUtilisateur,
+        _ => EtatInstallation::DesactiveParUtilisateur,
+    };
+    match politique_maj(e, obsolete != 0) {
+        PolitiqueMaj::Preinstaller => 0,
+        PolitiqueMaj::ForcerMaj => 1,
+        PolitiqueMaj::RienAFaire => 2,
+        PolitiqueMaj::RespecterChoix => 3,
+    }
+}
+
 /// Nombre de slogans du dico qui tourne.
 #[no_mangle]
 pub extern "C" fn pupdate_slogans_nombre() -> u32 {
