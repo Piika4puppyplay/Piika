@@ -1,0 +1,8 @@
+type=programme
+id=navigateur
+nom=Navigateur
+version=2.2.0
+auteur=PuppyOS
+description=Navigateur web Chromium enfermé dans un bac à sable : premier lancement guidé, protections expliquées, blocage PHP, permissions par site, audit de sécurité, certificats, langage et thème Puppyplay, images remplacées, applications web, onglets, favoris, historique, navigation privée, identités (User-Agent), coffre à mots de passe chiffré, VPN, extensions. Contient aussi le lecteur Streaming du MediaCenter.
+executable=bin/navigateur
+icone=icone.ppm
