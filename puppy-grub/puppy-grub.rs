@@ -23,6 +23,8 @@
 #![no_main]
 #![allow(dead_code)]
 
+mod police;
+mod theme;
 mod uefi;
 
 use core::ffi::c_void;
@@ -30,7 +32,8 @@ use core::panic::PanicInfo;
 use core::ptr;
 use uefi::*;
 
-const VERSION: &str = "0.2-menu";
+const VERSION: &str = "0.3-gop";
+const THEME: &str = "\\EFI\\PUPPYOS\\theme.pupgrub";
 const CONFIG: &str = "\\EFI\\PUPPYOS\\grub.conf";
 const MAX_ENTREES: usize = 8;
 
@@ -88,11 +91,19 @@ pub extern "efiapi" fn efi_main(image: Handle, table: *mut SystemTable) -> Statu
         menu.delai = -1;
     }
 
+    // 0.3 : menu graphique (GOP) habillé par un thème .pupgrub facultatif ;
+    // sans GOP utilisable, on garde le menu texte d'origine.
+    let ecran = ouvrir_gop(bs);
+    let th = lire_theme(bs, racine);
+
     // Boucle du menu.
     let mut sel = if menu.defaut < menu.n { menu.defaut } else { 0 };
     let mut restant = menu.delai;
     loop {
-        dessiner(out, &menu, sel, restant);
+        match &ecran {
+            Some(e) => dessiner_gop(e, &th, &menu, sel, restant),
+            None => dessiner(out, &menu, sel, restant),
+        }
         match lire_touche_1s(inp, bs) {
             Some(k) => {
                 restant = -1; // toute touche annule le compte à rebours
@@ -293,6 +304,140 @@ fn chainer(
         let _ = ((*bs).start_image)(enfant, ptr::null_mut(), ptr::null_mut());
         ecrire(out, "  (l'OS a rendu la main a puppy-GRUB)\n");
         ((*bs).stall)(2_000_000);
+    }
+}
+
+// ------------------------------ menu graphique ------------------------------
+struct Ecran {
+    fb: *mut u32,
+    l: u32,
+    h: u32,
+    ligne: u32,  // pixels par ligne de balayage
+    format: u32, // 0 = RGBX, 1 = BGRX
+}
+
+/// Trouve le protocole graphique GOP. None si absent ou format exotique.
+fn ouvrir_gop(bs: *mut BootServices) -> Option<Ecran> {
+    unsafe {
+        let mut poignees = [ptr::null_mut::<c_void>(); 8];
+        let mut taille = core::mem::size_of_val(&poignees);
+        // 2 = ByProtocol
+        if ((*bs).locate_handle)(2, &GOP_GUID, ptr::null(), &mut taille, poignees.as_mut_ptr()) != SUCCESS {
+            return None;
+        }
+        let n = taille / core::mem::size_of::<Handle>();
+        for &h in poignees.iter().take(n) {
+            let mut gop: *mut c_void = ptr::null_mut();
+            if ((*bs).handle_protocol)(h, &GOP_GUID, &mut gop) != SUCCESS || gop.is_null() {
+                continue;
+            }
+            let g = gop as *mut GraphicsOutput;
+            let m = (*g).mode;
+            if m.is_null() || (*m).info.is_null() || (*m).frame_buffer_base == 0 {
+                continue;
+            }
+            let i = &*(*m).info;
+            if theme::pixel_gop(0, i.pixel_format).is_none() || i.horizontal_resolution < 320 || i.vertical_resolution < 200 {
+                continue;
+            }
+            return Some(Ecran {
+                fb: (*m).frame_buffer_base as *mut u32,
+                l: i.horizontal_resolution,
+                h: i.vertical_resolution,
+                ligne: i.pixels_per_scan_line,
+                format: i.pixel_format,
+            });
+        }
+        None
+    }
+}
+
+/// Lit \EFI\PUPPYOS\theme.pupgrub (facultatif). Toujours un thème valide.
+fn lire_theme(bs: *mut BootServices, racine: *mut FileProtocol) -> theme::Theme {
+    let mut c16 = [0u16; 160];
+    chemin_utf16(THEME, &mut c16);
+    match lire_fichier(bs, racine, c16.as_ptr()) {
+        Some((buf, taille)) => {
+            let mut texte = [0u8; theme::TAILLE_MAX + 1];
+            let n = core::cmp::min(taille, texte.len());
+            unsafe {
+                ptr::copy_nonoverlapping(buf as *const u8, texte.as_mut_ptr(), n);
+                ((*bs).free_pool)(buf);
+            }
+            theme::lire_pupgrub(&texte[..n])
+        }
+        None => theme::Theme::austere(),
+    }
+}
+
+fn rect(e: &Ecran, x: u32, y: u32, l: u32, h: u32, c: u32) {
+    let p = theme::pixel_gop(c, e.format).unwrap_or(0);
+    let (x1, y1) = ((x + l).min(e.l), (y + h).min(e.h));
+    for yy in y.min(e.h)..y1 {
+        for xx in x.min(e.l)..x1 {
+            unsafe { ptr::write_volatile(e.fb.add((yy * e.ligne + xx) as usize), p) };
+        }
+    }
+}
+
+/// Écrit du texte ASCII avec la police Truffe agrandie. Retourne la largeur.
+fn texte(e: &Ecran, x: u32, y: u32, s: &[u8], c: u32, k: u32) -> u32 {
+    let mut cx = x;
+    for &b in s {
+        let g = police::glyphe(b);
+        for (ry, &bits) in g.iter().enumerate() {
+            for col in 0..police::LARGEUR {
+                if bits & (0x10 >> col) != 0 {
+                    rect(e, cx + col as u32 * k, y + (ry as u32 + 2) * k, k, k, c);
+                }
+            }
+        }
+        cx += 6 * k;
+    }
+    cx - x
+}
+
+fn largeur(s: &[u8], k: u32) -> u32 {
+    s.len() as u32 * 6 * k
+}
+
+fn dessiner_gop(e: &Ecran, th: &theme::Theme, menu: &Menu, sel: usize, restant: i32) {
+    let d = theme::disposition(e.l, e.h, menu.n as u32);
+    let k = d.echelle;
+    let p = d.panneau;
+    rect(e, 0, 0, e.l, e.h, th.fond);
+    rect(e, p.x, p.y, p.l, p.h, th.panneau);
+    rect(e, p.x, p.y, p.l, 2 * k, th.selection); // liseré haut
+    let cx = p.x + p.l / 2;
+    let kt = k + 1; // titre un cran plus grand
+    texte(e, cx - largeur(th.titre(), kt) / 2, d.titre_y, th.titre(), th.texte, kt);
+    let sous = b"puppy-GRUB - choisissez un systeme";
+    texte(e, cx - largeur(sous, k) / 2, d.titre_y + 16 * kt, sous, th.texte_doux, k);
+    for i in 0..menu.n {
+        let y = d.entree_y + i as u32 * d.ligne_h;
+        let t = menu.entrees[i].titre_str().as_bytes();
+        if i == sel {
+            rect(e, p.x + 8 * k, y, p.l - 16 * k, d.ligne_h - 4 * k, th.selection);
+            texte(e, p.x + 16 * k, y + 2 * k, b">", th.texte_selection, k);
+            texte(e, p.x + 26 * k, y + 2 * k, t, th.texte_selection, k);
+        } else {
+            texte(e, p.x + 26 * k, y + 2 * k, t, th.texte, k);
+        }
+    }
+    let aide = b"Haut/Bas : choisir   Entree : demarrer   Echap : micrologiciel";
+    let ka = if largeur(aide, k) + 16 * k > p.l { 1 } else { k };
+    texte(e, cx - largeur(aide, ka) / 2, d.aide_y, aide, th.texte_doux, ka);
+    if restant > 0 {
+        let mut msg = *b"Demarrage automatique dans    s";
+        let mut n = restant as u32;
+        let mut i = 30usize;
+        loop {
+            msg[i - 1] = b'0' + (n % 10) as u8;
+            n /= 10;
+            i -= 1;
+            if n == 0 || i == 27 { break; }
+        }
+        texte(e, cx - largeur(&msg, ka) / 2, d.aide_y + 14 * ka, &msg, th.texte_doux, ka);
     }
 }
 
